@@ -1,9 +1,3 @@
-#include "dns_const.h"
-#include "dns_error.h"
-#ifdef USE_MPI
-
-#endif
-
 module OPR_Partial
     use TLab_Constants, only: wp, wi
     use TLab_Arrays, only: wrk2d, wrk3d
@@ -21,19 +15,21 @@ module OPR_Partial
     public :: OPR_Partial_Y
     public :: OPR_Partial_Z
 
+    integer, parameter, public :: OPR_P1 = 1                ! 1. order derivative
+    integer, parameter, public :: OPR_P2 = 2                ! 2. order derivative
+    integer, parameter, public :: OPR_P2_P1 = 3             ! 2. and 1.order derivatives
+
 contains
     ! ###################################################################
     ! ###################################################################
     subroutine OPR_Partial_X(type, nx, ny, nz, bcs, g, u, result, tmp1)
-        integer(wi), intent(in) :: type     ! OPR_P1         1.order derivative
-        !                                   OPR_P2           2.order derivative
-        !                                   OPR_P2_P1        2. and 1.order derivatives (1. in tmp1)
+        integer(wi), intent(in) :: type                         ! OPR_P1, OPR_P2, OPR_P2_P1
         integer(wi), intent(in) :: nx, ny, nz
         integer(wi), intent(in) :: bcs(*)
         type(fdm_dt), intent(in) :: g
         real(wp), intent(in) :: u(nx*ny*nz)
         real(wp), intent(out) :: result(nx*ny*nz)
-        real(wp), intent(inout), optional :: tmp1(nx*ny*nz)
+        real(wp), intent(inout), optional :: tmp1(nx*ny*nz)     ! 1. order derivative in 2. order calculation
 
         target u, tmp1, result
 
@@ -130,15 +126,13 @@ contains
     !########################################################################
     !########################################################################
     subroutine OPR_Partial_Y(type, nx, ny, nz, bcs, g, u, result, tmp1)
-        integer(wi), intent(in) :: type     ! OPR_P1           1.order derivative
-        !                                   OPR_P2           2.order derivative
-        !                                   OPR_P2_P1        2. and 1.order derivatives (1. in tmp1)
+        integer(wi), intent(in) :: type                         ! OPR_P1, OPR_P2, OPR_P2_P1
         integer(wi), intent(in) :: nx, ny, nz
         integer, intent(in) :: bcs(*)
         type(fdm_dt), intent(in) :: g
         real(wp), intent(in) :: u(nx*ny*nz)
         real(wp), intent(out) :: result(nx*ny*nz)
-        real(wp), intent(inout), optional :: tmp1(nx*ny*nz)
+        real(wp), intent(inout), optional :: tmp1(nx*ny*nz)     ! 1. order derivative in 2. order calculation
 
         target u, tmp1, result
 
@@ -214,15 +208,13 @@ contains
     !########################################################################
     !########################################################################
     subroutine OPR_Partial_Z(type, nx, ny, nz, bcs, g, u, result, tmp1)
-        integer(wi), intent(in) :: type     ! OPR_P1           1.order derivative
-        !                                   OPR_P2           2.order derivative
-        !                                   OPR_P2_P1        2. and 1.order derivatives (1. in tmp1)
+        integer(wi), intent(in) :: type                         ! OPR_P1, OPR_P2, OPR_P2_P1
         integer(wi), intent(in) :: nx, ny, nz
         integer, intent(in) :: bcs(*)
         type(fdm_dt), intent(in) :: g
         real(wp), intent(in) :: u(nx*ny*nz)
         real(wp), intent(out) :: result(nx*ny*nz)
-        real(wp), intent(inout), optional :: tmp1(nx*ny*nz)
+        real(wp), intent(inout), optional :: tmp1(nx*ny*nz)     ! 1. order derivative in 2. order calculation
 
         ! -------------------------------------------------------------------
 
