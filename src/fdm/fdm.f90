@@ -1,4 +1,4 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 module FDM
     use TLab_Constants, only: wp, wi, roundoff_wp, efile, wfile

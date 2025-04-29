@@ -1,4 +1,4 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 module RAND_LOCAL
     use TLab_Constants, only: wp, wi, big_wp
@@ -8,11 +8,11 @@ module RAND_LOCAL
 #ifdef USE_MPI
     use TLabMPI_VARS, only: ims_pro
 #endif
+    use TLab_Grid, only: x, y, z
     use Averages, only: AVG1V2D
     use Distributions
     use OPR_Fourier
     implicit none
-    save
 
     type(distributions_dt) :: psd
     type(distributions_dt) :: pdf
@@ -116,11 +116,10 @@ contains
         real(wp), intent(INOUT) :: tmp1(:), tmp2(:), tmp3(:)
 
         ! -------------------------------------------------------------------
-        integer(wi) idim
         real(wp) RAN0, RANG
         external RAN0, RANG
-        complex(wp), pointer :: c_tmp1(:) => null()
-        target tmp1
+        complex(wp), pointer :: c_tmp1(:) => null(), c_tmp3(:) => null()
+        target tmp1, tmp3
 
         ! ###################################################################
         select case (pdf%type)
@@ -137,15 +136,10 @@ contains
         end select
 
         if (psd%type > 0) then
-            if (z%size == 1) then           ! 2D Fourier transform
-                idim = 2
-            else                            ! 3D Fourier transform
-                idim = 3
-            end if
-
             call c_f_pointer(c_loc(tmp1), c_tmp1, shape=[isize_txc_field/2])
+            call c_f_pointer(c_loc(tmp3), c_tmp3, shape=[isize_txc_field/2])
             if (pdf%type > 0) then
-                call OPR_Fourier_F(idim, imax, jmax, kmax, tmp2, tmp1, tmp3)
+                call OPR_Fourier_Forward(tmp2, c_tmp1, c_tmp3)
                 call OPR_Fourier_SetPSD(imax, jmax, kmax, c_tmp1, psd)
             else
                 do i = 1, isize_txc_field
@@ -153,8 +147,8 @@ contains
                 end do
                 call OPR_Fourier_SetPSD(imax, jmax, kmax, c_tmp1, psd, locPhase=tmp3)
             end if
-            call OPR_Fourier_B(idim, imax, jmax, kmax, tmp1, tmp2)
-
+            call OPR_Fourier_Backward(c_tmp1, tmp2)
+            nullify (c_tmp1, c_tmp3)
         end if
 
         call RAND_NORMALIZE(variance, tmp2)

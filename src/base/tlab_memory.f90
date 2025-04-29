@@ -1,4 +1,4 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 ! ###################################################################
 ! ###################################################################
@@ -96,8 +96,7 @@ module TLab_Pointers_C
     use TLab_Constants, only: wp
     implicit none
 
-    complex(wp), pointer :: c_wrk1d(:, :) => null()
-    complex(wp), pointer :: c_wrk3d(:, :) => null()
+    complex(wp), pointer :: c_wrk3d(:) => null()
 
 end module TLab_Pointers_C
 
@@ -163,7 +162,6 @@ contains
     ! ###################################################################
     subroutine TLab_Initialize_Memory(C_FILE_LOC)
         use TLab_Arrays
-        use TLab_WorkFlow, only: fourier_on
 #ifdef USE_MPI
         use TLabMPI_VARS, only: ims_npro, ims_npro_i, ims_npro_j, ims_npro_k
 #endif
@@ -182,10 +180,8 @@ contains
 
         ! auxiliar array txc for intermediate calculations
         isize_txc_field = imax*jmax*kmax
-        if (fourier_on) then
-            isize_txc_dimz = (imax + 2)*kmax            ! Add space for Nyquist frequency
-            isize_txc_field = max(isize_txc_field, isize_txc_dimz*jmax)
-        end if
+        isize_txc_dimz = (imax + 2)*kmax            ! Add space for Nyquist frequency
+        isize_txc_field = max(isize_txc_field, isize_txc_dimz*jmax)
 
         ! scratch arrays
 #ifdef USE_MPI

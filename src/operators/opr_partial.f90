@@ -2,7 +2,7 @@ module OPR_Partial
     use TLab_Constants, only: wp, wi
     use TLab_Arrays, only: wrk2d, wrk3d
 #ifdef USE_MPI
-    use TLabMPI_VARS, only: ims_npro_i, ims_npro_k
+    use TLabMPI_VARS, only: ims_npro_i, ims_npro_j
     use TLabMPI_Transpose
 #endif
     use FDM, only: fdm_dt
@@ -147,12 +147,16 @@ contains
 
         else
             ! ###################################################################
-            ! -------------------------------------------------------------------
+            ! Local transposition: make y-direction the last one
+#ifdef USE_ESSL
+            call DGETMO(u, nx*ny, nx*ny, nz, wrk3d, nz)
+#else
+            call TLab_Transpose(u, nx*ny, nz, nx*ny, wrk3d, nz)
+#endif
             ! MPI Transposition
-            ! -------------------------------------------------------------------
 #ifdef USE_MPI
-            if (ims_npro_k > 1) then
-                call TLabMPI_Trp_ExecK_Forward(u, result, tmpi_plan_dz)
+            if (ims_npro_j > 1) then
+                call TLabMPI_Trp_ExecJ_Forward(wrk3d, result, tmpi_plan_dy)
                 p_a => result
                 if (any([OPR_P2, OPR_P2_P1] == type)) then
                     p_b => tmp1
@@ -160,10 +164,10 @@ contains
                 else
                     p_b => wrk3d
                 end if
-                nxz = tmpi_plan_dz%nlines
+                nxz = tmpi_plan_dy%nlines
             else
 #endif
-                p_a => u
+                p_a => wrk3d
                 p_b => result
                 if (any([OPR_P2, OPR_P2_P1] == type)) then
                     p_c => tmp1
@@ -191,9 +195,9 @@ contains
             ! ###################################################################
             ! Put arrays back in the order in which they came in
 #ifdef USE_MPI
-            if (ims_npro_k > 1) then
-                call TLabMPI_Trp_ExecK_Backward(p_b, result, tmpi_plan_dz)
-                if (type == OPR_P2_P1) call TLabMPI_Trp_ExecK_Backward(p_c, tmp1, tmpi_plan_dz)
+            if (ims_npro_j > 1) then
+                call TLabMPI_Trp_ExecJ_Backward(p_b, result, tmpi_plan_dy)
+                if (type == OPR_P2_P1) call TLabMPI_Trp_ExecJ_Backward(p_c, tmp1, tmpi_plan_dy)
             end if
 #endif
 
@@ -217,12 +221,11 @@ contains
         real(wp), intent(inout), optional :: tmp1(nx*ny*nz)     ! 1. order derivative in 2. order calculation
 
         ! -------------------------------------------------------------------
-
         ! ###################################################################
         if (g%size == 1) then
             result = 0.0_wp
             if (present(tmp1)) tmp1 = 0.0_wp
-            
+
         else
             select case (type)
             case (OPR_P2)

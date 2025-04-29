@@ -1,6 +1,7 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 module TLabMPI_PROCS
+    use mpi_f08
     use TLab_Constants, only: wp, dp, sp, wi, lfile, efile
     use TLab_Memory, only: imax, jmax, kmax
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop

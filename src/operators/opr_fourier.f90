@@ -1,4 +1,4 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 module OPR_Fourier
     use TLab_Constants, only: wp, wi, pi_wp, efile
@@ -10,7 +10,7 @@ module OPR_Fourier
     use TLab_Grid
     use, intrinsic :: iso_c_binding
 #ifdef USE_MPI
-    use TLabMPI_VARS, only: ims_npro_i, ims_npro_k
+    use TLabMPI_VARS, only: ims_npro_i, ims_npro_j
     use TLabMPI_VARS, only: ims_offset_i, ims_offset_k
     use TLabMPI_Transpose
 #endif
@@ -20,6 +20,7 @@ module OPR_Fourier
     public :: OPR_Fourier_Initialize
     public :: OPR_Fourier_X_Forward, OPR_Fourier_X_Backward     ! Main routines, used in Poisson solver; optimize
     public :: OPR_Fourier_Y_Forward, OPR_Fourier_Y_Backward
+    public :: OPR_Fourier_Forward, OPR_Fourier_Backward         ! 3D FFTs
     public :: OPR_Fourier_SetPSD
 
     logical, public :: fft_x_on = .false.                       ! Switch on and off the FFT in the corresponding directions.
@@ -30,15 +31,15 @@ module OPR_Fourier
     integer(wi) size_fft_x, size_fft_y, size_fft_z
 
     type(c_ptr) :: fft_plan_fx, fft_plan_bx
-    type(c_ptr) :: fft_plan_fy, fft_plan_by!, fft_plan_fy1d, fft_plan_by1d
+    type(c_ptr) :: fft_plan_fy, fft_plan_by
     type(c_ptr) :: fft_plan_fz, fft_plan_bz
 #ifdef USE_MPI
     type(tmpi_transpose_dt), public :: tmpi_plan_fftx
     type(tmpi_transpose_dt), public :: tmpi_plan_ffty
-#endif
 
     complex(wp), pointer :: c_out(:) => null()
     real(wp), pointer :: r_out(:) => null()
+#endif
 
 contains
     ! #######################################################################
@@ -68,7 +69,7 @@ contains
 
         ! -----------------------------------------------------------------------
         ! Ox direction
-        size_fft_x = size(x(:))
+        size_fft_x = x%size
         if (size_fft_x > 1) then
             fft_x_on = .true.
 
@@ -88,8 +89,8 @@ contains
             end if
 #endif
 
-#ifdef _DEBUG
-#else
+! #ifdef _DEBUG
+! #else
             call dfftw_plan_many_dft_r2c(fft_plan_fx, 1, size_fft_x, nlines, &
                                          txc(:, 1), size_fft_x, 1, size_fft_x, &
                                          wrk3d, size_fft_x/2 + 1, 1, offset, &
@@ -98,13 +99,13 @@ contains
                                          txc(:, 1), size_fft_x/2 + 1, 1, offset, &
                                          wrk3d, size_fft_x, 1, size_fft_x, &
                                          FFTW_MEASURE)
-#endif
+! #endif
 
         end if
 
         ! -----------------------------------------------------------------------
         ! Oy direction
-        size_fft_y = size(y(:))
+        size_fft_y = y%size
 
         if (size_fft_y > 1) then
             fft_y_on = .true.
@@ -116,15 +117,15 @@ contains
                 tmpi_plan_ffty = TLabMPI_Trp_PlanJ(jmax, nlines, &
                                                    locType=MPI_DOUBLE_COMPLEX, &
                                                    message='Oz FFTW in Poisson solver.')
-                nlines = tmpi_plan_fftz%nlines
+                nlines = tmpi_plan_ffty%nlines
 
             end if
 #endif
 
             stride = nlines
 
-#ifdef _DEBUG
-#else
+! #ifdef _DEBUG
+! #else
             call dfftw_plan_many_dft(fft_plan_fy, 1, size_fft_y, nlines, &
                                      txc(:, 1), size_fft_y, stride, 1, &
                                      wrk3d, size_fft_y, stride, 1, &
@@ -134,20 +135,20 @@ contains
                                      txc(:, 1), size_fft_y, stride, 1, &
                                      wrk3d, size_fft_y, stride, 1, &
                                      FFTW_BACKWARD, FFTW_MEASURE)
-#endif
+! #endif
         end if
 
         ! -----------------------------------------------------------------------
         ! Oz direction
-        size_fft_z = size(z(:))
+        size_fft_z = z%size
         if (size_fft_z > 1) then
             fft_z_on = .true.
 
             nlines = (imax/2 + 1)*jmax
             stride = (imax/2 + 1)*jmax
 
-#ifdef _DEBUG
-#else
+! #ifdef _DEBUG
+! #else
             call dfftw_plan_many_dft(fft_plan_fz, 1, size_fft_z, nlines, &
                                      txc(:, 1), size_fft_z, stride, 1, &
                                      wrk3d, size_fft_z, stride, 1, &
@@ -157,7 +158,7 @@ contains
                                      txc(:, 1), size_fft_z, stride, 1, &
                                      wrk3d, size_fft_z, stride, 1, &
                                      FFTW_BACKWARD, FFTW_MEASURE)
-#endif
+! #endif
         end if
 
         return
@@ -167,23 +168,20 @@ contains
     !########################################################################
     subroutine OPR_Fourier_X_Forward(in, out)
         real(wp), intent(in) :: in(*)
-        complex(wp), intent(out) :: out(*)
-
-        target out
+        complex(wp), intent(out), target :: out(*)
 
         ! -----------------------------------------------------------------------
-
         ! #######################################################################
 
 #ifdef USE_MPI
         if (ims_npro_i > 1) then
             call c_f_pointer(c_loc(out), r_out, shape=[isize_txc_field])
 
-            call TLabMPI_Trp_ExecI_Forward(in(:), r_out(:), tmpi_plan_dx)
+            call TLabMPI_Trp_ExecI_Forward(in, r_out, tmpi_plan_dx)
 
-            call dfftw_execute_dft_r2c(fft_plan_fx, r_out(:), c_wrk3d)
+            call dfftw_execute_dft_r2c(fft_plan_fx, r_out, c_wrk3d)
 
-            call TLabMPI_Trp_ExecI_Backward(c_wrk3d, out(:), tmpi_plan_fftx)
+            call TLabMPI_Trp_ExecI_Backward(c_wrk3d, out, tmpi_plan_fftx)
 
             nullify (r_out)
 
@@ -202,7 +200,7 @@ contains
     !########################################################################
     subroutine OPR_Fourier_X_Backward(in, out)
         complex(wp), intent(in) :: in(*)
-        real(wp), intent(out) :: out(*)
+        real(wp), intent(out), target :: out(*)
 
         ! -----------------------------------------------------------------------
         !########################################################################
@@ -210,13 +208,13 @@ contains
         if (ims_npro_i > 1) then
             call c_f_pointer(c_loc(out), c_out, shape=[isize_txc_field])
 
-            call TLabMPI_Trp_ExecI_Forward(in(:), c_out(:, 1), tmpi_plan_fftx)
+            call TLabMPI_Trp_ExecI_Forward(in, c_out, tmpi_plan_fftx)
 
             call dfftw_execute_dft_c2r(fft_plan_bx, c_out, wrk3d)
 
-            call TLabMPI_Trp_ExecI_Backward(wrk3d, out(:), tmpi_plan_dx) !tmpi_plan_fftx1)
+            call TLabMPI_Trp_ExecI_Backward(wrk3d, out, tmpi_plan_dx)
 
-            nullify (r_in, c_out)
+            nullify (c_out)
 
         else
 #endif
@@ -231,7 +229,7 @@ contains
 
     !########################################################################
     !########################################################################
-    subroutine OPR_Fourier_Z_Forward(in, out)
+    subroutine OPR_Fourier_Y_Forward(in, out)
         complex(wp), intent(inout), target :: in(*)     ! in might be overwritten
         complex(wp), intent(out), target :: out(*)
 
@@ -239,48 +237,87 @@ contains
 
         ! #######################################################################
 #ifdef USE_MPI
-        if (ims_npro_k > 1) then
-            call TLabMPI_Trp_ExecK_Forward(in, out, tmpi_plan_fftz)
+        if (ims_npro_j > 1) then
+            call TLabMPI_Trp_ExecJ_Forward(in, out, tmpi_plan_ffty)
 
-            call dfftw_execute_dft(fft_plan_fz, out, c_wrk3d)
+            call dfftw_execute_dft(fft_plan_fy, out, c_wrk3d)
 
-            call TLabMPI_Trp_ExecK_Backward(c_wrk3d, out, tmpi_plan_fftz)
+            call TLabMPI_Trp_ExecJ_Backward(c_wrk3d, out, tmpi_plan_ffty)
 
         else
 #endif
-            call dfftw_execute_dft(fft_plan_fz, in, out)
+            call dfftw_execute_dft(fft_plan_fy, in, out)
 
 #ifdef USE_MPI
         end if
 #endif
 
         return
-    end subroutine OPR_Fourier_Z_Forward
+    end subroutine OPR_Fourier_Y_Forward
 
     !########################################################################
     !########################################################################
-    subroutine OPR_Fourier_Z_Backward(in, out)
+    subroutine OPR_Fourier_Y_Backward(in, out)
         complex(wp), intent(inout) :: in(*)
         complex(wp), intent(out) :: out(*)
 
         ! #######################################################################
 #ifdef USE_MPI
-        if (ims_npro_k > 1) then
-            call TLabMPI_Trp_ExecK_Forward(in, out, tmpi_plan_fftz)
+        if (ims_npro_j > 1) then
+            call TLabMPI_Trp_ExecJ_Forward(in, out, tmpi_plan_ffty)
 
-            call dfftw_execute_dft(fft_plan_bz, out, c_wrk3d)
+            call dfftw_execute_dft(fft_plan_by, out, c_wrk3d)
 
-            call TLabMPI_Trp_ExecK_Backward(c_wrk3d, out, tmpi_plan_fftz)
+            call TLabMPI_Trp_ExecJ_Backward(c_wrk3d, out, tmpi_plan_ffty)
 
         else
 #endif
-            call dfftw_execute_dft(fft_plan_bz, in, out)
+            call dfftw_execute_dft(fft_plan_by, in, out)
 #ifdef USE_MPI
         end if
 #endif
 
         return
-    end subroutine OPR_Fourier_Z_Backward
+    end subroutine OPR_Fourier_Y_Backward
+
+    ! #######################################################################
+    ! #######################################################################
+    subroutine OPR_Fourier_Forward(in, out, tmp1)
+        real(wp), intent(in) :: in(:)
+        complex(wp), intent(out) :: out(:)
+        complex(wp), intent(inout) :: tmp1(:)
+
+        ! #######################################################################
+        if (fft_y_on) then
+            call OPR_Fourier_X_Forward(in, out)
+            call OPR_Fourier_Y_Forward(out, tmp1) ! out might be overwritten
+        else
+            call OPR_Fourier_X_Forward(in, tmp1)
+        end if
+
+        call dfftw_execute_dft(fft_plan_fz, tmp1, out)
+
+        return
+    end subroutine OPR_Fourier_Forward
+
+    ! #######################################################################
+    ! #######################################################################
+    subroutine OPR_Fourier_Backward(in, out)
+        complex(wp), intent(inout) :: in(:)
+        real(wp), intent(out) :: out(:)
+
+        ! #######################################################################
+        call dfftw_execute_dft(fft_plan_bz, in, c_wrk3d)
+
+        if (fft_y_on) then
+            call OPR_Fourier_Y_Backward(c_wrk3d, in)
+            call OPR_Fourier_X_Backward(in, out)
+        else
+            call OPR_Fourier_X_Backward(c_wrk3d, out)
+        end if
+
+        return
+    end subroutine OPR_Fourier_Backward
 
     ! #######################################################################
     ! #######################################################################
@@ -294,7 +331,7 @@ contains
         real(wp), intent(in), optional :: locPhase(nx/2 + 1, ny, nz)
 
         ! -----------------------------------------------------------------------
-        integer(wi) i, j, iglobal, jglobal, kglobal
+        integer(wi) i, j, k, iglobal, jglobal, kglobal
         real(wp) pow_dst, pow_org, phase
         real(wp) f, fi, fj, fk
 

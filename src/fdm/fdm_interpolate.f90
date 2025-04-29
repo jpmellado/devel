@@ -1,4 +1,4 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 !########################################################################
 ! Midpoint interpolation using compact schemes and

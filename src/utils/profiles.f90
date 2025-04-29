@@ -1,4 +1,4 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 ! Definining functions f=f(x) to be used in bcs, ics, and reference background profiles
 module Profiles

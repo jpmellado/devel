@@ -1,8 +1,4 @@
-#include "dns_error.h"
-#include "dns_const.h"
-#ifdef USE_MPI
-
-#endif
+#include "tlab_error.h"
 
 #define USE_ACCESS_STREAM
 
@@ -23,6 +19,7 @@ module IO_Fields
     use TLab_Arrays, only: wrk3d
     use, intrinsic :: iso_c_binding, only: c_f_pointer, c_loc
 #ifdef USE_MPI
+    use mpi_f08
     use TLabMPI_VARS
     use TLabMPI_PROCS, only: TLabMPI_Panic
 #endif
@@ -62,8 +59,7 @@ module IO_Fields
     public :: IO_Read_Field_INT1, IO_Write_Field_INT1
     public :: IO_Read_Subarray, IO_Write_Subarray
 #ifdef USE_MPI
-    public :: IO_Create_Subarray_XOY, IO_Create_Subarray_XOZ, IO_Create_Subarray_ZOY
-    public :: TLabMPI_WRITE_PE0_SINGLE
+    public :: IO_Create_Subarray_XOY !, IO_Create_Subarray_XOZ, IO_Create_Subarray_ZOY
 #endif
 
     ! -------------------------------------------------------------------
@@ -120,7 +116,7 @@ contains
         call MPI_Type_create_subarray(ndims, sizes, locsize, offset, MPI_ORDER_FORTRAN, locType, locSubarray, ims_err)
         call MPI_Type_commit(locSubarray, ims_err)
 
-    end function IO_Create_Subarray_XOZ
+    end function IO_Create_Subarray_XOY
 
     ! !########################################################################
     ! !########################################################################
@@ -212,7 +208,7 @@ contains
 #ifdef USE_MPI
                     if (ims_pro == 0) then
 #endif
-#include "dns_open_file.h"
+#include "tlab_open_file.h"
                         rewind (LOC_UNIT_ID)
                         call IO_READ_HEADER(LOC_UNIT_ID, header_offset, nx_total, ny_total, nz_total, nt, params)
                         close (LOC_UNIT_ID)
@@ -237,7 +233,7 @@ contains
                     call MPI_File_close(mpio_fh, ims_err)
 
 #else
-#include "dns_open_file.h"
+#include "tlab_open_file.h"
                     if (io_datatype == IO_TYPE_SINGLE) then
                         read (LOC_UNIT_ID, POS=header_offset + 1) s_wrk(:)
                         a(:, iz) = real(s_wrk(:), dp)
@@ -300,7 +296,7 @@ contains
 #ifdef USE_MPI
         if (ims_pro == 0) then
 #endif
-#include "dns_open_file.h"
+#include "tlab_open_file.h"
             rewind (LOC_UNIT_ID)
             call IO_READ_HEADER(LOC_UNIT_ID, header_offset, nx_total, ny_total, nz_total, nt, params)
             close (LOC_UNIT_ID)
@@ -318,7 +314,7 @@ contains
         call MPI_File_close(mpio_fh, ims_err)
 
 #else
-#include "dns_open_file.h"
+#include "tlab_open_file.h"
         header_offset = header_offset + 1
         read (LOC_UNIT_ID, POS=header_offset) a
         close (LOC_UNIT_ID)
@@ -408,7 +404,7 @@ contains
 #ifdef USE_MPI
                 if (ims_pro == 0) then
 #endif
-#include "dns_open_file.h"
+#include "tlab_open_file.h"
                     if (present(locHeader)) then
                         call IO_WRITE_HEADER(LOC_UNIT_ID, nx_total, ny_total, nz_total, nt, locHeader(ih)%params(1:locHeader(ih)%size))
                     else
@@ -438,7 +434,7 @@ contains
                 call MPI_File_close(mpio_fh, ims_err)
 
 #else
-#include "dns_open_file.h"
+#include "tlab_open_file.h"
                 if (io_datatype == IO_TYPE_SINGLE) then
                     s_wrk(:) = real(a(:, ifield), sp)
                     write (LOC_UNIT_ID, POS=header_offset + 1) s_wrk(:)
@@ -497,7 +493,7 @@ contains
 #ifdef USE_MPI
         if (ims_pro == 0) then
 #endif
-#include "dns_open_file.h"
+#include "tlab_open_file.h"
             call IO_WRITE_HEADER(LOC_UNIT_ID, nx_total, ny_total, nz_total, nt, params(:))
             close (LOC_UNIT_ID)
 #ifdef USE_MPI
@@ -517,7 +513,7 @@ contains
         call MPI_File_close(mpio_fh, ims_err)
 
 #else
-#include "dns_open_file.h"
+#include "tlab_open_file.h"
         header_offset = header_offset + 1
         write (LOC_UNIT_ID, POS=header_offset) a
         close (LOC_UNIT_ID)
@@ -655,7 +651,7 @@ contains
                 if (ims_err /= MPI_SUCCESS) call TLabMPI_Panic(__FILE__, ims_err)
 
 #else
-#include "dns_open_file.h"
+#include "tlab_open_file.h"
                 ioffset_local = locSubarrayPlan%offset + 1
                 if (locSubarrayPlan%precision == IO_TYPE_SINGLE) then
                     write (LOC_UNIT_ID, POS=ioffset_local) real(data(sizes(2):sizes(3):sizes(4), iv), sp)
@@ -731,7 +727,7 @@ contains
                 call MPI_File_close(mpio_fh, ims_err)
                 if (ims_err /= MPI_SUCCESS) call TLabMPI_Panic(__FILE__, ims_err)
 #else
-#include "dns_open_file.h"
+#include "tlab_open_file.h"
                 ioffset_local = locSubarrayPlan%offset + 1
                 if (locSubarrayPlan%precision == IO_TYPE_SINGLE) then
                     read (LOC_UNIT_ID, POS=ioffset_local) s_wrk(1:isize)
@@ -754,5 +750,5 @@ contains
 
         return
     end subroutine IO_Read_Subarray
-    
+
 end module IO_Fields

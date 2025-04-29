@@ -1,5 +1,5 @@
 !# Grid generation tool. Origin is set always to (0,0,0)
-#include "dns_error.h"
+#include "tlab_error.h"
 
 #define C_FILE_LOC "INIGRID"
 

@@ -1,4 +1,4 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 !########################################################################
 ! Boundary-value problems and integrals based on the compact schemes.

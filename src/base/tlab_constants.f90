@@ -23,7 +23,8 @@ module TLab_Constants
     character(len=*), parameter :: tag_part = 'part.'
     character(len=*), parameter :: tag_traj = 'traj.'
 
-    character(len=*), parameter :: fmt_r = 'e13.5e3'
+    ! character(len=*), parameter :: fmt_r = 'e13.5e3'
+    character(len=*), parameter :: fmt_r = '(e13.5e3)'
 
     ! from https://fortran-lang.org/en/learn/best_practices/floating_point/
     integer, parameter :: sp = kind(1.0)

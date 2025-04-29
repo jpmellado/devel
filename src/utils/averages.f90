@@ -2,7 +2,7 @@ module Averages
     use TLab_Constants, only: wp, wi
 #ifdef USE_MPI
     use mpi_f08
-    use TLabMPI_VARS, only: ims_comm_z, ims_npro_i, ims_npro_k
+    use TLabMPI_VARS, only: ims_comm_y, ims_npro_i, ims_npro_k
     use TLabMPI_VARS, only: ims_err
 #endif
     implicit none
@@ -50,7 +50,7 @@ contains
         avg = avg/real(nz, wp)
 #ifdef USE_MPI
         sum_mpi = avg/real(ims_npro_k, wp)
-        call MPI_ALLREDUCE(sum_mpi, avg, 1, MPI_REAL8, MPI_SUM, ims_comm_z, ims_err)
+        call MPI_ALLREDUCE(sum_mpi, avg, 1, MPI_REAL8, MPI_SUM, ims_comm_y, ims_err)
 #endif
 
         return
@@ -102,7 +102,7 @@ contains
         avg = avg/real(nz, wp)
 #ifdef USE_MPI
         sum_mpi = avg/real(ims_npro_k, wp)
-        call MPI_ALLREDUCE(sum_mpi, avg, 1, MPI_REAL8, MPI_SUM, ims_comm_z, ims_err)
+        call MPI_ALLREDUCE(sum_mpi, avg, 1, MPI_REAL8, MPI_SUM, ims_comm_y, ims_err)
 #endif
 
         return

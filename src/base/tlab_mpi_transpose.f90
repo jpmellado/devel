@@ -1,7 +1,8 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 ! Circular transposition within directional communicators
 module TLabMPI_Transpose
+    use mpi_f08
     use TLab_Constants, only: lfile, efile, wp, dp, sp, wi, sizeofreal
     use TLab_Memory, only: imax, jmax, kmax, isize_wrk3d
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
@@ -265,6 +266,7 @@ contains
 
     !########################################################################
     !########################################################################
+    ! It assumes that j is last index
     function TLabMPI_Trp_PlanJ(nmax, npage, locStride, locType, message) result(trp_plan)
         integer(wi), intent(in) :: npage, nmax
         integer(wi), intent(in), optional :: locStride
@@ -360,13 +362,13 @@ contains
             a_wrk(1:size) = real(a(1:size), sp)
             call Transpose_Kernel_Single(a_wrk, maps_send_j(:), trp_plan%disp_s(:), trp_plan%type_s, &
                                          b_wrk, maps_recv_j(:), trp_plan%disp_r(:), trp_plan%type_r, &
-                                         ims_comm_z, trp_sizBlock_j, trp_mode_j)
+                                         ims_comm_y, trp_sizBlock_j, trp_mode_j)
             b(1:size) = real(b_wrk(1:size), dp)
             nullify (a_wrk, b_wrk)
         else
             call Transpose_Kernel_Double(a, maps_send_j(:), trp_plan%disp_s(:), trp_plan%type_s, &
                                          b, maps_recv_j(:), trp_plan%disp_r(:), trp_plan%type_r, &
-                                         ims_comm_z, trp_sizBlock_j, trp_mode_j)
+                                         ims_comm_y, trp_sizBlock_j, trp_mode_j)
         end if
 
 #ifdef PROFILE_ON
@@ -387,7 +389,7 @@ contains
         ! #######################################################################
         call Transpose_Kernel_Complex(a, maps_send_j(:), trp_plan%disp_s(:), trp_plan%type_s, &
                                       b, maps_recv_j(:), trp_plan%disp_r(:), trp_plan%type_r, &
-                                      ims_comm_z, trp_sizBlock_j, trp_mode_j)
+                                      ims_comm_y, trp_sizBlock_j, trp_mode_j)
 
         return
     end subroutine TLabMPI_Trp_ExecJ_Forward_Complex
@@ -419,13 +421,13 @@ contains
             b_wrk(1:size) = real(b(1:size), sp)
             call Transpose_Kernel_Single(b_wrk, maps_recv_j(:), trp_plan%disp_r(:), trp_plan%type_r, &
                                          a_wrk, maps_send_j(:), trp_plan%disp_s(:), trp_plan%type_s, &
-                                         ims_comm_z, trp_sizBlock_j, trp_mode_j)
+                                         ims_comm_y, trp_sizBlock_j, trp_mode_j)
             a(1:size) = real(a_wrk(1:size), dp)
             nullify (a_wrk, b_wrk)
         else
             call Transpose_Kernel_Double(b, maps_recv_j(:), trp_plan%disp_r(:), trp_plan%type_r, &
                                          a, maps_send_j(:), trp_plan%disp_s(:), trp_plan%type_s, &
-                                         ims_comm_z, trp_sizBlock_j, trp_mode_j)
+                                         ims_comm_y, trp_sizBlock_j, trp_mode_j)
         end if
 
 #ifdef PROFILE_ON
@@ -446,7 +448,7 @@ contains
         ! #######################################################################
         call Transpose_Kernel_Complex(b, maps_recv_j(:), trp_plan%disp_r(:), trp_plan%type_r, &
                                       a, maps_send_j(:), trp_plan%disp_s(:), trp_plan%type_s, &
-                                      ims_comm_z, trp_sizBlock_j, trp_mode_j)
+                                      ims_comm_y, trp_sizBlock_j, trp_mode_j)
 
         return
     end subroutine TLabMPI_Trp_ExecJ_Backward_Complex

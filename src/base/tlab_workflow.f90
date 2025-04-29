@@ -1,5 +1,7 @@
+#include "tlab_error.h"
+
 module TLab_WorkFlow
-    use TLab_Constants, only: sp, wp, wi, longi, lfile, efile
+    use TLab_Constants, only: sp, wp, wi, longi, lfile, efile, fmt_r
 #ifdef USE_OPENMP
     use OMP_LIB
 #endif
@@ -106,12 +108,12 @@ contains
 
 #ifdef USE_MPI
         ims_time_max = MPI_WTIME()
-        write (line, '('//fmt_r//')') ims_time_max - ims_time_min
+        write (line, fmt_r) ims_time_max - ims_time_min
         line = 'Time elapse ....................: '//trim(adjustl(line))
         call TLab_Write_ASCII(lfile, line)
 
 #ifdef PROFILE_ON
-        write (line, '('//fmt_r//')') ims_time_trans
+        write (line, fmt_r) ims_time_trans
         line = 'Time in array transposition ....: '//trim(ADJUST(line))
         call TLab_Write_ASCII(lfile, line)
 #endif

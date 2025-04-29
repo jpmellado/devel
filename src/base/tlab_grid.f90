@@ -1,4 +1,4 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 module TLab_Grid
     use TLab_Constants, only: efile, wp, wi

@@ -1,5 +1,4 @@
-#include "dns_const.h"
-#include "dns_error.h"
+#include "tlab_error.h"
 
 module Discrete
     use TLab_Constants, only: wp, wi, efile, MAX_PARS, MAX_MODES

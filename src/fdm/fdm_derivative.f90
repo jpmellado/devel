@@ -1,4 +1,4 @@
-#include "dns_error.h"
+#include "tlab_error.h"
 
 module FDM_Derivative
     use TLab_Constants, only: wp, wi, pi_wp, efile, wfile

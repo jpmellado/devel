@@ -1,5 +1,4 @@
-#include "dns_error.h"
-#include "dns_const.h"
+#include "tlab_error.h"
 
 !########################################################################
 !# Reading general data from file tlab.ini, setting up general parameters
@@ -7,7 +6,7 @@
 subroutine TLab_Initialize_Parameters(inifile)
     use TLab_Constants, only: wp, wi, lfile, efile, wfile, MajorVersion, MinorVersion
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
-    use TLab_WorkFlow, only: imode_sim, imode_verbosity
+    use TLab_WorkFlow, only: imode_verbosity
     use TLab_WorkFlow, only: flow_on, scal_on, stagger_on
     use TLab_Memory, only: imax, jmax, kmax
     use IO_Fields, only: io_fileformat, io_datatype, IO_MPIIO, IO_NETCDF, IO_NOFILE, IO_TYPE_DOUBLE, IO_TYPE_SINGLE
