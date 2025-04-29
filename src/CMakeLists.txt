@@ -98,6 +98,6 @@ add_subdirectory(physics)
 add_subdirectory(tools)
 
 # produce validation tools
-# add_subdirectory(valid)
+add_subdirectory(valid)
 
 #add_custom_target(examples message(STATUS "We are making examples"))

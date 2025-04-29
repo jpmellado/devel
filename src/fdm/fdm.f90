@@ -29,7 +29,7 @@ module FDM
     end type fdm_dt
 
     type(fdm_dt), public, protected :: g(3)                    ! fdm derivative plans along 3 directions
-    type(fdm_integral_dt), public, protected :: fdm_Int0(2)    ! fdm integral plans along Oy (ode for lambda = 0)
+    type(fdm_integral_dt), public, protected :: fdm_Int0(2)    ! fdm integral plans along Oz (ode for lambda = 0)
 
     public :: FDM_Initialize
     public :: FDM_CreatePlan
@@ -132,8 +132,8 @@ contains
 
         ! ###################################################################
         ! Initializing fdm plans for first-order integrals (cases lambda = 0.0_wp)
-        call FDM_Int1_Initialize(y%nodes(:), g(2)%der1, 0.0_wp, BCS_MIN, fdm_Int0(BCS_MIN))
-        call FDM_Int1_Initialize(y%nodes(:), g(2)%der1, 0.0_wp, BCS_MAX, fdm_Int0(BCS_MAX))
+        call FDM_Int1_Initialize(z%nodes(:), g(3)%der1, 0.0_wp, BCS_MIN, fdm_Int0(BCS_MIN))
+        call FDM_Int1_Initialize(z%nodes(:), g(3)%der1, 0.0_wp, BCS_MAX, fdm_Int0(BCS_MAX))
 
         return
     end subroutine FDM_Initialize
