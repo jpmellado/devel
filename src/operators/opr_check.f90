@@ -37,9 +37,9 @@ subroutine OPR_CHECK()
     call random_number(q(1:isize_field, 1))
 
     ! ###################################################################
-    ! MPI transposition along OX
+    ! MPI transposition
 #ifdef USE_MPI
-    if (ims_npro_i > 1) then
+    if (ims_npro_i > 1) then            ! MPI transposition along OX
         call system_clock(t_srt, PROC_CYCLES, MAX_CYCLES)
         call TLabMPI_Trp_ExecI_Forward(q(:, 1), wrk3d, tmpi_plan_dx)
         call TLabMPI_Trp_ExecI_Backward(wrk3d, q(:, 2), tmpi_plan_dx)
@@ -58,13 +58,10 @@ subroutine OPR_CHECK()
         call TLab_Write_ASCII(lfile, line)
 
     end if
-#endif
 
-    ! MPI transposition along Oy
-#ifdef USE_MPI
-    if (ims_npro_j > 1) then
+    if (ims_npro_j > 1) then            ! MPI transposition along Oy
         call system_clock(t_srt, PROC_CYCLES, MAX_CYCLES)
-        idummy = itime; itime = -1  ! set itime to -1 for this call to trigger interruption
+        idummy = itime; itime = -1      ! set itime to -1 for this call to trigger interruption
         call TLabMPI_Trp_ExecJ_Forward(q(:, 1), wrk3d, tmpi_plan_dy)
         itime = idummy
         call TLabMPI_Trp_ExecJ_Backward(wrk3d, q(:, 2), tmpi_plan_dy)

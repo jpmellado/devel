@@ -116,7 +116,7 @@ contains
             if (ims_npro_j > 1) then
                 tmpi_plan_ffty = TLabMPI_Trp_PlanJ(jmax, nlines, &
                                                    locType=MPI_DOUBLE_COMPLEX, &
-                                                   message='Oz FFTW in Poisson solver.')
+                                                   message='Oy FFTW in Poisson solver.')
                 nlines = tmpi_plan_ffty%nlines
 
             end if
@@ -167,8 +167,8 @@ contains
     !########################################################################
     !########################################################################
     subroutine OPR_Fourier_X_Forward(in, out)
-        real(wp), intent(in) :: in(*)
-        complex(wp), intent(out), target :: out(*)
+        real(wp), intent(in) :: in(:)
+        complex(wp), intent(out), target :: out(:)
 
         ! #######################################################################
 #ifdef USE_MPI
@@ -195,8 +195,8 @@ contains
     !########################################################################
     !########################################################################
     subroutine OPR_Fourier_X_Backward(in, out)
-        complex(wp), intent(in) :: in(*)
-        real(wp), intent(out), target :: out(*)
+        complex(wp), intent(in) :: in(:)
+        real(wp), intent(out), target :: out(:)
 
         ! #######################################################################
 #ifdef USE_MPI
@@ -223,8 +223,8 @@ contains
     !########################################################################
     !########################################################################
     subroutine OPR_Fourier_Y_Forward(in, out)
-        complex(wp), intent(in), target :: in(*)
-        complex(wp), intent(out), target :: out(*)
+        complex(wp), intent(in), target :: in(:)
+        complex(wp), intent(out), target :: out(:)
 
         ! #######################################################################
         ! Local transposition: make y-direction the last one
@@ -250,8 +250,8 @@ contains
     !########################################################################
     !########################################################################
     subroutine OPR_Fourier_Y_Backward(in, out)
-        complex(wp), intent(in) :: in(*)
-        complex(wp), intent(out) :: out(*)
+        complex(wp), intent(in) :: in(:)
+        complex(wp), intent(out) :: out(:)
 
         ! #######################################################################
 #ifdef USE_MPI

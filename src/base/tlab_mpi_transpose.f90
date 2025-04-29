@@ -82,7 +82,7 @@ contains
 
         block = 'Parallel'
 
-        call ScanFile_Char(bakfile, inifile, block, 'TransposeModeI', 'void', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'TransposeModeI', 'asynchronous', sRes)
         if (trim(adjustl(sRes)) == 'none') then; trp_mode_i = TLAB_MPI_TRP_NONE
         elseif (trim(adjustl(sRes)) == 'asynchronous') then; trp_mode_i = TLAB_MPI_TRP_ASYNCHRONOUS
         elseif (trim(adjustl(sRes)) == 'sendrecv') then; trp_mode_i = TLAB_MPI_TRP_SENDRECV
@@ -92,7 +92,7 @@ contains
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
-        call ScanFile_Char(bakfile, inifile, block, 'TransposeModeJ', 'void', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'TransposeModeJ', 'asynchronous', sRes)
         if (trim(adjustl(sRes)) == 'none') then; trp_mode_j = TLAB_MPI_TRP_NONE
         elseif (trim(adjustl(sRes)) == 'asynchronous') then; trp_mode_j = TLAB_MPI_TRP_ASYNCHRONOUS
         elseif (trim(adjustl(sRes)) == 'sendrecv') then; trp_mode_j = TLAB_MPI_TRP_SENDRECV

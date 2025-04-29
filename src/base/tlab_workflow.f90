@@ -36,18 +36,6 @@ contains
 
         character*10 clock(2)
 
-        !########################################################################
-        ! First output
-        call date_and_time(clock(1), clock(2))
-        line = 'Starting on '//trim(adjustl(clock(1) (1:8)))//' at '//trim(adjustl(clock(2)))
-        call TLab_Write_ASCII(lfile, line)
-
-        line = 'Git-hash '//GITHASH
-        call TLab_Write_ASCII(lfile, line)
-
-        line = 'Git-branch '//GITBRANCH
-        call TLab_Write_ASCII(lfile, line)
-
         !#####################################################################
         ! Inititalize MPI parallel mode
 #ifdef USE_MPI
@@ -68,6 +56,17 @@ contains
         ims_time_trans = 0.0_wp
 
 #endif
+        !########################################################################
+        ! First output
+        call date_and_time(clock(1), clock(2))
+        line = 'Starting on '//trim(adjustl(clock(1) (1:8)))//' at '//trim(adjustl(clock(2)))
+        call TLab_Write_ASCII(lfile, line)
+
+        line = 'Git-hash '//GITHASH
+        call TLab_Write_ASCII(lfile, line)
+
+        line = 'Git-branch '//GITBRANCH
+        call TLab_Write_ASCII(lfile, line)
 
         !#####################################################################
         ! Inititalize OpenMP mode
