@@ -147,7 +147,7 @@ contains
                 end do
                 call OPR_Fourier_SetPSD(imax, jmax, kmax, c_tmp1, psd, locPhase=tmp3)
             end if
-            call OPR_Fourier_Backward(c_tmp1, tmp2)
+            call OPR_Fourier_Backward(c_tmp1, tmp2, c_tmp3)
             nullify (c_tmp1, c_tmp3)
         end if
 

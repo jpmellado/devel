@@ -11,7 +11,7 @@ subroutine OPR_CHECK()
     use TLabMPI_VARS, only: ims_npro_i, ims_npro_j
     use TLabMPI_Transpose
 #endif
-    use TLab_Grid, only: x, y
+    use TLab_Grid, only: x, y, z
     use OPR_Fourier
 
     implicit none
@@ -31,7 +31,7 @@ subroutine OPR_CHECK()
     complex(wp), pointer :: c_tmp1(:) => null(), c_tmp2(:) => null()
 
     ! ###################################################################
-    if (inb_flow_array < 3 .or. inb_txc < 4) return ! not enough memory
+    if (inb_flow_array < 3 .or. inb_txc < 2) return ! not enough memory
 
     ! Create random array
     call random_number(q(1:isize_field, 1))
@@ -91,8 +91,10 @@ subroutine OPR_CHECK()
     call c_f_pointer(c_loc(txc(:, 2)), c_tmp2, shape=[isize_txc_field/2])
 
     call system_clock(t_srt, PROC_CYCLES, MAX_CYCLES)
+    ! call OPR_Fourier_XY_Forward(q(:, 1), c_tmp1, c_tmp2)
+    ! call OPR_Fourier_XY_Backward(c_tmp1, q(:, 2), c_tmp2)
     call OPR_Fourier_Forward(q(:, 1), c_tmp1, c_tmp2)
-    call OPR_Fourier_Backward(c_tmp1, q(:, 2))
+    call OPR_Fourier_Backward(c_tmp1, q(:, 2), c_tmp2)
     call system_clock(t_end, PROC_CYCLES, MAX_CYCLES)
 
 #ifdef USE_MPI
@@ -103,7 +105,13 @@ subroutine OPR_CHECK()
 #endif
     write (str, fmt_r) real(t_dif, wp)/PROC_CYCLES
 
-    norm = 1.0_wp/real(x%size*y%size, wp)
+    if (fft_y_on) then
+        ! norm = 1.0_wp/real(x%size*y%size, wp)
+        norm = 1.0_wp/real(x%size*y%size*z%size, wp)
+    else
+        ! norm = 1.0_wp/real(x%size, wp)
+        norm = 1.0_wp/real(x%size*z%size, wp)
+    end if
 
 #ifdef USE_MPI
     dummy = maxval(abs(norm*q(1:isize_field, 2) - q(1:isize_field, 1)))
