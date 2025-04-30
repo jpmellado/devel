@@ -12,9 +12,9 @@ FILE(GLOB sourcefiles "fdm/vintegral.f90")
 add_executable(vintegral.x ${sourcefiles})
 target_link_libraries(vintegral.x physics operators fdm ${LEVEL1_LIBS} ${LIBS})
 
-# FILE(GLOB sourcefiles "elliptic/vpoisson.f90")
-# add_executable(vpoisson.x ${sourcefiles})
-# target_link_libraries(vpoisson.x physics mappings operators thermodynamics filters fdm ibm ${LEVEL1_LIBS} ${LIBS})
+FILE(GLOB sourcefiles "elliptic/velliptic.f90")
+add_executable(velliptic.x ${sourcefiles})
+target_link_libraries(velliptic.x physics operators fdm ${LEVEL1_LIBS} ${LIBS})
 
 # FILE(GLOB sourcefiles "burgers/*.f90")
 # add_executable(vburgers.x ${sourcefiles})

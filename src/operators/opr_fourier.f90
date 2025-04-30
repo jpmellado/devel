@@ -201,7 +201,7 @@ contains
         ! #######################################################################
 #ifdef USE_MPI
         if (ims_npro_i > 1) then
-            call c_f_pointer(c_loc(out), c_out, shape=[isize_txc_field])
+            call c_f_pointer(c_loc(out), c_out, shape=[isize_txc_field/2])
 
             call TLabMPI_Trp_ExecI_Forward(in, c_out, tmpi_plan_fftx)
             call dfftw_execute_dft_c2r(fft_plan_bx, c_out, wrk3d)
@@ -344,7 +344,7 @@ contains
         call dfftw_execute_dft(fft_plan_bz, in, tmp1)
 
         if (fft_y_on) then
-            call c_f_pointer(c_loc(out), c_out, shape=[isize_txc_field])
+            call c_f_pointer(c_loc(out), c_out, shape=[isize_txc_field/2])
 
             ! Local transposition: make y-direction the last one
             call TLab_Transpose_complex(tmp1, (imax/2 + 1)*jmax, kmax, (imax/2 + 1)*jmax, c_out, kmax)

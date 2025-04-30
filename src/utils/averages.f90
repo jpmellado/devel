@@ -2,7 +2,7 @@ module Averages
     use TLab_Constants, only: wp, wi
 #ifdef USE_MPI
     use mpi_f08
-    use TLabMPI_VARS, only: ims_comm_y, ims_npro_i, ims_npro_k
+    use TLabMPI_VARS, only: ims_comm_y, ims_npro_i, ims_npro_j, ims_npro_k
     use TLabMPI_VARS, only: ims_err
 #endif
     implicit none
@@ -35,7 +35,7 @@ contains
 !########################################################################
     function AVG1V1D(nx, ny, nz, i, j, imom, a) result(avg)
         integer(wi), intent(in) :: nx, ny, nz, i, j, imom   ! Moment order
-        real(wp),    intent(in) :: a(nx, ny, nz)
+        real(wp), intent(in) :: a(nx, ny, nz)
         real(wp) avg
 
         ! -------------------------------------------------------------------
@@ -60,10 +60,10 @@ contains
 ! Adding in k of the matrix a for all the elements in j
 !########################################################################
     subroutine SUM1V1D_V(ny, nz, a, avg, wrk)
-        integer(wi), intent(in)    :: ny, nz
-        real(wp),    intent(in)    :: a(ny, nz)
-        real(wp),    intent(out)   :: avg(ny)
-        real(wp),    intent(inout) :: wrk(ny)
+        integer(wi), intent(in) :: ny, nz
+        real(wp), intent(in) :: a(ny, nz)
+        real(wp), intent(out) :: avg(ny)
+        real(wp), intent(inout) :: wrk(ny)
 
         ! -------------------------------------------------------------------
         integer(wi) k
@@ -87,7 +87,7 @@ contains
 !########################################################################
     function COV2V1D(nx, ny, nz, i, j, a, b) result(avg)
         integer(wi), intent(in) :: nx, ny, nz, i, j
-        real(wp),    intent(in) :: a(nx, ny, nz), b(nx, ny, nz)
+        real(wp), intent(in) :: a(nx, ny, nz), b(nx, ny, nz)
         real(wp) avg
 
         ! -------------------------------------------------------------------
@@ -113,7 +113,7 @@ contains
 !########################################################################
     function AVG1V2D(nx, ny, nz, j, imom, a) result(avg)
         integer(wi), intent(in) :: nx, ny, nz, j, imom      ! Moment order
-        real(wp),    intent(in) :: a(nx, ny, nz)
+        real(wp), intent(in) :: a(nx, ny, nz)
         real(wp) avg
 
         ! -------------------------------------------------------------------
@@ -140,10 +140,10 @@ contains
 ! #######################################################################
 ! Vector form
     subroutine AVG1V2D_V(nx, ny, nz, imom, a, avg, wrk)
-        integer(wi), intent(in)    :: nx, ny, nz, imom      ! Moment order
-        real(wp),    intent(in)    :: a(nx, ny, nz)
-        real(wp),    intent(out)   :: avg(ny)
-        real(wp),    intent(inout) :: wrk(ny)
+        integer(wi), intent(in) :: nx, ny, nz, imom      ! Moment order
+        real(wp), intent(in) :: a(nx, ny, nz)
+        real(wp), intent(out) :: avg(ny)
+        real(wp), intent(inout) :: wrk(ny)
 
         ! -------------------------------------------------------------------
         integer(wi) i, j, k
@@ -171,9 +171,9 @@ contains
 !########################################################################
     function AVG1V2D1G(nx, ny, nz, j, igate, imom, a, gate) result(avg)
         integer(wi), intent(in) :: nx, ny, nz, j, imom      ! Moment order
-        integer(1),  intent(in) :: igate                    ! Gate level to use
-        real(wp),    intent(in) :: a(nx, ny, nz)
-        integer(1),  intent(in) :: gate(nx, ny, nz)
+        integer(1), intent(in) :: igate                    ! Gate level to use
+        real(wp), intent(in) :: a(nx, ny, nz)
+        integer(1), intent(in) :: gate(nx, ny, nz)
         real(wp) avg
 
         ! -------------------------------------------------------------------
@@ -213,7 +213,7 @@ contains
 !########################################################################
     function INTER1V2D(nx, ny, nz, j, igate, gate) result(avg)
         integer(wi), intent(in) :: nx, ny, nz, j
-        integer(1),  intent(in) :: gate(nx, ny, nz), igate
+        integer(1), intent(in) :: gate(nx, ny, nz), igate
         real(wp) avg
 
         ! -------------------------------------------------------------------
@@ -243,7 +243,7 @@ contains
 ! ###################################################################
     function COV2V2D(nx, ny, nz, j, a, b) result(avg)
         integer(wi), intent(in) :: nx, ny, nz, j
-        real(wp),    intent(in) :: a(nx, ny, nz), b(nx, ny, nz)
+        real(wp), intent(in) :: a(nx, ny, nz), b(nx, ny, nz)
         real(wp) avg
 
         ! -------------------------------------------------------------------
@@ -270,26 +270,26 @@ contains
 !# Calculate the average of the plane j in array a over nonuniform grids.
 !# Same as avg1v2d but specific for the common case imom = 1
 !########################################################################
-    function AVG_IK(nx, ny, nz, j, a) result(avg)
-        integer(wi), intent(in) :: nx, ny, nz, j
-        real(wp),    intent(in) :: a(nx, ny, nz)
+    function AVG_IK(nx, ny, nz, k, a) result(avg)
+        integer(wi), intent(in) :: nx, ny, nz, k
+        real(wp), intent(in) :: a(nx, ny, nz)
         real(wp) avg
 
         ! -------------------------------------------------------------------
-        integer(wi) i, k
+        integer(wi) i, j
 
         ! ###################################################################
         avg = 0.0_wp
-        do k = 1, nz
+        do j = 1, ny
             do i = 1, nx
                 avg = avg + a(i, j, k)
             end do
         end do
 
-        avg = avg/real(nx*nz, wp)
+        avg = avg/real(nx*ny, wp)
 #ifdef USE_MPI
         call MPI_ALLREDUCE(avg, sum_mpi, 1, MPI_REAL8, MPI_SUM, MPI_COMM_WORLD, ims_err)
-        avg = sum_mpi/real(ims_npro_i*ims_npro_k, wp)
+        avg = sum_mpi/real(ims_npro_i*ims_npro_j, wp)
 #endif
 
         return
@@ -299,10 +299,10 @@ contains
 !########################################################################
 ! Vector form
     subroutine AVG_IK_V(nx, ny, nz, a, avg, wrk)
-        integer(wi), intent(in)    :: nx, ny, nz
-        real(wp),    intent(in)    :: a(nx, ny, nz)
-        real(wp),    intent(out)   :: avg(ny)
-        real(wp),    intent(inout) :: wrk(ny)
+        integer(wi), intent(in) :: nx, ny, nz
+        real(wp), intent(in) :: a(nx, ny, nz)
+        real(wp), intent(out) :: avg(ny)
+        real(wp), intent(inout) :: wrk(ny)
 
         ! -------------------------------------------------------------------
         integer(wi) i, j, k
