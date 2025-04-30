@@ -138,7 +138,7 @@ contains
 
         ! -------------------------------------------------------------------
         integer(wi) nxz
-        real(wp), dimension(:), pointer :: p_a, p_b, p_c
+        real(wp), dimension(:), pointer :: p_b, p_c, p_d
 
         ! ###################################################################
         if (g%size == 1) then ! Set to zero in 2D case
@@ -147,32 +147,38 @@ contains
 
         else
             ! ###################################################################
-            ! Local transposition: make y-direction the last one
+            ! Transposition: make y-direction the last one
 #ifdef USE_ESSL
-            call DGETMO(u, nx*ny, nx*ny, nz, wrk3d, nz)
+            call DGETMO(u, nx*ny, nx*ny, nz, result, nz)
 #else
-            call TLab_Transpose(u, nx*ny, nz, nx*ny, wrk3d, nz)
+            call TLab_Transpose(u, nx*ny, nz, nx*ny, result, nz)
 #endif
-            ! MPI Transposition
+
 #ifdef USE_MPI
             if (ims_npro_j > 1) then
-                call TLabMPI_Trp_ExecJ_Forward(wrk3d, result, tmpi_plan_dy)
-                p_a => result
-                if (any([OPR_P2, OPR_P2_P1] == type)) then
-                    p_b => tmp1
-                    p_c => wrk3d
-                else
-                    p_b => wrk3d
-                end if
+                call TLabMPI_Trp_ExecJ_Forward(result, wrk3d, tmpi_plan_dy)
                 nxz = tmpi_plan_dy%nlines
+
+                p_b => wrk3d
+                if (any([OPR_P2, OPR_P2_P1] == type)) then
+                    p_c => result
+                    p_d => tmp1
+                else
+                    p_c => result
+                end if
+
             else
 #endif
-                p_a => wrk3d
+                nxz = nx*nz
+
                 p_b => result
                 if (any([OPR_P2, OPR_P2_P1] == type)) then
                     p_c => tmp1
+                    p_d => wrk3d
+                else
+                    p_c => wrk3d
                 end if
-                nxz = nx*nz
+
 #ifdef USE_MPI
             end if
 #endif
@@ -180,15 +186,15 @@ contains
             ! ###################################################################
             select case (type)
             case (OPR_P2)
-                if (g%der2%need_1der) call FDM_Der1_Solve(nxz, bcs(1), g%der1, g%der1%lu, p_a, p_c, wrk2d)
-                call FDM_Der2_Solve(nxz, g%der2, g%der2%lu, p_a, p_b, p_c, wrk2d)
+                if (g%der2%need_1der) call FDM_Der1_Solve(nxz, bcs(1), g%der1, g%der1%lu, p_b, p_d, wrk2d)
+                call FDM_Der2_Solve(nxz, g%der2, g%der2%lu, p_b, p_c, p_d, wrk2d)
 
             case (OPR_P2_P1)
-                call FDM_Der1_Solve(nxz, bcs(1), g%der1, g%der1%lu, p_a, p_c, wrk2d)
-                call FDM_Der2_Solve(nxz, g%der2, g%der2%lu, p_a, p_b, p_c, wrk2d)
+                call FDM_Der1_Solve(nxz, bcs(1), g%der1, g%der1%lu, p_b, p_d, wrk2d)
+                call FDM_Der2_Solve(nxz, g%der2, g%der2%lu, p_b, p_c, p_d, wrk2d)
 
             case (OPR_P1)
-                call FDM_Der1_Solve(nxz, bcs(1), g%der1, g%der1%lu, p_a, p_c, wrk2d)
+                call FDM_Der1_Solve(nxz, bcs(1), g%der1, g%der1%lu, p_b, p_c, wrk2d)
 
             end select
 
@@ -196,13 +202,34 @@ contains
             ! Put arrays back in the order in which they came in
 #ifdef USE_MPI
             if (ims_npro_j > 1) then
-                call TLabMPI_Trp_ExecJ_Backward(p_b, result, tmpi_plan_dy)
-                if (type == OPR_P2_P1) call TLabMPI_Trp_ExecJ_Backward(p_c, tmp1, tmpi_plan_dy)
+                call TLabMPI_Trp_ExecJ_Backward(p_c, p_b, tmpi_plan_dy)
+                if (type == OPR_P2_P1) call TLabMPI_Trp_ExecJ_Backward(p_d, p_c, tmpi_plan_dy)
+
+#ifdef USE_ESSL
+                if (type == OPR_P2_P1) call DGETMO(p_c, nz, nz, nx*ny, tmp1, nx*ny)
+                call DGETMO(p_b, nz, nz, nx*ny, result, nx*ny)
+#else
+                if (type == OPR_P2_P1) call TLab_Transpose(p_c, nz, nx*ny, nz, tmp1, nx*ny)
+                call TLab_Transpose(p_b, nz, nx*ny, nz, result, nx*ny)
+#endif
+
+            else
+#endif
+
+#ifdef USE_ESSL
+                call DGETMO(p_c, nz, nz, nx*ny, result, nx*ny)
+                if (type == OPR_P2_P1) call DGETMO(p_d, nz, nz, nx*ny, tmp1, nx*ny)
+#else
+                call TLab_Transpose(p_c, nz, nx*ny, nz, result, nx*ny)
+                if (type == OPR_P2_P1) call TLab_Transpose(p_d, nz, nx*ny, nz, tmp1, nx*ny)
+#endif
+
+#ifdef USE_MPI
             end if
 #endif
 
-            nullify (p_a, p_b)
-            if (associated(p_c)) nullify (p_c)
+            nullify (p_b, p_c)
+            if (associated(p_d)) nullify (p_d)
 
         end if
 

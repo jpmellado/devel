@@ -1,5 +1,5 @@
 program VPARTIAL3D
-    use TLab_Constants, only: wp, wi, gfile, ifile
+    use TLab_Constants, only: wp, wi, pi_wp, gfile, ifile
     use TLab_Time, only: itime
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop, TLab_Start
     use TLab_Memory, only: imax, jmax, kmax, inb_txc
@@ -7,7 +7,7 @@ program VPARTIAL3D
     use TLab_Arrays
 #ifdef USE_MPI
     use mpi_f08
-    use TLabMPI_VARS, only: ims_err, ims_pro
+    use TLabMPI_VARS, only: ims_err, ims_pro, ims_offset_i, ims_offset_j
     use TLabMPI_PROCS, only: TLabMPI_Initialize
     use TLabMPI_Transpose, only: TLabMPI_Trp_Initialize
 #endif
@@ -20,12 +20,12 @@ program VPARTIAL3D
 
     implicit none
 
-    type(fdm_dt) :: g_loc(3)
+    type(fdm_dt) :: g_loc
     real(wp), dimension(:, :), allocatable :: bcs_hb, bcs_ht
     real(wp), dimension(:, :, :), pointer :: a, b, c, d, e, f
     real(wp), dimension(:, :, :), pointer :: u, du1_a, du2_a, du1_n, du2_n
 
-    integer(wi) i, bcs(2, 2)
+    integer(wi) i, bcs(2, 2), idsp, jdsp
     integer(wi) type_of_problem
     real(wp) params(0), wk, x_0
 
@@ -72,44 +72,66 @@ program VPARTIAL3D
     x_0 = 0.75_wp
     wk = 1.0_wp
 
-    do i = 1, kmax
-        ! ! single-mode
-        ! u(:, i) = 1.0_wp + sin(2.0_wp*pi_wp/z%scale*wk*z%nodes(i)) ! + pi_wp/4.0_wp)
-        ! du1_a(:, i) = (2.0_wp*pi_wp/z%scale*wk) &
-        !               *cos(2.0_wp*pi_wp/z%scale*wk*z%nodes(i))! + pi_wp/4.0_wp)
-        ! ! Gaussian
-        u(:, :, i) = exp(-(z%nodes(i) - x_0*z%scale)**2/(2.0_wp*(z%scale/wk)**2))
-        du1_a(:, :, i) = -(z%nodes(i) - x_0*z%scale)/(z%scale/wk)**2*u(:, :, i)
-        du2_a(:, :, i) = -(z%nodes(i) - x_0*z%scale)/(z%scale/wk)**2*du1_a(:, :, i) &
-                         - 1.0_wp/(z%scale/wk)**2*u(:, :, i)
-        ! ! exponential
-        ! u(:, i) = exp(-z%nodes(i)*wk)
-        ! du1_a(:, i) = -wk*u(:, i)
-        ! step
-        ! u(:, i) = max(0.0_wp, (z%nodes(i) - z%nodes(kmax/2))*x_0)
-        ! du1_a(:, i) = (1.0_wp + sign(1.0_wp, z%nodes(i) - z%nodes(kmax/2)))*0.5_wp*x_0
-        ! ! tanh
-        ! u(:, i) = x_0*log(1.0_wp + exp((z%nodes(i) - z%nodes(kmax/2))/x_0))
-        ! du1_a(:, i) = 0.5_wp*(1.0_wp + tanh(0.5_wp*(z%nodes(i) - z%nodes(kmax/2))/x_0))
-        ! ! Polynomial
-        ! dummy = 4.0_wp
-        ! u(:, i) = ((z%scale - z%nodes(i))/wk)**dummy
-        ! du1_a(:, i) = -dummy*((z%scale - z%nodes(i))/wk)**(dummy - 1.0_wp)
-        ! ! zero
-        ! u(:, i) = 0.0_wp
-        ! du1_a(:, i) = 0.0_wp
-        ! ! delta-function
-        ! u(:, i) = max(0.0_wp, 2.0_wp - real(i, wp))
-        ! du1_a(:, i) = 0.0_wp
-        ! du2_a(:, i) = 0.0_wp
+#ifdef USE_MPI
+    idsp = ims_offset_i; jdsp = ims_offset_j
+#else
+    idsp = 0; jdsp = 0
+#endif
+
+    do i = 1, imax
+        ! single-mode
+        u(i, :, :) = 1.0_wp + sin(2.0_wp*pi_wp/x%scale*wk*x%nodes(i + idsp)) ! + pi_wp/4.0_wp)
+        du1_a(i, :, :) = (2.0_wp*pi_wp/x%scale*wk) &
+                         *cos(2.0_wp*pi_wp/x%scale*wk*x%nodes(i + idsp))! + pi_wp/4.0_wp)
+        du2_a(i, :, :) = -(2.0_wp*pi_wp/x%scale*wk)**2 &
+                         *sin(2.0_wp*pi_wp/x%scale*wk*x%nodes(i + idsp))! + pi_wp/4.0_wp)
     end do
+
+    ! do i = 1, jmax
+    !     ! single-mode
+    !     u(:, i, :) = 1.0_wp + sin(2.0_wp*pi_wp/y%scale*wk*y%nodes(i + jdsp)) ! + pi_wp/4.0_wp)
+    !     du1_a(:, i, :) = (2.0_wp*pi_wp/y%scale*wk) &
+    !                      *cos(2.0_wp*pi_wp/y%scale*wk*y%nodes(i + jdsp))! + pi_wp/4.0_wp)
+    !     du2_a(:, i, :) = -(2.0_wp*pi_wp/y%scale*wk)**2 &
+    !                      *sin(2.0_wp*pi_wp/y%scale*wk*y%nodes(i + jdsp))! + pi_wp/4.0_wp)
+    ! end do
+
+    ! do i = 1, kmax
+    !     ! ! Gaussian
+    !     u(:, :, i) = exp(-(z%nodes(i) - x_0*z%scale)**2/(2.0_wp*(z%scale/wk)**2))
+    !     du1_a(:, :, i) = -(z%nodes(i) - x_0*z%scale)/(z%scale/wk)**2*u(:, :, i)
+    !     du2_a(:, :, i) = -(z%nodes(i) - x_0*z%scale)/(z%scale/wk)**2*du1_a(:, :, i) &
+    !                      - 1.0_wp/(z%scale/wk)**2*u(:, :, i)
+    !     ! ! exponential
+    !     ! u(:, i) = exp(-z%nodes(i)*wk)
+    !     ! du1_a(:, i) = -wk*u(:, i)
+    !     ! step
+    !     ! u(:, i) = max(0.0_wp, (z%nodes(i) - z%nodes(kmax/2))*x_0)
+    !     ! du1_a(:, i) = (1.0_wp + sign(1.0_wp, z%nodes(i) - z%nodes(kmax/2)))*0.5_wp*x_0
+    !     ! ! tanh
+    !     ! u(:, i) = x_0*log(1.0_wp + exp((z%nodes(i) - z%nodes(kmax/2))/x_0))
+    !     ! du1_a(:, i) = 0.5_wp*(1.0_wp + tanh(0.5_wp*(z%nodes(i) - z%nodes(kmax/2))/x_0))
+    !     ! ! Polynomial
+    !     ! dummy = 4.0_wp
+    !     ! u(:, i) = ((z%scale - z%nodes(i))/wk)**dummy
+    !     ! du1_a(:, i) = -dummy*((z%scale - z%nodes(i))/wk)**(dummy - 1.0_wp)
+    !     ! ! zero
+    !     ! u(:, i) = 0.0_wp
+    !     ! du1_a(:, i) = 0.0_wp
+    !     ! ! delta-function
+    !     ! u(:, i) = max(0.0_wp, 2.0_wp - real(i, wp))
+    !     ! du1_a(:, i) = 0.0_wp
+    !     ! du2_a(:, i) = 0.0_wp
+    ! end do
 
     ! call IO_Read_Fields('field.inp', imax, jmax, kmax, itime, 1, 0, f, params)
 
     ! ###################################################################
     select case (type_of_problem)
     case (1)
-        call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, bcs, g(3), u, du2_n, du1_n)
+        call OPR_Partial_X(OPR_P2_P1, imax, jmax, kmax, bcs, g(1), u, du2_n, du1_n)
+        ! call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g(2), u, du2_n, du1_n)
+        ! call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, bcs, g(3), u, du2_n, du1_n)
 
         call check(du1_a, du1_n, txc(:, 1))
 
@@ -117,24 +139,24 @@ program VPARTIAL3D
 
         ! ###################################################################
     case (2)
-        ! g(2)%der1%mode_fdm = FDM_COM6_JACOBIAN
-        ! call FDM_CreatePlan(y, g(2))
-        ! ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), f, c)
-        ! ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), c, a)
-        ! call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g(2), f, a, c)
-        ! call IO_Write_Fields('field.out1', imax, jmax, kmax, itime, 1, a)
+        g_loc%der1%mode_fdm = FDM_COM6_JACOBIAN
+        call FDM_CreatePlan(z, g_loc)
+        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), f, c)
+        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), c, a)
+        call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g_loc, f, a, c)
+        call IO_Write_Fields('field.out1', imax, jmax, kmax, itime, 1, a)
 
-        ! g(2)%der1%mode_fdm = FDM_COM4_DIRECT
-        ! call FDM_CreatePlan(y, g(2))
-        ! ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), f, d)
-        ! ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), d, b)
-        ! call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g(2), f, b, d)
-        ! call IO_Write_Fields('field.out2', imax, jmax, kmax, itime, 1, b)
+        g_loc%der1%mode_fdm = FDM_COM4_DIRECT
+        call FDM_CreatePlan(z, g_loc)
+        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), f, d)
+        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), d, b)
+        call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g_loc, f, b, d)
+        call IO_Write_Fields('field.out2', imax, jmax, kmax, itime, 1, b)
 
-        ! ! -------------------------------------------------------------------
-        ! call check(a, b, txc(:, 1), 'field.dif')
+        ! -------------------------------------------------------------------
+        call check(a, b, txc(:, 1), 'field.dif')
 
-        ! call check(c, d, txc(:, 1))
+        call check(c, d, txc(:, 1))
 
     end select
 

@@ -188,7 +188,7 @@ contains
         end if
 
         if (ims_npro_j > 1) then
-            tmpi_plan_dy = TLabMPI_Trp_PlanJ(jmax, imax*kmax, message='Oz derivatives.')
+            tmpi_plan_dy = TLabMPI_Trp_PlanJ(jmax, imax*kmax, message='Oy derivatives.')
         end if
 
         return
