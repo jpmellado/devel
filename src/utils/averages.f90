@@ -109,27 +109,27 @@ contains
     end function COV2V1D
 
 !########################################################################
-! Average within the plane j
+! Average within the plane k
 !########################################################################
-    function AVG1V2D(nx, ny, nz, j, imom, a) result(avg)
-        integer(wi), intent(in) :: nx, ny, nz, j, imom      ! Moment order
+    function AVG1V2D(nx, ny, nz, k, imom, a) result(avg)
+        integer(wi), intent(in) :: nx, ny, nz, k, imom      ! Moment order
         real(wp), intent(in) :: a(nx, ny, nz)
         real(wp) avg
 
         ! -------------------------------------------------------------------
-        integer(wi) i, k
+        integer(wi) i, j
 
         ! ###################################################################
         avg = 0.0_wp
-        do k = 1, nz
+        do j = 1, ny
             do i = 1, nx
                 avg = avg + a(i, j, k)**imom
             end do
         end do
 
-        avg = avg/real(nx*nz, wp)
+        avg = avg/real(nx*ny, wp)
 #ifdef USE_MPI
-        sum_mpi = avg/real(ims_npro_i*ims_npro_k, wp)
+        sum_mpi = avg/real(ims_npro_i*ims_npro_j, wp)
         call MPI_ALLREDUCE(sum_mpi, avg, 1, MPI_REAL8, MPI_SUM, MPI_COMM_WORLD, ims_err)
 #endif
 

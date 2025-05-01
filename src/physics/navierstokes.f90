@@ -41,7 +41,7 @@ contains
         ! -------------------------------------------------------------------
         character(len=32) bakfile, block
         character(len=512) sRes
-        character*64 lstr
+        character(len=64) lstr
         integer(wi) is, idummy
         real(wp) dummy, reynolds
 

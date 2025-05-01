@@ -8,8 +8,8 @@ module Discrete
     type, public :: discrete_dt
         sequence
         integer type, size
-        integer, dimension(MAX_MODES) :: modex, modez
-        real(wp), dimension(MAX_MODES) :: amplitude, phasex, phasez
+        integer, dimension(MAX_MODES) :: modex, modey
+        real(wp), dimension(MAX_MODES) :: amplitude, phasex, phasey
         real(wp), dimension(MAX_PARS) :: parameters
     end type discrete_dt
 
@@ -31,11 +31,11 @@ contains
         call TLab_Write_ASCII(bakfile, '#')
         call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
         call TLab_Write_ASCII(bakfile, '#Type=<Varicose/Sinuous/Gaussian/Step>')
-        call TLab_Write_ASCII(bakfile, '#Aplitude=<value>')
+        call TLab_Write_ASCII(bakfile, '#Amplitude=<value>')
         call TLab_Write_ASCII(bakfile, '#ModeX=<value>')
-        call TLab_Write_ASCII(bakfile, '#ModeZ=<value>')
+        call TLab_Write_ASCII(bakfile, '#ModeY=<value>')
         call TLab_Write_ASCII(bakfile, '#PhaseX=<value>')
-        call TLab_Write_ASCII(bakfile, '#PhaseZ=<value>')
+        call TLab_Write_ASCII(bakfile, '#PhaseY=<value>')
         call TLab_Write_ASCII(bakfile, '#Broadening=<value>')
 !    CALL TLab_Write_ASCII(bakfile, '#Parameters=<values>')
 
@@ -57,14 +57,14 @@ contains
             end if
         end if
 
-        call ScanFile_Char(bakfile, inifile, block, 'ModeZ', 'void', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'Modey', 'void', sRes)
         if (trim(adjustl(sRes)) == 'void') then     ! Default
-            var%modez = 0
+            var%modey = 0
         else
             idummy = MAX_MODES
-            call LIST_INTEGER(sRes, idummy, var%modez)
+            call LIST_INTEGER(sRes, idummy, var%modey)
             if (idummy /= var%size) then
-                call TLab_Write_ASCII(efile, __FILE__//'. Inconsistent Discrete.ModeZ.')
+                call TLab_Write_ASCII(efile, __FILE__//'. Inconsistent Discrete.Modey.')
                 call TLab_Stop(DNS_ERROR_INFDISCR)
             end if
         end if
@@ -83,14 +83,14 @@ contains
             end if
         end if
 
-        call ScanFile_Char(bakfile, inifile, block, 'PhaseZ', 'void', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'PhaseY', 'void', sRes)
         if (trim(adjustl(sRes)) == 'void') then     ! Default
-            var%phasez = 0.0_wp
+            var%phasey = 0.0_wp
         else
             idummy = MAX_MODES
-            call LIST_REAL(sRes, idummy, var%phasez)
+            call LIST_REAL(sRes, idummy, var%phasey)
             if (idummy /= var%size) then
-                call TLab_Write_ASCII(efile, __FILE__//'. Inconsistent Discrete.PhaseZ.')
+                call TLab_Write_ASCII(efile, __FILE__//'. Inconsistent Discrete.PhaseY.')
                 call TLab_Stop(DNS_ERROR_INFDISCR)
             end if
         end if

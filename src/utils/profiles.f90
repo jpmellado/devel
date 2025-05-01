@@ -16,11 +16,11 @@ module Profiles
         logical :: relative = .true.                ! use reference spatial position relative to the extent of the domain
         real(wp) :: mean = 0.0_wp                   ! mean value of f
         real(wp) :: delta = 1.0_wp                  ! increment of f
-        real(wp) :: ymean = 0.0_wp                  ! reference spatial position at which f changes      
-        real(wp) :: ymean_rel = 0.5_wp              ! same but relative to the extent of the domain
+        real(wp) :: zmean = 0.0_wp                  ! reference spatial position at which f changes      
+        real(wp) :: zmean_rel = 0.5_wp              ! same but relative to the extent of the domain
         real(wp) :: thick = 1.0_wp                  ! spatial interval over which f changes
-        real(wp) :: lslope = 0.0_wp                 ! slope of f below the ymean
-        real(wp) :: uslope = 0.0_wp                 ! slope of f above ymean
+        real(wp) :: lslope = 0.0_wp                 ! slope of f below the zmean
+        real(wp) :: uslope = 0.0_wp                 ! slope of f above zmean
         real(wp) :: diam = 0.0_wp                   ! diameter
         real(wp) :: parameters(MAX_PARS) = 0.0_wp   ! additional parameters
     end type profiles_dt
@@ -64,8 +64,8 @@ contains
         ! -------------------------------------------------------------------
         call TLab_Write_ASCII(bakfile, '#Profile'//trim(adjustl(tag))//'=<None/Tanh/Erf/Ekman/Parabolic/...>')
         call TLab_Write_ASCII(bakfile, '#'//trim(adjustl(tag))//'=<value>')
-        call TLab_Write_ASCII(bakfile, '#YMean'//trim(adjustl(tag))//'=<value>')
-        call TLab_Write_ASCII(bakfile, '#YMeanRelative'//trim(adjustl(tag))//'=<value>')
+        call TLab_Write_ASCII(bakfile, '#Zmean'//trim(adjustl(tag))//'=<value>')
+        call TLab_Write_ASCII(bakfile, '#ZmeanRelative'//trim(adjustl(tag))//'=<value>')
         call TLab_Write_ASCII(bakfile, '#Diam'//trim(adjustl(tag))//'=<value>')
         call TLab_Write_ASCII(bakfile, '#Thick'//trim(adjustl(tag))//'=<value>')
         call TLab_Write_ASCII(bakfile, '#Delta'//trim(adjustl(tag))//'=<value>')
@@ -110,19 +110,19 @@ contains
             call ScanFile_Real(bakfile, inifile, block, 'Mean'//trim(adjustl(tag)), '0.0', var%mean)
         end if
 
-        call ScanFile_Char(bakfile, inifile, block, 'YMean'//trim(adjustl(tag)), 'void', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'Zmean'//trim(adjustl(tag)), 'void', sRes)
         if (trim(adjustl(sRes)) == 'void') then
             var%relative = .true.
-            call ScanFile_Real(bakfile, inifile, block, 'YMeanRelative'//trim(adjustl(tag)), '0.5', var%ymean_rel)    ! Position in relative coordinates
+            call ScanFile_Real(bakfile, inifile, block, 'ZmeanRelative'//trim(adjustl(tag)), '0.5', var%zmean_rel)    ! Position in relative coordinates
             ! Backwards compatibility
             call ScanFile_Char(bakfile, inifile, block, 'YCoor'//trim(adjustl(tag)), 'void', sRes)
             if (trim(adjustl(sRes)) /= 'void') then
-                call ScanFile_Real(bakfile, inifile, block, 'YCoor'//trim(adjustl(tag)), '0.5', var%ymean_rel)
-                call TLab_Write_ASCII(wfile, 'Update tag YCoor to YMeanRelative.')
+                call ScanFile_Real(bakfile, inifile, block, 'YCoor'//trim(adjustl(tag)), '0.5', var%zmean_rel)
+                call TLab_Write_ASCII(wfile, 'Update tag YCoor to ZmeanRelative.')
             end if
         else
             var%relative = .false.
-            call ScanFile_Real(bakfile, inifile, block, 'YMean'//trim(adjustl(tag)), '0.0', var%ymean)         ! Position in absolute coordinates
+            call ScanFile_Real(bakfile, inifile, block, 'Zmean'//trim(adjustl(tag)), '0.0', var%zmean)         ! Position in absolute coordinates
         end if
 
         call ScanFile_Real(bakfile, inifile, block, 'Thick'//trim(adjustl(tag)), '0.0', var%thick)
@@ -175,7 +175,7 @@ contains
         real(wp) yrel, xi, amplify, zamp, cnought
 
         ! ###################################################################
-        yrel = y - var%ymean    ! position relative to reference height
+        yrel = y - var%zmean    ! position relative to reference height
         amplify = 0.0_wp        ! default
 
         ! -------------------------------------------------------------------

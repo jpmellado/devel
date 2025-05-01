@@ -9,19 +9,13 @@ FILE(GLOB sourcefiles "preprocessing/inirand/*.f90")
 add_executable(inirand.x ${sourcefiles})
 target_link_libraries(inirand.x physics operators fdm ${LEVEL1_LIBS} ${LIBS})
 
-# FILE(GLOB sourcefiles "initialize/scal/*.f90")
-# add_executable(iniscal.x ${sourcefiles})
-# target_link_libraries(iniscal.x statistics physics mappings operators filters fdm ibm thermodynamics ${LEVEL1_LIBS} ${LIBS})
-# if (PSFFT_LIB)
-# set_target_properties(iniscal.x PROPERTIES LINK_FLAGS "${PSFFT_LINK_FLAGS} ${LINK_FLAGS}")
-# endif()
+FILE(GLOB sourcefiles "preprocessing/iniscal/*.f90")
+add_executable(iniscal.x ${sourcefiles})
+target_link_libraries(iniscal.x physics operators fdm ${LEVEL1_LIBS} ${LIBS})
 
-# FILE(GLOB sourcefiles "initialize/flow/*.f90")
+# FILE(GLOB sourcefiles "preprocessing/iniflow/*.f90")
 # add_executable(iniflow.x ${sourcefiles})
 # target_link_libraries(iniflow.x statistics physics mappings operators filters fdm ibm thermodynamics ${LEVEL1_LIBS} ${LIBS})
-# if (PSFFT_LIB)
-# set_target_properties(iniflow.x PROPERTIES LINK_FLAGS "${PSFFT_LINK_FLAGS} ${LINK_FLAGS}")
-# endif()
 
 # # Simulation
 # FILE(GLOB sourcefiles "dns/*.f90")
