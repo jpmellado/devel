@@ -39,7 +39,7 @@ contains
         character(len=*), intent(in) :: inifile
 
         ! -------------------------------------------------------------------
-        character(len=32) bakfile, block
+        character(len=32) bakfile, block, eStr
         character(len=512) sRes
         character(len=64) lstr
         integer(wi) is, idummy
@@ -50,6 +50,7 @@ contains
 
         ! ###################################################################
         block = 'Main'
+        eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
         call TLab_Write_ASCII(bakfile, '#')
         call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
@@ -64,7 +65,7 @@ contains
         elseif (trim(adjustl(sRes)) == 'incompressible') then; nse_eqns = DNS_EQNS_INCOMPRESSIBLE
         elseif (trim(adjustl(sRes)) == 'anelastic') then; nse_eqns = DNS_EQNS_ANELASTIC
         else
-            call TLab_Write_ASCII(efile, __FILE__//trim(adjustl(block))//'. Wrong entry Main.Equations option.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong entry Main.Equations option.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
@@ -74,7 +75,7 @@ contains
         else if (trim(adjustl(sRes)) == 'skewsymmetric') then; nse_advection = EQNS_SKEWSYMMETRIC
         else if (trim(adjustl(sRes)) == 'convective') then; nse_advection = EQNS_CONVECTIVE
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. '//trim(adjustl(block))//'. Wrong TermAdvection option.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TermAdvection option.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
@@ -83,7 +84,7 @@ contains
         else if (trim(adjustl(sRes)) == 'divergence') then; nse_viscous = EQNS_DIVERGENCE
         else if (trim(adjustl(sRes)) == 'explicit') then; nse_viscous = EQNS_EXPLICIT
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. '//trim(adjustl(block))//'. Wrong TermViscous option.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TermViscous option.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
@@ -92,7 +93,7 @@ contains
         else if (trim(adjustl(sRes)) == 'divergence') then; nse_diffusion = EQNS_DIVERGENCE
         else if (trim(adjustl(sRes)) == 'explicit') then; nse_diffusion = EQNS_EXPLICIT
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. '//trim(adjustl(block))//'. Wrong TermDiffusion option.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TermDiffusion option.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
@@ -100,11 +101,11 @@ contains
         select case (nse_eqns)
         case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
             if (nse_viscous /= EQNS_EXPLICIT) then
-                call TLab_Write_ASCII(efile, __FILE__//'. '//trim(adjustl(block))//'.TermViscous undeveloped.')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'TermViscous undeveloped.')
                 call TLab_Stop(DNS_ERROR_OPTION)
             end if
             if (nse_diffusion /= EQNS_EXPLICIT) then
-                call TLab_Write_ASCII(efile, __FILE__//'. '//trim(adjustl(block))//'.TermDiffusion undeveloped.')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'TermDiffusion undeveloped.')
                 call TLab_Stop(DNS_ERROR_OPTION)
             end if
 
@@ -112,6 +113,7 @@ contains
 
         ! ###################################################################
         block = 'Parameters'
+        eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
         call TLab_Write_ASCII(bakfile, '#')
         call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
@@ -130,7 +132,7 @@ contains
         if (reynolds <= 0.0) then
             call ScanFile_Real(bakfile, inifile, 'Parameters', 'Viscosity', '-1.0', dummy)
             if (dummy <= 0.0) then
-                call TLab_Write_ASCII(efile, __FILE__//'. '//trim(adjustl(block))//'. Molecular transport coefficients need to be positive.')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Molecular transport coefficients need to be positive.')
                 call TLab_Stop(DNS_ERROR_OPTION)
             else
                 reynolds = 1.0_wp/dummy
@@ -143,21 +145,21 @@ contains
             visc = 1.0_wp/reynolds
         end if
 
-        call ScanFile_Char(bakfile, inifile, 'Parameters', 'Schmidt', '1.0', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'Schmidt', '1.0', sRes)
         schmidt(:) = 0.0_wp; inb_scal = MAX_VARS
         call LIST_REAL(sRes, inb_scal, schmidt)
 
         ! Gravity
-        call ScanFile_Real(bakfile, inifile, 'Parameters', 'Froude', '-1.0', froude)
+        call ScanFile_Real(bakfile, inifile, block, 'Froude', '-1.0', froude)
         if (froude <= 0.0) then
-            call ScanFile_Real(bakfile, inifile, 'Parameters', 'Gravity', '1.0', dummy)   ! default value
+            call ScanFile_Real(bakfile, inifile, block, 'Gravity', '1.0', dummy)   ! default value
             froude = 1.0_wp/dummy
         end if
 
         ! Coriolis
-        call ScanFile_Real(bakfile, inifile, 'Parameters', 'Rossby', '-1.0', rossby)
+        call ScanFile_Real(bakfile, inifile, block, 'Rossby', '-1.0', rossby)
         if (rossby <= 0.0) then
-            call ScanFile_Real(bakfile, inifile, 'Parameters', 'Coriolis', '1.0', dummy)   ! default value
+            call ScanFile_Real(bakfile, inifile, block, 'Coriolis', '1.0', dummy)   ! default value
             rossby = 1.0_wp/dummy
         end if
 
@@ -166,21 +168,21 @@ contains
         do is = 2, inb_scal
             lstr = trim(adjustl(lstr))//',0.0'
         end do
-        call ScanFile_Char(bakfile, inifile, 'Parameters', 'Damkohler', lstr, sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'Damkohler', lstr, sRes)
         damkohler(:) = 0.0_wp; idummy = MAX_VARS
         call LIST_REAL(sRes, idummy, damkohler)
         if (inb_scal /= idummy) then ! Consistency check
-            call TLab_Write_ASCII(efile, __FILE__//'. '//trim(adjustl(block))//'. Schmidt and Damkholer sizes do not match.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Schmidt and Damkholer sizes do not match.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
         ! Compressible flows
-        call ScanFile_Real(bakfile, inifile, 'Parameters', 'Prandtl', '1.0', prandtl)   ! molecular transport, but only appearing in compressible formulation
-        ! call ScanFile_Real(bakfile, inifile, 'Parameters', 'Mach', '1.0', mach)
+        call ScanFile_Real(bakfile, inifile, block, 'Prandtl', '1.0', prandtl)   ! molecular transport, but only appearing in compressible formulation
+        ! call ScanFile_Real(bakfile, inifile, block, 'Mach', '1.0', mach)
 
         ! Particle-laden flows
-        call ScanFile_Real(bakfile, inifile, 'Parameters', 'Stokes', '0.0', stokes)
-        call ScanFile_Real(bakfile, inifile, 'Parameters', 'Settling', '0.0', settling)
+        call ScanFile_Real(bakfile, inifile, block, 'Stokes', '0.0', stokes)
+        call ScanFile_Real(bakfile, inifile, block, 'Settling', '0.0', settling)
 
         ! ###################################################################
         ! Initialization of array sizes

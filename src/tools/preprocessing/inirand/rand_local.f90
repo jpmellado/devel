@@ -29,31 +29,33 @@ contains
         character*(*) inifile
 
         ! -------------------------------------------------------------------
-        character*512 sRes
-        character*32 bakfile
+        character(len=32) bakfile, block, eStr
+        character(len=512) sRes
 
         integer(wi) :: idummy
         real(wp) :: rdummy(6)
 
         ! ###################################################################
         bakfile = trim(adjustl(inifile))//'.bak'
+        
+        block = 'Broadband'
+        eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
-        call TLab_Write_ASCII(lfile, 'Reading local input data')
         call TLab_Write_ASCII(bakfile, '#')
-        call TLab_Write_ASCII(bakfile, '#[Broadband]')
+        call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
         call TLab_Write_ASCII(bakfile, '#Spectrum=<none/uniform/quartic/quadratic/gaussian>')
         call TLab_Write_ASCII(bakfile, '#f0=<frequencies>')
         call TLab_Write_ASCII(bakfile, '#Distribution=<none/uniform/gaussian>')
         call TLab_Write_ASCII(bakfile, '#Covariance=<Rxx,Ryy,Rzz,Rxy,Rxz,Ryz>')
         call TLab_Write_ASCII(bakfile, '#Seed=<random seed>')
 
-        call ScanFile_Int(bakfile, inifile, 'Broadband', 'Seed', '7', seed)
+        call ScanFile_Int(bakfile, inifile, block, 'Seed', '7', seed)
 #ifdef USE_MPI
         seed = seed + ims_pro         ! seed for random generator
 #endif
         seed = -abs(seed)
 
-        call ScanFile_Char(bakfile, inifile, 'Broadband', 'Spectrum', 'quartic', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'Spectrum', 'quartic', sRes)
         if (trim(adjustl(sRes)) == 'none') then; psd%type = TYPE_DF_NONE
         else if (trim(adjustl(sRes)) == 'uniform') then; psd%type = TYPE_DF_UNIFORM
         else if (trim(adjustl(sRes)) == 'quartic') then; psd%type = TYPE_DF_QUARTIC
@@ -63,34 +65,34 @@ contains
 
         psd%parameters(1) = 0.0_wp
         psd%parameters(2:3) = [0.0_wp, big_wp]
-        call ScanFile_Char(bakfile, inifile, 'Broadband', 'f0', '1.0', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'f0', '1.0', sRes)
         idummy = 3
         call LIST_REAL(sRes, idummy, psd%parameters)
         psd%mean = psd%parameters(1)
         psd%parameters(1) = psd%parameters(2)
         psd%parameters(2) = psd%parameters(3)
 
-        call ScanFile_Real(bakfile, inifile, 'Broadband', 'Sigma', '-1.0', psd%sigma)
+        call ScanFile_Real(bakfile, inifile, block, 'Sigma', '-1.0', psd%sigma)
         if (psd%sigma < 0.0_wp) psd%sigma = psd%mean/6.0_wp    ! Default value
 
-        call ScanFile_Char(bakfile, inifile, 'Broadband', 'Distribution', 'none', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'Distribution', 'none', sRes)
         if (trim(adjustl(sRes)) == 'none') then; pdf%type = TYPE_DF_NONE
         else if (trim(adjustl(sRes)) == 'uniform') then; pdf%type = TYPE_DF_UNIFORM
         else if (trim(adjustl(sRes)) == 'gaussian') then; pdf%type = TYPE_DF_GAUSSIAN
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. Broadband: Distribution type unknown.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Distribution type unknown.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
         ucov(1:3) = 1.0_wp ! diagonal terms
         ucov(4:6) = 0.0_wp ! off-diagonal terms
-        call ScanFile_Char(bakfile, inifile, 'Broadband', 'Covariance', '-1', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'Covariance', '-1', sRes)
         if (trim(adjustl(sRes)) /= '-1') then
             idummy = 6
             call LIST_REAL(sRes, idummy, rdummy)
             if (idummy == 6) then; ucov(1:6) = rdummy(1:6)
             else
-                call TLab_Write_ASCII(efile, __FILE__//'. Broadband: Incorrect number of variances.')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Incorrect number of variances.')
                 call TLab_Stop(DNS_ERROR_OPTION)
             end if
         end if

@@ -72,7 +72,7 @@ contains
         ! -----------------------------------------------------------------------
         integer(wi) ip
 
-        character(len=32) bakfile, block
+        character(len=32) bakfile, block, eStr
         character(len=512) sRes, line
         character*64 lstr
 
@@ -81,6 +81,7 @@ contains
         bakfile = trim(adjustl(inifile))//'.bak'
 
         block = 'Parallel'
+        eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
         call ScanFile_Char(bakfile, inifile, block, 'TransposeModeI', 'asynchronous', sRes)
         if (trim(adjustl(sRes)) == 'none') then; trp_mode_i = TLAB_MPI_TRP_NONE
@@ -88,7 +89,7 @@ contains
         elseif (trim(adjustl(sRes)) == 'sendrecv') then; trp_mode_i = TLAB_MPI_TRP_SENDRECV
         elseif (trim(adjustl(sRes)) == 'alltoall') then; trp_mode_i = TLAB_MPI_TRP_ALLTOALL
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. Wrong TransposeModeI option.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TransposeModeI option.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
@@ -98,23 +99,23 @@ contains
         elseif (trim(adjustl(sRes)) == 'sendrecv') then; trp_mode_j = TLAB_MPI_TRP_SENDRECV
         elseif (trim(adjustl(sRes)) == 'alltoall') then; trp_mode_j = TLAB_MPI_TRP_ALLTOALL
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. Wrong TransposeModeJ option.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TransposeModeJ option.')
             call TLab_Stop(DNS_ERROR_OPTION)
-        end if
-
-        call ScanFile_Char(bakfile, inifile, block, 'TransposeTypeK', 'Double', sRes)
-        if (trim(adjustl(sRes)) == 'double') then; trp_datatype_j = MPI_REAL8
-        elseif (trim(adjustl(sRes)) == 'single') then; trp_datatype_j = MPI_REAL4
-        else
-            call TLab_Write_ASCII(efile, __FILE__//'. Wrong TransposeTypeK.')
-            call TLab_Stop(DNS_ERROR_UNDEVELOP)
         end if
 
         call ScanFile_Char(bakfile, inifile, block, 'TransposeTypeI', 'Double', sRes)
         if (trim(adjustl(sRes)) == 'double') then; trp_datatype_i = MPI_REAL8
         elseif (trim(adjustl(sRes)) == 'single') then; trp_datatype_i = MPI_REAL4
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. Wrong TransposeTypeI.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TransposeTypeI.')
+            call TLab_Stop(DNS_ERROR_UNDEVELOP)
+        end if
+
+        call ScanFile_Char(bakfile, inifile, block, 'TransposeTypJ', 'Double', sRes)
+        if (trim(adjustl(sRes)) == 'double') then; trp_datatype_j = MPI_REAL8
+        elseif (trim(adjustl(sRes)) == 'single') then; trp_datatype_j = MPI_REAL4
+        else
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TransposeTypeJ.')
             call TLab_Stop(DNS_ERROR_UNDEVELOP)
         end if
 

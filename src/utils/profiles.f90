@@ -3,7 +3,7 @@
 ! Definining functions f=f(x) to be used in bcs, ics, and reference background profiles
 module Profiles
     use TLab_Constants, only: wp, i4_, pi_wp, efile, wfile, MAX_PARS
-    use TLab_WorkFlow,     only: TLab_Write_ASCII, TLab_Stop
+    use TLab_WorkFlow,  only: TLab_Write_ASCII, TLab_Stop
     implicit none
     private
 
@@ -114,12 +114,6 @@ contains
         if (trim(adjustl(sRes)) == 'void') then
             var%relative = .true.
             call ScanFile_Real(bakfile, inifile, block, 'ZmeanRelative'//trim(adjustl(tag)), '0.5', var%zmean_rel)    ! Position in relative coordinates
-            ! Backwards compatibility
-            call ScanFile_Char(bakfile, inifile, block, 'YCoor'//trim(adjustl(tag)), 'void', sRes)
-            if (trim(adjustl(sRes)) /= 'void') then
-                call ScanFile_Real(bakfile, inifile, block, 'YCoor'//trim(adjustl(tag)), '0.5', var%zmean_rel)
-                call TLab_Write_ASCII(wfile, 'Update tag YCoor to ZmeanRelative.')
-            end if
         else
             var%relative = .false.
             call ScanFile_Real(bakfile, inifile, block, 'Zmean'//trim(adjustl(tag)), '0.0', var%zmean)         ! Position in absolute coordinates

@@ -1,9 +1,4 @@
-#include "tlab_error.h"
-
-#define C_FILE_LOC "INISCAL"
-
-program INISCAL
-
+program IniScal
     use TLab_Constants, only: wp, wi
     use TLab_Constants, only: ifile, gfile, lfile, tag_scal
     use TLab_Time, only: itime, rtime
@@ -18,15 +13,13 @@ program INISCAL
 #endif
     use IO_Fields
     use TLab_Grid
-    use FDM, only: FDM_Initialize
+    ! use FDM, only: FDM_Initialize
     ! use FDM, only: fdm_Int0
     use NavierStokes, only: NavierStokes_Initialize_Parameters
     ! use Thermodynamics
     use TLab_Background, only: TLab_Initialize_Background, sbg
     ! use Gravity, only: Gravity_Initialize
-    ! use Rotation, only: Rotation_Initialize
     ! use Radiation, only: Radiation_Initialize, infraredProps, Radiation_Infrared_Y, radterm_dt, TYPE_RAD_NONE
-    ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
     ! use THERMO_AIRWATER
     ! use Thermo_Anelastic
     use Profiles, only: Profiles_Calculate
@@ -56,10 +49,10 @@ program INISCAL
 
     call TLab_Consistency_Check()
 
-    call Iniscal_Initialize_Parameters(ifile)
+    call IniScal_Initialize_Parameters(ifile)
 
     ! ###################################################################
-    call TLab_Initialize_Memory(C_FILE_LOC)
+    call TLab_Initialize_Memory(__FILE__)
 
     call TLab_Initialize_Background(ifile)
     do is = 1, size(IniS)
@@ -70,7 +63,7 @@ program INISCAL
     itime = 0; rtime = 0.0_wp
 
     ! ###################################################################
-    call TLab_Write_ASCII(lfile, 'Initializing scalars.')
+    call TLab_Write_ASCII(lfile, 'Initializing scalar fields.')
 
     do is = 1, inb_scal
         do k = 1, kmax
@@ -128,4 +121,5 @@ program INISCAL
     call IO_Write_Fields(trim(adjustl(tag_scal))//'ics', imax, jmax, kmax, itime, inb_scal, s, io_header_s(1:inb_scal))
 
     call TLab_Stop(0)
-end program INISCAL
+
+end program IniScal

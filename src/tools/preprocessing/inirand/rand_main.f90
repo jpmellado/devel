@@ -1,13 +1,9 @@
-#include "tlab_error.h"
-
-#define C_FILE_LOC "INIRAND"
-
-program INIRAND
+program IniRand
     use TLab_Constants, only: wp, wi, tag_flow, tag_scal
     use TLab_Constants, only: ifile, gfile, lfile
     use TLab_Time, only: itime, rtime
     use TLab_Memory, only: inb_flow, inb_scal
-    use TLab_Arrays
+    use TLab_Arrays, only: q, s, txc
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop, TLab_Start
     use TLab_Memory, only: TLab_Initialize_Memory
 #ifdef USE_MPI
@@ -38,10 +34,10 @@ program INIRAND
 
     call NavierStokes_Initialize_Parameters(ifile)
 
-    call Inirand_Initialize_Parameters(ifile)
+    call IniRand_Initialize_Parameters(ifile)
 
     ! ###################################################################
-    call TLab_Initialize_Memory(C_FILE_LOC)
+    call TLab_Initialize_Memory(__FILE__)
 
     call OPR_Fourier_Initialize()
 
@@ -73,4 +69,4 @@ program INIRAND
     call IO_Write_Fields(trim(adjustl(tag_scal))//'rand', imax, jmax, kmax, itime, inb_scal, s, io_header_s(1:inb_scal))
 
     call TLab_Stop(0)
-end program INIRAND
+end program IniRand

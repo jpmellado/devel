@@ -25,7 +25,7 @@ module SCAL_LOCAL
     public :: Iniscal_Initialize_Parameters
     public :: SCAL_FLUCTUATION_PLANE, SCAL_FLUCTUATION_VOLUME
 
-    integer(wi), public :: flag_s, flag_mixture                 ! Type of perturbation in scalar fields
+    integer(wi), public :: flag_s                               ! Type of perturbation
     integer, parameter, public :: PERT_NONE = 0
     integer, parameter, public :: PERT_LAYER_BROADBAND = 1
     integer, parameter, public :: PERT_LAYER_DISCRETE = 2
@@ -36,6 +36,7 @@ module SCAL_LOCAL
     integer, parameter, public :: PERT_FLUX_BROADBAND = 8
     integer, parameter, public :: PERT_FLUX_DISCRETE = 9
 
+    integer(wi), public :: flag_mixture
     type(profiles_dt), public :: IniS(MAX_VARS)                 ! Geometry of perturbation of initial boundary condition
     real(wp), public :: norm_ini_radiation                      ! Scaling of perturbation
 
@@ -54,7 +55,7 @@ contains
         character(len=*), intent(in) :: inifile
 
         ! -------------------------------------------------------------------
-        character(len=32) bakfile, block
+        character(len=32) bakfile, block, eStr
         character(len=512) sRes
         character(len=64) lstr
         integer(wi) idummy, is
@@ -62,12 +63,10 @@ contains
         integer :: IniSvalid(5) = [PROFILE_NONE, PROFILE_GAUSSIAN, PROFILE_GAUSSIAN_ANTISYM, PROFILE_GAUSSIAN_SYM, PROFILE_GAUSSIAN_SURFACE]
 
         ! ###################################################################
-        call TLab_Write_ASCII(lfile, 'Reading local input data')
-
         bakfile = trim(adjustl(inifile))//'.bak'
 
-        ! ###################################################################
         block = 'IniFields'
+        eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
         call TLab_Write_ASCII(bakfile, '#')
         call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
@@ -86,14 +85,14 @@ contains
         else if (trim(adjustl(sRes)) == 'fluxbroadband') then; flag_s = PERT_FLUX_BROADBAND
         else if (trim(adjustl(sRes)) == 'fluxdiscrete') then; flag_s = PERT_FLUX_DISCRETE
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. Scalar forcing type unknown')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Scalar forcing type unknown')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
-        call Profiles_ReadBlock(bakfile, inifile, block, 'IniS', IniS(1), 'gaussiansurface')      ! if IniS, valid for all
+        call Profiles_ReadBlock(bakfile, inifile, block, 'IniS', IniS(1), 'gaussiansurface')
         if (trim(adjustl(sRes)) /= 'none') then
             IniS(2:) = IniS(1)
-        else                                                                                            ! if not, read separately
+        else
             do is = 1, inb_scal
                 write (lstr, *) is
                 call Profiles_ReadBlock(bakfile, inifile, block, 'IniS'//trim(adjustl(lstr)), IniS(is), 'gaussiansurface')
@@ -101,7 +100,7 @@ contains
         end if
         do is = 1, inb_scal
             if (.not. any(IniSvalid == IniS(is)%type)) then
-                call TLab_Write_ASCII(efile, __FILE__//'. Undeveloped IniS type.')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Undeveloped IniS type.')
                 call TLab_Stop(DNS_ERROR_OPTION)
             end if
         end do
@@ -114,9 +113,9 @@ contains
         if (idummy /= inb_scal) then            ! Consistency check
             if (idummy == 1) then
                 norm_ini_s(2:) = norm_ini_s(1)
-                call TLab_Write_ASCII(wfile, __FILE__//'. Using NormalizeS(1) for all scalars.')
+                call TLab_Write_ASCII(wfile, trim(adjustl(eStr))//'Using NormalizeS(1) for all scalars.')
             else
-                call TLab_Write_ASCII(efile, __FILE__//'. NormalizeS size does not match number of scalars.')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'NormalizeS size does not match number of scalars.')
                 call TLab_Stop(DNS_ERROR_OPTION)
             end if
         end if
