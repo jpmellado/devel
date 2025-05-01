@@ -61,13 +61,15 @@ program VELLIPTIC
     e(1:imax, 1:jmax, 1:kmax) => txc(1:imax*jmax*kmax, 7)
     f(1:imax, 1:jmax, 1:kmax) => txc(1:imax*jmax*kmax, 8)
 
+    call OPR_Fourier_Initialize()
+    call OPR_CHECK()
+
     call OPR_Elliptic_Initialize(ifile)
 
     bcs = 0
 
-    call OPR_Fourier_Initialize()
-    call OPR_CHECK()
-
+    type_of_operator = 1    ! default
+#ifndef USE_MPI
     print *, '1. Poisson routines'
     print *, '2. Helmholtz routines'
     read (*, *) type_of_operator
@@ -80,6 +82,7 @@ program VELLIPTIC
             call TLab_Stop(0)
         end if
     end if
+#endif
 
     ! type_of_problem = 1     ! the forcing in the rhs is given
     type_of_problem = 2     ! the field in the lhs is given
@@ -100,14 +103,10 @@ program VELLIPTIC
         a(i, :, :) = 1.0_wp + sin(2.0_wp*pi_wp/x%scale*wk*x%nodes(i + idsp)) ! + pi_wp/4.0_wp)
     end do
 
-    ! do i = 1, jmax
-    !     ! single-mode
-    !     u(:, i, :) = 1.0_wp + sin(2.0_wp*pi_wp/y%scale*wk*y%nodes(i + jdsp)) ! + pi_wp/4.0_wp)
-    !     du1_a(:, i, :) = (2.0_wp*pi_wp/y%scale*wk) &
-    !                      *cos(2.0_wp*pi_wp/y%scale*wk*y%nodes(i + jdsp))! + pi_wp/4.0_wp)
-    !     du2_a(:, i, :) = -(2.0_wp*pi_wp/y%scale*wk)**2 &
-    !                      *sin(2.0_wp*pi_wp/y%scale*wk*y%nodes(i + jdsp))! + pi_wp/4.0_wp)
-    ! end do
+    do i = 1, jmax
+        ! single-mode
+        a(:, i, :) = a(:, i, :)*cos(2.0_wp*pi_wp/y%scale*wk*y%nodes(i + jdsp)) ! + pi_wp/4.0_wp)
+    end do
 
     do i = 1, kmax
         ! Gaussian
@@ -162,10 +161,10 @@ program VELLIPTIC
         end select
 
         if (type_of_operator == 1) then
-            call OPR_Poisson(imax, jmax, kmax, ibc, a, txc(1, 1), txc(1, 2), bcs_hb, bcs_ht, d)
+            call OPR_Poisson(imax, jmax, kmax, ibc, a, txc(:, 1), txc(:, 2), bcs_hb, bcs_ht)
 
         else if (type_of_operator == 2) then
-            call OPR_Helmholtz(imax, jmax, kmax, ibc, lambda, a, txc(1, 1), txc(1, 2), bcs_hb, bcs_ht)
+            call OPR_Helmholtz(imax, jmax, kmax, ibc, lambda, a, txc(:, 1), txc(:, 2), bcs_hb, bcs_ht)
 
         end if
 
@@ -207,28 +206,19 @@ program VELLIPTIC
         ! end do
         ! call OPR_FILTER(imax, jmax, kmax, FilterDomain, a, txc)
 
-        ! call OPR_Partial_X(OPR_P1, imax, jmax, kmax, bcs, g(1), a, c)
-        ! call OPR_Partial_X(OPR_P1, imax, jmax, kmax, bcs, g(1), c, b)
-        call OPR_Partial_X(OPR_P2_P1, imax, jmax, kmax, bcs, g(1), a, b, c)
+        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, bcs, g(1), a, c)
+        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, bcs, g(1), c, b)
+        ! call OPR_Partial_X(OPR_P2_P1, imax, jmax, kmax, bcs, g(1), a, b, c)
 
-        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), a, c)
-        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), c, d)
-        call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g(2), a, d, c)
+        call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), a, c)
+        call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), c, d)
+        ! call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g(2), a, d, c)
         b = b + d
 
-        ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs, g(3), a, c)
-        ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs, g(3), c, d)
-        call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, bcs, g(3), a, d, c)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs, g(3), a, c)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs, g(3), c, d)
+        ! call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, bcs, g(3), a, d, c)
         b = b + d
-
-        ! ! Creating a field
-        ! lambda = 1.0
-        ! do j = 1, jmax
-        !     a(:, j, :) = sin(2.0_wp*pi_wp/g(2)%scale*lambda*g(2)%nodes(j))
-        !     ! a(:,j,:) = exp(lambda*g(2)%nodes(j))
-        ! end do
-        ! b = -(2.0_wp*pi_wp/g(2)%scale*lambda)**2.0*a
-        ! c = (2.0_wp*pi_wp/g(2)%scale*lambda)*cos(2.0_wp*pi_wp/g(2)%scale*lambda*g(2)%nodes(j))
 
         ! -------------------------------------------------------------------
         ! DC level at lower boundary set to zero
@@ -262,11 +252,10 @@ program VELLIPTIC
 
             e = b       ! to save b for other cases in the loop
             if (type_of_operator == 1) then
-                call OPR_Poisson(imax, jmax, kmax, ibc, e, txc(1, 1), txc(1, 2), bcs_hb, bcs_ht, d)
+                call OPR_Poisson(imax, jmax, kmax, ibc, e, txc(:, 1), txc(:, 2), bcs_hb, bcs_ht)
 
             else if (type_of_operator == 2) then
-                call OPR_Helmholtz(imax, jmax, kmax, ibc, lambda, e, txc(1, 1), txc(1, 2), bcs_hb, bcs_ht)
-                call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), e, d)
+                call OPR_Helmholtz(imax, jmax, kmax, ibc, lambda, e, txc(:, 1), txc(:, 2), bcs_hb, bcs_ht)
 
             end if
 
@@ -275,13 +264,11 @@ program VELLIPTIC
             call IO_Write_Fields('field.out', imax, jmax, kmax, itime, 1, e)!, io_header_s(1:1))
             call check(a, e, txc(:, 1), 'field.dif')
 
-            call check(c, d, txc(:, 1))
-
         end do
 
     end select
 
-    stop
+    call TLab_Stop(0)
 
 ! ###################################################################
 contains

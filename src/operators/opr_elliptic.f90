@@ -15,7 +15,7 @@ module OPR_Elliptic
 #endif
     use FDM, only: fdm_dt
     use FDM_Integral
-    use OPR_Fourier
+    use OPR_Fourier, only: OPR_Fourier_XY_Backward, OPR_Fourier_XY_Forward
     use OPR_ODES
     use OPR_Partial, only: OPR_Partial_Z, OPR_P1
     use, intrinsic :: iso_c_binding, only: c_f_pointer, c_loc
@@ -29,31 +29,30 @@ module OPR_Elliptic
     ! -----------------------------------------------------------------------
     procedure(OPR_Poisson_interface) :: OPR_Poisson_dt      ! Implicit pointer (Procedure type)
     abstract interface
-        subroutine OPR_Poisson_interface(nx, ny, nz, ibc, p, tmp1, tmp2, bcs_hb, bcs_ht, dpdz)
+        subroutine OPR_Poisson_interface(nx, ny, nz, ibc, p, tmp1, tmp2, bcs_hb, bcs_ht)
             use TLab_Constants, only: wi, wp
             use FDM, only: fdm_dt
             integer(wi), intent(in) :: nx, ny, nz
-            integer, intent(in) :: ibc                                      ! Dirichlet/Neumman BCs at jmin/jmax: BCS_DD, BCS_ND, BCS_DN, BCS_NN
+            integer, intent(in) :: ibc                                      ! Dirichlet/Neumman BCs at kmin/kmax: BCS_DD, BCS_ND, BCS_DN, BCS_NN
             real(wp), intent(inout) :: p(nx, ny, nz)                        ! Forcing term, and solution field p
-            real(wp), intent(inout), target :: tmp1(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
-            real(wp), intent(inout), target :: tmp2(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
+            real(wp), intent(inout), target :: tmp1(2*nz, nx/2 + 1, ny)
+            real(wp), intent(inout), target :: tmp2(2*nz, nx/2 + 1, ny)
             real(wp), intent(in) :: bcs_hb(nx, ny), bcs_ht(nx, ny)          ! Boundary-condition fields
-            real(wp), intent(out), optional :: dpdz(nx, ny, nz)             ! Vertical derivative of solution
         end subroutine
     end interface
     procedure(OPR_Poisson_dt), pointer :: OPR_Poisson
 
     procedure(OPR_Helmholtz_interface) :: OPR_Helmholtz_dt  ! Implicit pointer (Procedure type)
     abstract interface
-        subroutine OPR_Helmholtz_interface(nx, ny, nz, ibc, alpha, p, tmp1, tmp2, bcs_hb, bcs_ht)
+        subroutine OPR_Helmholtz_interface(nx, ny, nz, ibc, alpha, a, tmp1, tmp2, bcs_hb, bcs_ht)
             use TLab_Constants, only: wi, wp
             use FDM, only: fdm_dt
             integer(wi), intent(in) :: nx, ny, nz
-            integer, intent(in) :: ibc                                      ! Dirichlet/Neumman BCs at jmin/jmax: BCS_DD, BCS_ND, BCS_DN, BCS_NN
+            integer, intent(in) :: ibc                                      ! Dirichlet/Neumman BCs at kmin/kmax: BCS_DD, BCS_ND, BCS_DN, BCS_NN
             real(wp), intent(in) :: alpha
-            real(wp), intent(inout) :: p(nx, ny, nz)                        ! Forcing term, and solution field p
-            real(wp), intent(inout), target :: tmp1(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
-            real(wp), intent(inout), target :: tmp2(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
+            real(wp), intent(inout) :: a(nx, ny, nz)                        ! Forcing term, and solution field a
+            real(wp), intent(inout), target :: tmp1(2*nz, nx/2 + 1, ny)
+            real(wp), intent(inout), target :: tmp2(2*nz, nx/2 + 1, ny)
             real(wp), intent(in) :: bcs_hb(nx, ny), bcs_ht(nx, ny)          ! Boundary-condition fields
         end subroutine
     end interface
@@ -103,7 +102,7 @@ contains
         ! Reading
         bakfile = trim(adjustl(inifile))//'.bak'
 
-        imode_elliptic = TYPE_FACTORIZE         ! default is the finite-difference method used for the derivatives
+        imode_elliptic = TYPE_FACTORIZE                 ! default is the finite-difference method used for the derivatives
         fdm_loc%der1%mode_fdm = g(3)%der1%mode_fdm      ! to impose zero divergence down to round-off error in the interior points
         fdm_loc%der2%mode_fdm = g(3)%der2%mode_fdm
 
@@ -139,13 +138,13 @@ contains
             call TLab_Allocate_Real(__FILE__, rhs_b, [g(3)%size, nd], 'rhs_b')
             call TLab_Allocate_Real(__FILE__, rhs_t, [g(3)%size, nd], 'rhs_t')
 
-            if (stagger_on) then
-                i_sing = [1, 1]                 ! only one singular mode + different modified wavenumbers
-                j_sing = [1, 1]
-            else
-                i_sing = [1, x%size/2 + 1]   ! global indexes, transformed below to task-local indexes.
-                j_sing = [1, y%size/2 + 1]
-            end if
+            ! if (stagger_on) then
+            !     i_sing = [1, 1]                 ! only one singular mode + different modified wavenumbers
+            !     j_sing = [1, 1]
+            ! else
+            i_sing = [1, x%size/2 + 1]   ! global indexes, transformed below to task-local indexes.
+            j_sing = [1, y%size/2 + 1]
+            ! end if
 
         case (TYPE_DIRECT)
             OPR_Poisson => OPR_Poisson_FourierXZ_Direct
@@ -258,16 +257,13 @@ contains
     !# The reference value of p at the lower boundary is set to zero
     !#
     !########################################################################
-    subroutine OPR_Poisson_FourierXZ_Factorize(nx, ny, nz, ibc, p, tmp1, tmp2, bcs_hb, bcs_ht, dpdz)
+    subroutine OPR_Poisson_FourierXZ_Factorize(nx, ny, nz, ibc, p, tmp1, tmp2, bcs_hb, bcs_ht)
         integer(wi), intent(in) :: nx, ny, nz
         integer, intent(in) :: ibc
         real(wp), intent(inout) :: p(nx, ny, nz)                        ! Forcing term, and solution field p
-        real(wp), intent(inout) :: tmp1(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
-        real(wp), intent(inout) :: tmp2(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
+        real(wp), intent(inout), target :: tmp1(2*nz, nx/2 + 1, ny)
+        real(wp), intent(inout), target :: tmp2(2*nz, nx/2 + 1, ny)
         real(wp), intent(in) :: bcs_hb(nx, ny), bcs_ht(nx, ny)          ! Boundary-condition fields
-        real(wp), intent(out), optional :: dpdz(nx, ny, nz)             ! Vertical derivative of solution
-
-        target tmp1, tmp2
 
         ! -----------------------------------------------------------------------
         real(wp) bcs(2, 2)
@@ -279,8 +275,8 @@ contains
 
         ! #######################################################################
         ! Construct forcing term in Fourier space, \hat{f}
-        p(1:nx, 1, 1:nz) = bcs_hb(1:nx, 1:nz)               ! Add boundary conditions to forcing array
-        p(1:nx, ny, 1:nz) = bcs_ht(1:nx, 1:nz)
+        p(1:nx, 1:ny, 1) = bcs_hb(1:nx, 1:ny)               ! Add boundary conditions to forcing array
+        p(1:nx, 1:ny, nz) = bcs_ht(1:nx, 1:ny)
         call OPR_Fourier_XY_Forward(p(:, 1, 1), c_tmp1, c_tmp2)
 
         tmp1 = tmp1*norm
@@ -292,8 +288,8 @@ contains
 #define v(k,i,j) p_wrk3d(k,i,j)
 
         ! Solve for each (kx,ky) a system of 1 complex equation as 2 independent real equations
-        do i = 1, i_max
-            do j = 1, ny
+        do j = 1, ny
+            do i = 1, i_max
                 bcs(1:2, 1) = f(1:2, i, j)                  ! bottom boundary conditions
                 bcs(1:2, 2) = f(2*nz - 1:2*nz, i, j)        ! top boundary conditions
 
@@ -323,11 +319,6 @@ contains
         ! Transform solution to physical space
         call OPR_Fourier_XY_Backward(c_tmp2, p(:, 1, 1), c_tmp1)
 
-        if (present(dpdz)) then
-            c_tmp2(1:isize_txc_field/2) = c_wrk3d(1:isize_txc_field/2)      ! to be fixed
-            call OPR_Fourier_XY_Backward(c_tmp2, dpdz(:, 1, 1), c_tmp1)
-        end if
-
         nullify (c_tmp1, c_tmp2, p_wrk3d)
 #undef f
 #undef v
@@ -338,18 +329,15 @@ contains
 
     !########################################################################
     !########################################################################
-    subroutine OPR_Poisson_FourierXZ_Direct(nx, ny, nz, ibc, p, tmp1, tmp2, bcs_hb, bcs_ht, dpdz)
-        use FDM, only: g
+    subroutine OPR_Poisson_FourierXZ_Direct(nx, ny, nz, ibc, p, tmp1, tmp2, bcs_hb, bcs_ht)
         integer(wi), intent(in) :: nx, ny, nz
         integer, intent(in) :: ibc
         real(wp), intent(inout) :: p(nx, ny, nz)                        ! Forcing term, and solution field p
-        real(wp), intent(inout) :: tmp1(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
-        real(wp), intent(inout) :: tmp2(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
+        real(wp), intent(inout), target :: tmp1(2*nz, nx/2 + 1, ny)
+        real(wp), intent(inout), target :: tmp2(2*nz, nx/2 + 1, ny)
         real(wp), intent(in) :: bcs_hb(nx, ny), bcs_ht(nx, ny)          ! Boundary-condition fields
-        real(wp), intent(out), optional :: dpdz(nx, ny, nz)             ! Vertical derivative of solution
 
-        target tmp1, tmp2
-
+        ! -----------------------------------------------------------------------
         ! #######################################################################
         call c_f_pointer(c_loc(tmp1), c_tmp1, shape=[isize_txc_field/2])
         call c_f_pointer(c_loc(tmp2), c_tmp2, shape=[isize_txc_field/2])
@@ -357,8 +345,8 @@ contains
 
         ! #######################################################################
         ! Construct forcing term in Fourier space, \hat{f}
-        p(1:nx, 1, 1:nz) = bcs_hb(1:nx, 1:nz)               ! Add boundary conditions to forcing array
-        p(1:nx, ny, 1:nz) = bcs_ht(1:nx, 1:nz)
+        p(1:nx, 1:ny, 1) = bcs_hb(1:nx, 1:ny)               ! Add boundary conditions to forcing array
+        p(1:nx, 1:ny, nz) = bcs_ht(1:nx, 1:ny)
         call OPR_Fourier_XY_Forward(p(:, 1, 1), c_tmp1, c_tmp2)
 
         tmp1 = tmp1*norm
@@ -369,8 +357,8 @@ contains
 #define u(k,i,j) tmp2(k,i,j)
 
         ! Solve for each (kx,ky) a system of 1 complex equation as 2 independent real equations
-        do i = 1, i_max
-            do j = 1, ny
+        do j = 1, ny
+            do i = 1, i_max
                 u(1:2, i, j) = f(1:2, i, j)                         ! bottom boundary conditions
                 u(2*nz - 1:2*nz, i, j) = f(2*nz - 1:2*nz, i, j)     ! top boundary conditions
 
@@ -394,10 +382,6 @@ contains
         ! Transform solution to physical space
         call OPR_Fourier_XY_Backward(c_tmp2, p(:, 1, 1), c_tmp1)
 
-        if (present(dpdz)) then
-            call OPR_Partial_Z(OPR_P1, nx, ny, nz, [BCS_NONE, BCS_NONE], g(3), p, dpdz)
-        end if
-
         nullify (c_tmp1, c_tmp2, p_wrk3d)
 #undef f
 #undef u
@@ -419,11 +403,9 @@ contains
         integer, intent(in) :: ibc
         real(wp), intent(in) :: alpha
         real(wp), intent(inout) :: a(nx, ny, nz)                        ! Forcing term, and solution field
-        real(wp), intent(inout) :: tmp1(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
-        real(wp), intent(inout) :: tmp2(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
+        real(wp), intent(inout), target :: tmp1(2*nz, nx/2 + 1, ny)
+        real(wp), intent(inout), target :: tmp2(2*nz, nx/2 + 1, ny)
         real(wp), intent(in) :: bcs_hb(nx, ny), bcs_ht(nx, ny)          ! Boundary-condition fields
-
-        target tmp1, tmp2
 
         ! -----------------------------------------------------------------------
         real(wp) bcs(2, 2)
@@ -435,8 +417,8 @@ contains
 
         ! #######################################################################
         ! Construct forcing term in Fourier space, \hat{f}
-        a(1:nx, 1, 1:nz) = bcs_hb(1:nx, 1:nz)               ! Add boundary conditions to forcing array
-        a(1:nx, ny, 1:nz) = bcs_ht(1:nx, 1:nz)
+        a(1:nx, 1:ny, 1) = bcs_hb(1:nx, 1:ny)               ! Add boundary conditions to forcing array
+        a(1:nx, 1:ny, nz) = bcs_ht(1:nx, 1:ny)
         call OPR_Fourier_XY_Forward(a(:, 1, 1), c_tmp1, c_tmp2)
 
         tmp1 = tmp1*norm
@@ -491,14 +473,11 @@ contains
         integer, intent(in) :: ibc
         real(wp), intent(in) :: alpha
         real(wp), intent(inout) :: a(nx, ny, nz)                        ! Forcing term, and solution field
-        real(wp), intent(inout) :: tmp1(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
-        real(wp), intent(inout) :: tmp2(2*nz, nx/2 + 1, ny)             ! Aux array for FFT
+        real(wp), intent(inout), target :: tmp1(2*nz, nx/2 + 1, ny)
+        real(wp), intent(inout), target :: tmp2(2*nz, nx/2 + 1, ny)
         real(wp), intent(in) :: bcs_hb(nx, ny), bcs_ht(nx, ny)          ! Boundary-condition fields
 
-        target tmp1, tmp2
-
         ! -----------------------------------------------------------------------
-
         ! #######################################################################
         call c_f_pointer(c_loc(tmp1), c_tmp1, shape=[isize_txc_field/2])
         call c_f_pointer(c_loc(tmp2), c_tmp2, shape=[isize_txc_field/2])
@@ -506,8 +485,8 @@ contains
 
         ! #######################################################################
         ! Construct forcing term in Fourier space, \hat{f}
-        a(1:nx, 1, 1:nz) = bcs_hb(1:nx, 1:nz)               ! Add boundary conditions to forcing array
-        a(1:nx, ny, 1:nz) = bcs_ht(1:nx, 1:nz)
+        a(1:nx, 1:ny, 1) = bcs_hb(1:nx, 1:ny)               ! Add boundary conditions to forcing array
+        a(1:nx, 1:ny, nz) = bcs_ht(1:nx, 1:ny)
         call OPR_Fourier_XY_Forward(a(:, 1, 1), c_tmp1, c_tmp2)
 
         tmp1 = tmp1*norm

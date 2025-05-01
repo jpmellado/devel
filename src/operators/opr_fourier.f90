@@ -92,6 +92,14 @@ contains
 
 ! #ifdef _DEBUG
 ! #else
+            ! call dfftw_plan_many_dft_r2c(fft_plan_fx, 1, size_fft_x, nlines, &
+            !                              txc(:, 1), 1, 1, size_fft_x, &
+            !                              wrk3d, 1, 1, offset, &
+            !                              FFTW_MEASURE)
+            ! call dfftw_plan_many_dft_c2r(fft_plan_bx, 1, size_fft_x, nlines, &
+            !                              txc(:, 1), 1, 1, offset, &
+            !                              wrk3d, 1, 1, size_fft_x, &
+            !                              FFTW_MEASURE)
             call dfftw_plan_many_dft_r2c(fft_plan_fx, 1, size_fft_x, nlines, &
                                          txc(:, 1), size_fft_x, 1, size_fft_x, &
                                          wrk3d, size_fft_x/2 + 1, 1, offset, &
@@ -222,23 +230,21 @@ contains
 
     !########################################################################
     !########################################################################
+    !  y-direction the last one; j needs to be the last index
     subroutine OPR_Fourier_Y_Forward(in, out)
         complex(wp), intent(in), target :: in(:)
         complex(wp), intent(out), target :: out(:)
 
         ! #######################################################################
-        ! Local transposition: make y-direction the last one
-        call TLab_Transpose_complex(in, (imax/2 + 1)*jmax, kmax, (imax/2 + 1)*jmax, c_wrk3d, kmax)
-
 #ifdef USE_MPI
         if (ims_npro_j > 1) then
-            call TLabMPI_Trp_ExecJ_Forward(c_wrk3d, out, tmpi_plan_ffty)
+            call TLabMPI_Trp_ExecJ_Forward(in, out, tmpi_plan_ffty)
             call dfftw_execute_dft(fft_plan_fy, out, c_wrk3d)
             call TLabMPI_Trp_ExecJ_Backward(c_wrk3d, out, tmpi_plan_ffty)
 
         else
 #endif
-            call dfftw_execute_dft(fft_plan_fy, c_wrk3d, out)
+            call dfftw_execute_dft(fft_plan_fy, in, out)
 
 #ifdef USE_MPI
         end if
@@ -249,6 +255,7 @@ contains
 
     !########################################################################
     !########################################################################
+    !  y-direction the last one; j needs to be the last index
     subroutine OPR_Fourier_Y_Backward(in, out)
         complex(wp), intent(in) :: in(:)
         complex(wp), intent(out) :: out(:)
@@ -256,26 +263,24 @@ contains
         ! #######################################################################
 #ifdef USE_MPI
         if (ims_npro_j > 1) then
-            call TLabMPI_Trp_ExecJ_Forward(in, c_wrk3d, tmpi_plan_ffty)
-            call dfftw_execute_dft(fft_plan_by, c_wrk3d, out)
-            call TLabMPI_Trp_ExecJ_Backward(out, c_wrk3d, tmpi_plan_ffty)
+            call TLabMPI_Trp_ExecJ_Forward(in, out, tmpi_plan_ffty)
+            call dfftw_execute_dft(fft_plan_by, out, c_wrk3d)
+            call TLabMPI_Trp_ExecJ_Backward(c_wrk3d, out, tmpi_plan_ffty)
 
         else
 #endif
-            call dfftw_execute_dft(fft_plan_by, in, c_wrk3d)
+            call dfftw_execute_dft(fft_plan_by, in, out)
 
 #ifdef USE_MPI
         end if
 #endif
-
-        ! Local transposition: make y-direction the intermediate one again
-        call TLab_Transpose_complex(c_wrk3d, kmax, (imax/2 + 1)*jmax, kmax, out, (imax/2 + 1)*jmax)
 
         return
     end subroutine OPR_Fourier_Y_Backward
 
     ! #######################################################################
     ! #######################################################################
+    ! XY routines have j as last index, as used in the elliptic operators
     subroutine OPR_Fourier_XY_Forward(in, out, tmp1)
         real(wp), intent(in) :: in(:)
         complex(wp), intent(out) :: out(:)
@@ -283,10 +288,14 @@ contains
 
         ! #######################################################################
         if (fft_y_on) then
-            call OPR_Fourier_X_Forward(in, tmp1)
+            call OPR_Fourier_X_Forward(in, out)
+            ! Local transposition: make y-direction the last one
+            call TLab_Transpose_complex(out, (imax/2 + 1)*jmax, kmax, (imax/2 + 1)*jmax, tmp1, kmax)
             call OPR_Fourier_Y_Forward(tmp1, out)
         else
-            call OPR_Fourier_X_Forward(in, out)
+            call OPR_Fourier_X_Forward(in, tmp1)
+            ! Local transposition: make y-direction the last one
+            call TLab_Transpose_complex(tmp1, (imax/2 + 1)*jmax, kmax, (imax/2 + 1)*jmax, out, kmax)
         end if
 
         return
@@ -296,16 +305,24 @@ contains
     ! #######################################################################
     subroutine OPR_Fourier_XY_Backward(in, out, tmp1)
         complex(wp), intent(in) :: in(:)
-        real(wp), intent(out) :: out(:)
+        real(wp), intent(out), target :: out(:)
         complex(wp), intent(inout) :: tmp1(:)
 
         ! #######################################################################
         if (fft_y_on) then
-            call OPR_Fourier_Y_Backward(in, tmp1)
-            call OPR_Fourier_X_Backward(tmp1, out)
+            call c_f_pointer(c_loc(out), c_out, shape=[isize_txc_field/2])
+
+            call OPR_Fourier_Y_Backward(in, c_out)
+            ! Local transposition: make y-direction the intermediate one again
+            call TLab_Transpose_complex(c_out, kmax, (imax/2 + 1)*jmax, kmax, tmp1, (imax/2 + 1)*jmax)
+
+            nullify (c_out)
         else
-            call OPR_Fourier_X_Backward(in, out)
+            ! Local transposition: make y-direction the intermediate one again
+            call TLab_Transpose_complex(in, kmax, (imax/2 + 1)*jmax, kmax, tmp1, (imax/2 + 1)*jmax)
         end if
+
+        call OPR_Fourier_X_Backward(tmp1, out)
 
         return
     end subroutine OPR_Fourier_XY_Backward
@@ -320,7 +337,9 @@ contains
 
         ! #######################################################################
         if (fft_y_on) then
-            call OPR_Fourier_X_Forward(in, tmp1)
+            call OPR_Fourier_X_Forward(in, out)
+            ! Local transposition: make y-direction the last one
+            call TLab_Transpose_complex(out, (imax/2 + 1)*jmax, kmax, (imax/2 + 1)*jmax, tmp1, kmax)
             call OPR_Fourier_Y_Forward(tmp1, out)
             ! Local transposition: make y-direction the intermediate one again
             call TLab_Transpose_complex(out, kmax, (imax/2 + 1)*jmax, kmax, tmp1, (imax/2 + 1)*jmax)
@@ -341,21 +360,23 @@ contains
         complex(wp), intent(inout) :: tmp1(:)
 
         ! #######################################################################
-        call dfftw_execute_dft(fft_plan_bz, in, tmp1)
-
         if (fft_y_on) then
             call c_f_pointer(c_loc(out), c_out, shape=[isize_txc_field/2])
 
+            call dfftw_execute_dft(fft_plan_bz, in, c_out)
             ! Local transposition: make y-direction the last one
-            call TLab_Transpose_complex(tmp1, (imax/2 + 1)*jmax, kmax, (imax/2 + 1)*jmax, c_out, kmax)
-            call OPR_Fourier_Y_Backward(c_out, tmp1)
-            call OPR_Fourier_X_Backward(tmp1, out)
+            call TLab_Transpose_complex(c_out, (imax/2 + 1)*jmax, kmax, (imax/2 + 1)*jmax, tmp1, kmax)
+            call OPR_Fourier_Y_Backward(tmp1, c_out)
+            ! Local transposition: make y-direction the intermediate one again
+            call TLab_Transpose_complex(c_out, kmax, (imax/2 + 1)*jmax, kmax, tmp1, (imax/2 + 1)*jmax)
 
             nullify (c_out)
-
         else
-            call OPR_Fourier_X_Backward(tmp1, out)
+            call dfftw_execute_dft(fft_plan_bz, in, tmp1)
+
         end if
+
+        call OPR_Fourier_X_Backward(tmp1, out)
 
         return
     end subroutine OPR_Fourier_Backward
