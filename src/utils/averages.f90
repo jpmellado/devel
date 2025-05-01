@@ -272,18 +272,16 @@ contains
 !########################################################################
     function AVG_IK(nx, ny, nz, k, a) result(avg)
         integer(wi), intent(in) :: nx, ny, nz, k
-        real(wp), intent(in) :: a(nx, ny, nz)
+        real(wp), intent(in) :: a(nx*ny, nz)
         real(wp) avg
 
         ! -------------------------------------------------------------------
-        integer(wi) i, j
+        integer(wi) ij
 
         ! ###################################################################
         avg = 0.0_wp
-        do j = 1, ny
-            do i = 1, nx
-                avg = avg + a(i, j, k)
-            end do
+        do ij = 1, nx*ny
+            avg = avg + a(ij, k)
         end do
 
         avg = avg/real(nx*ny, wp)

@@ -17,7 +17,6 @@ module OPR_Elliptic
     use FDM_Integral
     use OPR_Fourier, only: OPR_Fourier_XY_Backward, OPR_Fourier_XY_Forward
     use OPR_ODES
-    use OPR_Partial, only: OPR_Partial_Z, OPR_P1
     use, intrinsic :: iso_c_binding, only: c_f_pointer, c_loc
     implicit none
     private

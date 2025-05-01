@@ -130,9 +130,9 @@ program VPARTIAL3D
     ! ###################################################################
     select case (type_of_problem)
     case (1)
-        call OPR_Partial_X(OPR_P2_P1, imax, jmax, kmax, bcs, g(1), u, du2_n, du1_n)
-        ! call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g(2), u, du2_n, du1_n)
-        ! call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, bcs, g(3), u, du2_n, du1_n)
+        call OPR_Partial_X(OPR_P2_P1, imax, jmax, kmax, g(1), u, du2_n, du1_n)
+        ! call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, g(2), u, du2_n, du1_n)
+        ! call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, g(3), u, du2_n, du1_n)
 
         call check(du1_a, du1_n, txc(:, 1))
 
@@ -142,16 +142,16 @@ program VPARTIAL3D
     case (2)
         g_loc%der1%mode_fdm = FDM_COM6_JACOBIAN
         call FDM_CreatePlan(z, g_loc)
-        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), f, c)
-        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), c, a)
-        call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g_loc, f, a, c)
+        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), f, c)
+        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), c, a)
+        call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, g_loc, f, a, c)
         call IO_Write_Fields('field.out1', imax, jmax, kmax, itime, 1, a)
 
         g_loc%der1%mode_fdm = FDM_COM4_DIRECT
         call FDM_CreatePlan(z, g_loc)
-        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), f, d)
-        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), d, b)
-        call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g_loc, f, b, d)
+        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), f, d)
+        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), d, b)
+        call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, g_loc, f, b, d)
         call IO_Write_Fields('field.out2', imax, jmax, kmax, itime, 1, b)
 
         ! -------------------------------------------------------------------

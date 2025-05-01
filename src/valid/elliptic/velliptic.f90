@@ -170,18 +170,18 @@ program VELLIPTIC
 
         ! -------------------------------------------------------------------
         ! With the calculated a, we calculate the b = lap a
-        ! call OPR_Partial_X(OPR_P1, imax, jmax, kmax, bcs, g(1), a, c)
-        ! call OPR_Partial_X(OPR_P1, imax, jmax, kmax, bcs, g(1), c, b)
-        call OPR_Partial_X(OPR_P2_P1, imax, jmax, kmax, bcs, g(1), a, b, txc(:, 1))
+        ! call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), a, c)
+        ! call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), c, b)
+        call OPR_Partial_X(OPR_P2_P1, imax, jmax, kmax, g(1), a, b, txc(:, 1))
 
-        ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs, g(3), a, c)
-        ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs, g(3), c, e)
-        call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, bcs, g(3), a, e, txc(:, 1))
+        ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), a, c)
+        ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), c, e)
+        call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, g(3), a, e, txc(:, 1))
         b = b + e
 
-        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), a, c)
-        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), c, e)
-        call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g(2), a, e, txc(:, 1))
+        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), a, c)
+        ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), c, e)
+        call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, g(2), a, e, txc(:, 1))
         b = b + e
 
         if (type_of_operator == 2) then
@@ -206,18 +206,18 @@ program VELLIPTIC
         ! end do
         ! call OPR_FILTER(imax, jmax, kmax, FilterDomain, a, txc)
 
-        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, bcs, g(1), a, c)
-        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, bcs, g(1), c, b)
-        ! call OPR_Partial_X(OPR_P2_P1, imax, jmax, kmax, bcs, g(1), a, b, c)
+        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), a, c)
+        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), c, b)
+        ! call OPR_Partial_X(OPR_P2_P1, imax, jmax, kmax, g(1), a, b, c)
 
-        call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), a, c)
-        call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, bcs, g(2), c, d)
-        ! call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, bcs, g(2), a, d, c)
+        call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), a, c)
+        call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), c, d)
+        ! call OPR_Partial_Y(OPR_P2_P1, imax, jmax, kmax, g(2), a, d, c)
         b = b + d
 
-        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs, g(3), a, c)
-        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs, g(3), c, d)
-        ! call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, bcs, g(3), a, d, c)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), a, c)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), c, d)
+        ! call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, g(3), a, d, c)
         b = b + d
 
         ! -------------------------------------------------------------------

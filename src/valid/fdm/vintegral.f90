@@ -18,7 +18,6 @@ program VINTEGRAL
 
     real(wp), dimension(:, :), pointer :: u => null(), w_n => null(), f => null()
     real(wp), dimension(:, :), pointer :: du1_a => null(), du2_a => null(), du1_n => null(), du2_n => null(), dw1_n => null(), dw2_n => null()
-    integer(wi) bcs_aux(2, 2)
     real(wp) :: lambda, wk, x_0
     integer(wi) :: test_type, ibc, ib, im
 
@@ -30,8 +29,8 @@ program VINTEGRAL
     type(fdm_dt) :: g
     type(fdm_integral_dt) :: fdmi(2), fdmi_test(2), fdmi_test_lambda(2)
 
-! ###################################################################
-! Initialize
+    ! ###################################################################
+    ! Initialize
     imax = 1
     jmax = 3
     kmax = 256
@@ -92,37 +91,35 @@ program VINTEGRAL
     call FDM_Int1_Initialize(x%nodes, g%der1, 0.0_wp, BCS_MIN, fdmi(BCS_MIN))
     call FDM_Int1_Initialize(x%nodes, g%der1, 0.0_wp, BCS_MAX, fdmi(BCS_MAX))
 
-    bcs_aux = 0
-
-! ###################################################################
-! Define the function f and analytic derivatives
+    ! ###################################################################
+    ! Define the function f and analytic derivatives
     x_0 = 0.75_wp
     wk = 1.0_wp
 
     do i = 1, kmax
-! single-mode
+        ! single-mode
         ! u(:, i) = 1.0_wp + sin(2.0_wp*pi_wp/g%scale*wk*g%nodes(i)) ! + pi_wp/4.0_wp)
         ! du1_a(:, i) = (2.0_wp*pi_wp/g%scale*wk) &
         !               *cos(2.0_wp*pi_wp/g%scale*wk*g%nodes(i))! + pi_wp/4.0_wp)
-! Gaussian
+        ! Gaussian
         u(:, i) = exp(-(g%nodes(i) - x_0*g%scale)**2/(2.0_wp*(g%scale/wk)**2))
         du1_a(:, i) = -(g%nodes(i) - x_0*g%scale)/(g%scale/wk)**2*u(:, i)
         du2_a(:, i) = -(g%nodes(i) - x_0*g%scale)/(g%scale/wk)**2*du1_a(:, i) &
                       - 1.0_wp/(g%scale/wk)**2*u(:, i)
-! exponential
+        ! exponential
         ! u(:, i) = exp(-g%nodes(i)*wk)
         ! du1_a(:, i) = -wk*u(:, i)
-! step
+        ! step
         ! u(:, i) = max(0.0_wp, (g%nodes(i) - g%nodes(kmax/2))*x_0)
         ! du1_a(:, i) = (1.0_wp + sign(1.0_wp, g%nodes(i) - g%nodes(kmax/2)))*0.5_wp*x_0
-! tanh
+        ! tanh
         ! u(:, i) = x_0*log(1.0_wp + exp((g%nodes(i) - g%nodes(kmax/2))/x_0))
         ! du1_a(:, i) = 0.5_wp*(1.0_wp + tanh(0.5_wp*(g%nodes(i) - g%nodes(kmax/2))/x_0))
-! Polynomial
+        ! Polynomial
         ! dummy = 4.0_wp
         ! u(:, i) = ((g%scale - g%nodes(i))/wk)**dummy
         ! du1_a(:, i) = -dummy*((g%scale - g%nodes(i))/wk)**(dummy - 1.0_wp)
-! zero
+        ! zero
         ! u(i) = 0.0_wp
         ! du1_a(i) = 0.0_wp
     end do
@@ -153,7 +150,7 @@ program VINTEGRAL
             call FDM_CreatePlan(x, g)
 
             f = du1_a
-            ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs_aux, g, u, f)
+            ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g, u, f)
             f = f + lambda*u
 
             do ib = 1, 2
@@ -176,7 +173,7 @@ program VINTEGRAL
 
                 ! check the calculation of the derivative at the boundary
                 print *, dw1_n(:, 1)
-                call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs_aux, g, w_n, dw1_n)
+                call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g, w_n, dw1_n)
                 select case (ibc)
                 case (BCS_MIN)
                     print *, dw1_n(:, 1)
@@ -188,9 +185,9 @@ program VINTEGRAL
 
         end do
 
-! ###################################################################
-! Second order equation; singular cases
-! ###################################################################
+        ! ###################################################################
+        ! Second order equation; singular cases
+        ! ###################################################################
     case (2)
         allocate (bcs(len, 2))
         do i = kmax, 1, -1     ! set the lower value to zero, which is assumed in BCS_NN
@@ -199,9 +196,9 @@ program VINTEGRAL
 
         ! f = du2_a
         ! du1_n = du1_a ! I need it for the boundary conditions
-        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs_aux, g, u, du1_n)
-        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs_aux, g, du1_n, du2_n)
-        ! call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, bcs_aux, g, u, du2_n, du1_n)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g, u, du1_n)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g, du1_n, du2_n)
+        ! call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, g, u, du2_n, du1_n)
         f = du2_n
 
         bcs_cases(1:4) = [BCS_DD, BCS_DN, BCS_ND, BCS_NN]
@@ -238,9 +235,9 @@ program VINTEGRAL
 
         end do
 
-! ###################################################################
-! Second order equation; regular cases
-! ###################################################################
+        ! ###################################################################
+        ! Second order equation; regular cases
+        ! ###################################################################
     case (3)
         write (*, *) 'Eigenvalue ?'
         read (*, *) lambda
@@ -254,9 +251,9 @@ program VINTEGRAL
 
         ! f = du2_a - lambda*lambda*u
         ! du1_n = du1_a ! I need it for the boundary conditions
-        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs_aux, g, u, du1_n)
-        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs_aux, g, du1_n, du2_n)
-        ! call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, bcs_aux, g, u, du2_n, du1_n)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g, u, du1_n)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g, du1_n, du2_n)
+        ! call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, g, u, du2_n, du1_n)
         f = du2_n - lambda*lambda*u
 
         bcs_cases(1:2) = [BCS_DD, BCS_NN]!, BCS_DN, BCS_ND]
@@ -289,9 +286,9 @@ program VINTEGRAL
 
         end do
 
-! ###################################################################
-! Second order equation; direct
-! ###################################################################
+        ! ###################################################################
+        ! Second order equation; direct
+        ! ###################################################################
     case (4)
         write (*, *) 'Eigenvalue ?'
         read (*, *) lambda
@@ -308,9 +305,9 @@ program VINTEGRAL
 
         ! f = du2_a - lambda*u
         ! du1_n = du1_a ! I need it for the boundary conditions
-        ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs_aux, g, u, du1_n)
-        ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, bcs_aux, g, du1_n, du2_n)
-        call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, bcs_aux, g, u, du2_n, du1_n)
+        ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g, u, du1_n)
+        ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g, du1_n, du2_n)
+        call OPR_Partial_Z(OPR_P2_P1, imax, jmax, kmax, g, u, du2_n, du1_n)
         f = du2_n - lambda*u
 
         bcs_cases(1:4) = [BCS_DD, BCS_NN, BCS_DN, BCS_ND]
@@ -341,9 +338,9 @@ program VINTEGRAL
 
         end do
 
-! ###################################################################
-! Test properties of integral matrices
-! ###################################################################
+        ! ###################################################################
+        ! Test properties of integral matrices
+        ! ###################################################################
     case (5)
         write (*, *) 'Eigenvalue ?'
         read (*, *) lambda
