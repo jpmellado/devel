@@ -66,10 +66,12 @@ program IniScal
     call TLab_Write_ASCII(lfile, 'Initializing scalar fields.')
 
     do is = 1, inb_scal
+        ! Mean
         do k = 1, kmax
             p_s(:, :, k, is) = Profiles_Calculate(sbg(is), z%nodes(k))
         end do
 
+        ! Fluctuation
         select case (flag_s)
         case (PERT_LAYER_BROADBAND, PERT_LAYER_DISCRETE)
             call SCAL_FLUCTUATION_VOLUME(is, s(:, is), txc)

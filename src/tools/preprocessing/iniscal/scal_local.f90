@@ -36,9 +36,10 @@ module SCAL_LOCAL
     integer, parameter, public :: PERT_FLUX_BROADBAND = 8
     integer, parameter, public :: PERT_FLUX_DISCRETE = 9
 
-    integer(wi), public :: flag_mixture
     type(profiles_dt), public :: IniS(MAX_VARS)                 ! Geometry of perturbation of initial boundary condition
+
     real(wp), public :: norm_ini_radiation                      ! Scaling of perturbation
+    integer(wi), public :: flag_mixture
 
     ! -------------------------------------------------------------------
     real(wp) :: norm_ini_s(MAX_VARS)                            ! Scaling of perturbation

@@ -69,7 +69,7 @@ contains
 ! -------------------------------------------------------------------
         call FI_INVARIANT_P(nx, ny, nz, u, v, w, tmp1, tmp2)
 
-        allocate (bcs_hb(nx*nz), bcs_ht(nx*nz))
+        allocate (bcs_hb(nx*ny), bcs_ht(nx*ny))
         bcs_hb = 0.0_wp; bcs_ht = 0.0_wp
         call OPR_Poisson(nx, ny, nz, BCS_NN, tmp1, tmp2, tmp3, bcs_hb, bcs_ht)
 

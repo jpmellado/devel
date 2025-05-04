@@ -28,7 +28,7 @@ program VPARTIAL3D
 
     integer(wi) i, bcs(2, 2), idsp, jdsp
     integer(wi) type_of_problem
-    real(wp) params(0), wk, x_0
+    real(wp) wk, x_0!, params(0) 
 
     ! ###################################################################
     call TLab_Start()
