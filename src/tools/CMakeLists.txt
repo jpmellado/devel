@@ -17,15 +17,10 @@ FILE(GLOB sourcefiles "preprocessing/iniflow/*.f90")
 add_executable(iniflow.x ${sourcefiles})
 target_link_libraries(iniflow.x physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
 
-# # Simulation
-# FILE(GLOB sourcefiles "dns/*.f90")
-
-# add_executable(dns.x ${sourcefiles})
-# target_link_libraries(dns.x statistics physics mappings operators particles filters fdm ibm thermodynamics ${LEVEL1_LIBS} ${LIBS})
-# if (PSFFT_LIB)
-# set_source_files_properties(dns/rhs_global_incompressible_nbc.f90 PROPERTIES COMPILE_FLAGS "${PSFFT_COMPILE_FLAGS}")
-# set_target_properties(dns.x PROPERTIES LINK_FLAGS "${PSFFT_LINK_FLAGS} ${LINK_FLAGS}")
-# endif()
+# Simulation
+FILE(GLOB sourcefiles "simulation/*.f90")
+add_executable(dns.x ${sourcefiles})
+target_link_libraries(dns.x physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
 
 # # Postprocessing
 # FILE(GLOB sourcefiles "plot/visuals*.f90")
