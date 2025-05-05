@@ -1,8 +1,6 @@
-#include "tlab_error.h"
-
-program INIFLOW
+program IniFlow
     use TLab_Constants, only: wp, wi
-    use TLab_Constants, only: ifile, gfile, lfile, efile, tag_flow
+    use TLab_Constants, only: ifile, gfile, lfile, tag_flow
     use TLab_Memory, only: imax, jmax, kmax, isize_field
     use TLab_Memory, only: inb_flow
     use TLab_Time, only: itime, rtime
@@ -30,7 +28,6 @@ program INIFLOW
     use OPR_Fourier, only: OPR_Fourier_Initialize
     use OPR_Elliptic, only: OPR_Elliptic_Initialize
     use FLOW_LOCAL
-    ! use FLOW_MEAN
 
     implicit none
 
@@ -64,11 +61,10 @@ program INIFLOW
     call TLab_Initialize_Background(ifile)
     if (IniK%relative) IniK%zmean = z%nodes(1) + z%scale*IniK%zmean_rel
 
-    ! call OPR_Burgers_Initialize(ifile)
-
     if (flag_u /= 0) then ! Initialize Poisson Solver
         call OPR_Fourier_Initialize()
         call OPR_Elliptic_Initialize(ifile)
+        call OPR_CHECK()
     end if
 
     ! ###################################################################
@@ -77,7 +73,6 @@ program INIFLOW
     ! ###################################################################
     call TLab_Write_ASCII(lfile, 'Initializing velocity fields.')
 
-    ! call VELOCITY_MEAN(q(1, 1), q(1, 2), q(1, 3))
     ! Mean
     do iq = 1, 3
         do k = 1, kmax
@@ -123,4 +118,5 @@ program INIFLOW
     call IO_Write_Fields(trim(adjustl(tag_flow))//'ics', imax, jmax, kmax, itime, inb_flow, q, io_header_q)
 
     call TLab_Stop(0)
-end program INIFLOW
+
+end program IniFlow

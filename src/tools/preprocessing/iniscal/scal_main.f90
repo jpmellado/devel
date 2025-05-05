@@ -2,7 +2,7 @@ program IniScal
     use TLab_Constants, only: wp, wi
     use TLab_Constants, only: ifile, gfile, lfile, tag_scal
     use TLab_Time, only: itime, rtime
-    use TLab_Memory, only: imax, jmax, kmax, inb_scal !inb_scal_array, inb_txc, isize_field, inb_wrk2d
+    use TLab_Memory, only: imax, jmax, kmax, inb_scal
     use TLab_Arrays
     use TLab_Pointers_3D, only: p_s
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop, TLab_Start
@@ -27,7 +27,6 @@ program IniScal
 
     implicit none
 
-    ! -------------------------------------------------------------------
     integer(wi) is, k
     ! type(radterm_dt) localInfraredProps
 

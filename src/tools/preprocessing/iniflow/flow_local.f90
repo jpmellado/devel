@@ -1,12 +1,12 @@
 #include "tlab_error.h"
 
 module FLOW_LOCAL
-    use TLab_Constants, only: efile, lfile, wfile, tag_flow
     use TLab_Constants, only: wp, wi, pi_wp
+    use TLab_Constants, only: efile, lfile, wfile, tag_flow
     use TLab_Constants, only: BCS_DD, BCS_DN, BCS_ND, BCS_NN
     use TLab_Memory, only: imax, jmax, kmax, isize_field
     use TLab_Memory, only: inb_wrk2d, inb_txc
-    use TLab_Time, only: itime, rtime
+    use TLab_Time, only: itime!, rtime
     use TLab_Pointers_3D, only: p_wrk1d, p_wrk2d
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
 #ifdef USE_MPI
@@ -52,7 +52,7 @@ module FLOW_LOCAL
 
     real(wp) :: norm_ini_u, norm_ini_p          ! Scaling of perturbation
     type(discrete_dt) :: fp                     ! Discrete perturbation
-    integer(wi) i, j, k
+    integer(wi) j, k
     integer(wi) im, idsp, jdsp
     real(wp) wx, wy, wx_1, wy_1
 
