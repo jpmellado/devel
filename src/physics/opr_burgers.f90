@@ -1,6 +1,6 @@
 #include "tlab_error.h"
 
-! Apply the non-linear operator N(u)(s) = visc* d^2/dx^2 s - u d/dx s
+! Calculate the non-linear operator N(u)(s) = visc* d^2/dx^2 s - u d/dx s
 
 module OPR_Burgers
     use TLab_Constants, only: wp, wi, efile, lfile, BCS_NONE
@@ -11,6 +11,7 @@ module OPR_Burgers
     use TLabMPI_VARS, only: ims_npro_i, ims_npro_j
     use TLabMPI_Transpose
 #endif
+    use TLab_Grid, only: x, y, z
     use FDM, only: fdm_dt, g
     use NavierStokes, only: visc, schmidt
     ! use OPR_FILTERS
@@ -50,7 +51,7 @@ contains
     !########################################################################
     !########################################################################
     subroutine OPR_Burgers_Initialize(inifile)
-        use TLab_Memory, only: isize_field, imax, jmax, kmax
+        use TLab_Memory, only: jmax, kmax !isize_field, imax, 
         use TLab_Memory, only: TLab_Allocate_Real
         use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
         use TLab_Memory, only: inb_scal
@@ -62,9 +63,12 @@ contains
         character(len=*), intent(in) :: inifile
 
         ! -----------------------------------------------------------------------
-        integer(wi) ig, is, j, ip, nlines, offset, idummy
+        character(len=32) bakfile!, block, eStr
+        ! character(len=512) sRes
+
+        integer(wi) ig, is, ip, idummy
+        integer(wi) nlines, offset
         real(wp) dummy
-        character*32 bakfile
 
         ! ###################################################################
         ! Read input data
@@ -126,25 +130,24 @@ contains
 
         ! ###################################################################
         ! Initialize anelastic density correction
-!         if (nse_eqns == DNS_EQNS_ANELASTIC) then
-!             call TLab_Write_ASCII(lfile, 'Initialize anelastic density correction in burgers operator.')
+        if (nse_eqns == DNS_EQNS_ANELASTIC) then
+            call TLab_Write_ASCII(lfile, 'Initialize anelastic density correction in burgers operator.')
 
-!             ! -----------------------------------------------------------------------
-!             ! Density correction term in the burgers operator along X
-!             rhoinv(1)%active = .true.
-! #ifdef USE_MPI
-!             if (ims_npro_i > 1) then
-!                 ! nlines = ims_size_i(TLAB_MPI_TRP_I_PARTIAL)
-!                 nlines = tmpi_plan_dx%nlines
-!                 offset = nlines*ims_pro_i
-!             else
-! #endif
-!                 nlines = jmax*kmax
-!                 offset = 0
-! #ifdef USE_MPI
-!             end if
-! #endif
-!             allocate (rhoinv(1)%values(nlines))
+            ! -----------------------------------------------------------------------
+            ! Density correction term in the burgers operator along X
+            rhoinv(1)%active = .true.
+#ifdef USE_MPI
+            if (ims_npro_i > 1) then
+                nlines = tmpi_plan_dx%nlines
+                offset = nlines*ims_pro_i
+            else
+#endif
+                nlines = jmax*kmax
+                offset = 0
+#ifdef USE_MPI
+            end if
+#endif
+            allocate (rhoinv(1)%values(nlines))
 !             do j = 1, nlines
 !                 ip = mod(offset + j - 1, g(2)%size) + 1
 !                 rhoinv(1)%values(j) = ribackground(ip)
@@ -179,7 +182,7 @@ contains
 !                 rhoinv(3)%values(j) = ribackground(ip)
 !             end do
 
-!         end if
+        end if
 
         return
     end subroutine OPR_Burgers_Initialize
@@ -202,12 +205,11 @@ contains
         real(wp), dimension(:), pointer :: p_a, p_b, p_c, p_d, p_vel
 
         ! ###################################################################
-        if (g(1)%size == 1) then ! Set to zero in 2D case
+        if (x%size == 1) then ! Set to zero in 2D case
             result = 0.0_wp
             return
         end if
 
-        ! ###################################################################
         ! -------------------------------------------------------------------
         ! MPI transposition
         ! -------------------------------------------------------------------
@@ -274,77 +276,95 @@ contains
     !########################################################################
     subroutine OPR_Burgers_Y(ivel, is, nx, ny, nz, s, u, result, tmp1, u_t)
         integer, intent(in) :: ivel
-        integer, intent(in) :: is           ! scalar index; if 0, then velocity
+        integer, intent(in) :: is                       ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz), u(nx*ny*nz)
         real(wp), intent(out) :: result(nx*ny*nz)
-        real(wp), intent(inout) :: tmp1(nx*ny*nz)      ! transposed velocity
+        real(wp), intent(inout) :: tmp1(nx*ny*nz)       ! transposed velocity
         real(wp), intent(in), optional :: u_t(nx*ny*nz)
 
         target s, u, result, tmp1, u_t
 
         ! -------------------------------------------------------------------
-        integer(wi) nxy, nxz, j
-        real(wp), dimension(:), pointer :: p_org, p_vel
-        real(wp), dimension(:, :), pointer :: p_dst1, p_dst2    ! need (nx*nz,ny) shape
+        integer(wi) nxz
+        real(wp), dimension(:), pointer :: p_org, p_vel, p_dst1, p_dst2
 
         ! ###################################################################
-        if (g(2)%size == 1) then ! Set to zero in 2D case
+        if (y%size == 1) then ! Set to zero in 2D case
             result = 0.0_wp
             return
         end if
 
-        ! ###################################################################
-        nxy = nx*ny
-        nxz = nx*nz
-
-        ! -------------------------------------------------------------------
-        ! Local transposition: Make y-direction the last one
-        ! -------------------------------------------------------------------
-        if (nz == 1) then
-            p_org => s
-            p_dst1(1:nx*nz, 1:ny) => wrk3d(1:nx*nz*ny)
-            p_dst2(1:nx*nz, 1:ny) => result(1:nx*nz*ny)
-        else
+        ! Transposition: make y-direction the last one
+#ifdef USE_MPI
+        if (ims_npro_j > 1) then
 #ifdef USE_ESSL
-            call DGETMO(s, nxy, nxy, nz, tmp1, nz)
+            call DGETMO(s, nx*ny, nx*ny, nz, wrk3d, nz)
 #else
-            call TLab_Transpose(s, nxy, nz, nxy, tmp1, nz)
+            call TLab_Transpose(s, nx*ny, nz, nx*ny, wrk3d, nz)
 #endif
+            call TLabMPI_Trp_ExecJ_Forward(result, tmp1, tmpi_plan_dy)
+            nxz = tmpi_plan_dy%nlines
+
             p_org => tmp1
-            p_dst1(1:nx*nz, 1:ny) => result(1:nx*nz*ny)
-            p_dst2(1:nx*nz, 1:ny) => wrk3d(1:nx*nz*ny)
+            p_dst1 => wrk3d
+            p_dst2 => result
+
+        else
+#endif
+#ifdef USE_ESSL
+            call DGETMO(s, nx*ny, nx*ny, nz, tmp1, nz)
+#else
+            call TLab_Transpose(s, nx*ny, nz, nx*ny, tmp1, nz)
+#endif
+            nxz = nx*nz
+
+            p_org => tmp1
+            p_dst1 => result
+            p_dst2 => wrk3d
+
+#ifdef USE_MPI
         end if
+#endif
 
         ! pointer to velocity
         if (ivel == OPR_B_SELF) then
             p_vel => p_org
         else
-            if (nz == 1) then  ! I do not need the transposed
-                p_vel => u
-            else               ! I do need the transposed
-                p_vel => u_t
-            end if
+            ! if (ny == 1) then  ! I do not need the transposed
+            !     p_vel => u
+            ! else               ! I do need the transposed
+            p_vel => u_t
+            ! end if
         end if
 
         ! ###################################################################
         call OPR_Burgers_1D(is, nxz, g(2), fdmDiffusion(2)%lu(:, :, is), Dealiasing(2), rhoinv(2), p_org, p_vel, p_dst2, p_dst1)
 
-        ! if (subsidenceProps%type == TYPE_SUB_CONSTANT_LOCAL) then
-        !     do j = 1, ny
-        !         p_dst2(:, j) = p_dst2(:, j) + g(2)%nodes(j)*subsidenceProps%parameters(1)*p_dst1(:, j)
-        !     end do
-        ! end if
-
         ! ###################################################################
         ! Put arrays back in the order in which they came in
-        if (nz > 1) then
+#ifdef USE_MPI
+        if (ims_npro_j > 1) then
+            call TLabMPI_Trp_ExecJ_Backward(p_dst2, p_dst1, tmpi_plan_dy)
+
 #ifdef USE_ESSL
-            call DGETMO(p_dst2, nz, nz, nxy, result, nxy)
+            call DGETMO(p_dst1, nz, nz, nx*ny, result, nx*ny)
 #else
-            call TLab_Transpose(p_dst2, nz, nxy, nz, result, nxy)
+            call TLab_Transpose(p_dst1, nz, nx*ny, nz, result, nx*ny)
 #endif
+
+        else
+#endif
+
+#ifdef USE_ESSL
+            call DGETMO(p_dst2, nz, nz, nx*ny, result, nx*ny)
+#else
+            call TLab_Transpose(p_dst2, nz, nx*ny, nz, result, nx*ny)
+#endif
+
+#ifdef USE_MPI
         end if
+#endif
 
         nullify (p_org, p_dst1, p_dst2, p_vel)
 
@@ -358,70 +378,25 @@ contains
         integer, intent(in) :: is           ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz), u(nx*ny*nz)
-        real(wp), intent(out) :: result(nx*ny*nz)
-        real(wp), intent(inout) :: tmp1(nx*ny*nz)
+        real(wp), intent(out) :: result(nx*ny, nz)
+        real(wp), intent(inout) :: tmp1(nx*ny, nz)
         real(wp), intent(in), optional :: u_t(nx*ny*nz)
 
-        target s, u, result, tmp1, u_t
-
         ! -------------------------------------------------------------------
-        integer(wi) nxy
-        real(wp), dimension(:), pointer :: p_a, p_b, p_c, p_vel
 
         ! ###################################################################
-        if (g(3)%size == 1) then ! Set to zero in 2D case
+        if (z%size == 1) then ! Set to zero in 2D case
             result = 0.0_wp
             return
         end if
 
-        ! ###################################################################
-        ! -------------------------------------------------------------------
-        ! MPI transposition
-        ! -------------------------------------------------------------------
-#ifdef USE_MPI
-        if (ims_npro_j > 1) then
-            call TLabMPI_Trp_ExecJ_Forward(s, tmp1, tmpi_plan_dy)
-            p_a => tmp1
-            p_b => result
-            p_c => wrk3d
-            nxy = tmpi_plan_dy%nlines
-        else
-#endif
-            p_a => s
-            p_b => wrk3d
-            p_c => result
-            nxy = nx*ny
-#ifdef USE_MPI
-        end if
-#endif
+        call OPR_Burgers_1D(is, nx*ny, g(3), fdmDiffusion(3)%lu(:, :, is), Dealiasing(3), rhoinv(3), s, u, result, tmp1)
 
-        ! pointer to velocity
-        if (ivel == OPR_B_SELF) then
-            p_vel => p_a
-        else
-#ifdef USE_MPI
-            if (ims_npro_j > 1) then        ! I do need the transposed
-                p_vel => u_t
-            else
-#endif
-                p_vel => u                 ! I do not need the transposed
-#ifdef USE_MPI
-            end if
-#endif
-        end if
-
-        ! ###################################################################
-        call OPR_Burgers_1D(is, nxy, g(3), fdmDiffusion(3)%lu(:, :, is), Dealiasing(3), rhoinv(3), p_a, p_vel, p_c, p_b)
-
-        ! ###################################################################
-        ! Put arrays back in the order in which they came in
-#ifdef USE_MPI
-        if (ims_npro_j > 1) then
-            call TLabMPI_Trp_ExecJ_Backward(p_c, result, tmpi_plan_dy)
-        end if
-#endif
-
-        nullify (p_a, p_b, p_c, p_vel)
+        ! if (subsidenceProps%type == TYPE_SUB_CONSTANT_LOCAL) then
+        !     do k = 1, nz
+        !         result(:, k) = result(:, k) + z%nodes(k)*subsidenceProps%parameters(1)*tmp1(:, k)
+        !     end do
+        ! end if
 
         return
     end subroutine OPR_Burgers_Z
@@ -447,15 +422,15 @@ contains
 
         ! -------------------------------------------------------------------
         integer(wi) ij
-        real(wp), pointer :: uf(:, :), dsf(:, :)
+        ! real(wp), pointer :: uf(:, :) !, dsf(:, :)
 
         ! ###################################################################
         ! dsdx: 1st derivative; result: 2nd derivative including diffusivity
         ! if (ibm_burgers) then
         !     call OPR_Partial2_IBM(is, nlines, BCS_NONE, g, lu2d, s, result, dsdx)
         ! else
-            call FDM_Der1_Solve(nlines, BCS_NONE, g%der1, g%der1%lu, s, dsdx, wrk2d)
-            call FDM_Der2_Solve(nlines, g%der2, lu2d, s, result, dsdx, wrk2d)
+        call FDM_Der1_Solve(nlines, BCS_NONE, g%der1, g%der1%lu, s, dsdx, wrk2d)
+        call FDM_Der2_Solve(nlines, g%der2, lu2d, s, result, dsdx, wrk2d)
         ! end if
 
         ! ###################################################################
@@ -495,9 +470,9 @@ contains
 !             else
 !$omp parallel default( shared ) private( ij )
 !$omp do
-                do ij = 1, nlines*g%size
-                    result(ij, 1) = result(ij, 1) - u(ij, 1)*dsdx(ij, 1)
-                end do
+        do ij = 1, nlines*g%size
+            result(ij, 1) = result(ij, 1) - u(ij, 1)*dsdx(ij, 1)
+        end do
 !$omp end do
 !$omp end parallel
         !     end if

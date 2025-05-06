@@ -81,7 +81,7 @@ contains
 
         call ScanFile_Char(bakfile, inifile, 'Main', 'TermViscous', 'void', sRes)
         if (trim(adjustl(sRes)) == 'none') then; nse_viscous = EQNS_NONE
-        else if (trim(adjustl(sRes)) == 'divergence') then; nse_viscous = EQNS_DIVERGENCE
+        ! else if (trim(adjustl(sRes)) == 'divergence') then; nse_viscous = EQNS_DIVERGENCE
         else if (trim(adjustl(sRes)) == 'explicit') then; nse_viscous = EQNS_EXPLICIT
         else
             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TermViscous option.')
@@ -90,26 +90,26 @@ contains
 
         call ScanFile_Char(bakfile, inifile, 'Main', 'TermDiffusion', 'void', sRes)
         if (trim(adjustl(sRes)) == 'none') then; nse_diffusion = EQNS_NONE
-        else if (trim(adjustl(sRes)) == 'divergence') then; nse_diffusion = EQNS_DIVERGENCE
+        ! else if (trim(adjustl(sRes)) == 'divergence') then; nse_diffusion = EQNS_DIVERGENCE
         else if (trim(adjustl(sRes)) == 'explicit') then; nse_diffusion = EQNS_EXPLICIT
         else
             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TermDiffusion option.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
-        ! consistency check
-        select case (nse_eqns)
-        case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
-            if (nse_viscous /= EQNS_EXPLICIT) then
-                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'TermViscous undeveloped.')
-                call TLab_Stop(DNS_ERROR_OPTION)
-            end if
-            if (nse_diffusion /= EQNS_EXPLICIT) then
-                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'TermDiffusion undeveloped.')
-                call TLab_Stop(DNS_ERROR_OPTION)
-            end if
+        ! ! consistency check
+        ! select case (nse_eqns)
+        ! case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
+        !     if (nse_viscous /= EQNS_EXPLICIT) then
+        !         call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'TermViscous undeveloped.')
+        !         call TLab_Stop(DNS_ERROR_OPTION)
+        !     end if
+        !     if (nse_diffusion /= EQNS_EXPLICIT) then
+        !         call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'TermDiffusion undeveloped.')
+        !         call TLab_Stop(DNS_ERROR_OPTION)
+        !     end if
 
-        end select
+        ! end select
 
         ! ###################################################################
         block = 'Parameters'

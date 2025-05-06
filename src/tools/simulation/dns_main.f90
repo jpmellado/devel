@@ -29,7 +29,7 @@ program DNS
     use Tlab_Background, only: TLab_Initialize_Background!, pbg, rbg
     use OPR_Fourier, only: OPR_Fourier_Initialize
     use OPR_Elliptic, only: OPR_Elliptic_Initialize
-    ! use OPR_Burgers, only: OPR_Burgers_Initialize
+    use OPR_Burgers, only: OPR_Burgers_Initialize
     ! use OPR_FILTERS
     ! use PARTICLE_VARS
     ! use PARTICLE_ARRAYS
@@ -37,7 +37,7 @@ program DNS
     use DNS_ARRAYS
     use DNS_LOCAL
     use DNS_Control
-    use TIME!, only: dtime
+    use TimeMarching!, only: dtime
     ! use DNS_TOWER
     ! use IBM_VARS
     ! use PLANES
@@ -121,7 +121,7 @@ program DNS
     ! ###################################################################
     ! Initialize operators
     ! ###################################################################
-    ! call OPR_Burgers_Initialize(ifile)
+    call OPR_Burgers_Initialize(ifile)
 
     call OPR_Fourier_Initialize()
     call OPR_Elliptic_Initialize(ifile)
@@ -178,7 +178,7 @@ program DNS
     ! ###################################################################
     ! call BOUNDARY_BUFFER_INITIALIZE(q, s, txc)
 
-    ! call BOUNDARY_BCS_INITIALIZE()
+    call BOUNDARY_BCS_INITIALIZE()
 
     ! ! ###################################################################
     ! ! Initialize IBM
@@ -196,8 +196,8 @@ program DNS
     ! ###################################################################
     ! Initialize time marching scheme
     ! ###################################################################
-    call TIME_INITIALIZE(ifile)
-    call TIME_COURANT()
+    call TMarch_Initialize(ifile)
+    call TMarch_Courant()
 
     ! ###################################################################
     ! Check-pointing: Initialize logfiles, write header & first line
@@ -215,7 +215,7 @@ program DNS
     do
         if (itime >= nitera_last) exit
         if (int(logs_data(1)) /= 0) exit
-        call TIME_RUNGEKUTTA()
+        call TMarch_RungeKutta()
         itime = itime + 1
         rtime = rtime + dtime
         ! if (mod(itime - nitera_first, nitera_filter) == 0) then
@@ -234,7 +234,7 @@ program DNS
             end if
         end if
 
-        call TIME_COURANT()
+        call TMarch_Courant()
 
         ! -------------------------------------------------------------------
         ! The rest: Logging, postprocessing and check-pointing

@@ -14,24 +14,17 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
 #ifdef USE_OPENMP
     use OMP_LIB
 #endif
-#ifdef TRACE_ON
-    use TLab_Constants, only: tfile
-#endif
+    use TLab_OpenMP
     use TLab_Constants, only: wp, wi, BCS_NN
-    ! use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
     use TLab_Memory, only: imax, jmax, kmax, isize_field, inb_flow, inb_scal
-    use FDM, only: g
-    ! use TLab_WorkFlow, only: stagger_on
-    ! use TLab_Time, only: itime
     use TLab_Arrays
     use TLab_Pointers, only: u, v, w, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9
+    use FDM, only: g
+    use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
     ! use Thermo_Anelastic
-    use TLab_OpenMP
     use DNS_ARRAYS
     use DNS_LOCAL, only: remove_divergence
-    ! use DNS_LOCAL, only: use_tower
-    use TIME, only: dte
-    ! use DNS_TOWER
+    use TimeMarching, only: dte
     ! use BOUNDARY_BUFFER
     use BOUNDARY_BCS
     ! use IBM_VARS, only: imode_ibm, imode_ibm_scal, ibm_burgers
@@ -56,12 +49,7 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
     integer ilen
 #endif
 
-#ifdef TRACE_ON
-    call TLab_Write_ASCII(tfile, 'ENTERING SUBROUTINE RHS_GLOBAL_INCOMPRESSIBLE_1')
-#endif
-
     ! #######################################################################
-
 #ifdef USE_ESSL
     ilen = isize_field
 #endif
@@ -71,17 +59,18 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
     ! (flow BCs initialized below as they are used for pressure in between)
     ! #######################################################################
     ! Default is zero
-    BcsScalJmin%ref(:, :, :) = 0.0_wp
-    BcsScalJmax%ref(:, :, :) = 0.0_wp
+    BcsScalKmin%ref(:, :, :) = 0.0_wp
+    BcsScalKmax%ref(:, :, :) = 0.0_wp
 
-    ! Keep the old tendency of the scalar at the boundary to be used in dynamic BCs
-    if (any(BcsScalJmin%SfcType(1:inb_scal) == DNS_SFC_LINEAR) .or. any(BcsScalJmax%SfcType(1:inb_scal) == DNS_SFC_LINEAR)) then
-        do is = 1, inb_scal
-            p_bcs(1:imax, 1:jmax, 1:kmax) => hs(1:imax*jmax*kmax, is)
-            if (BcsScalJmin%SfcType(is) == DNS_SFC_LINEAR) BcsScalJmin%ref(:, :, is) = p_bcs(:, 1, :)
-            if (BcsScalJmax%SfcType(is) == DNS_SFC_LINEAR) BcsScalJmax%ref(:, :, is) = p_bcs(:, jmax, :)
-        end do
-    end if
+    ! ! Keep the old tendency of the scalar at the boundary to be used in dynamic BCs
+    ! if (any(BcsScalJmin%SfcType(1:inb_scal) == DNS_SFC_LINEAR) .or. &
+    !     any(BcsScalJmax%SfcType(1:inb_scal) == DNS_SFC_LINEAR)) then
+    !     do is = 1, inb_scal
+    !         p_bcs(1:imax, 1:jmax, 1:kmax) => hs(1:imax*jmax*kmax, is)
+    !         if (BcsScalJmin%SfcType(is) == DNS_SFC_LINEAR) BcsScalKmin%ref(:, :, is) = p_bcs(:, 1, :)
+    !         if (BcsScalJmax%SfcType(is) == DNS_SFC_LINEAR) BcsScalKmax%ref(:, :, is) = p_bcs(:, jmax, :)
+    !     end do
+    ! end if
 
     ! #######################################################################
     ! Diffusion and advection terms
@@ -204,11 +193,11 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
         !     call IBM_BCS_FIELD(tmp3)
         !     call IBM_BCS_FIELD(tmp4)
         ! end if
-        ! if (nse_eqns == DNS_EQNS_ANELASTIC) then
-        !     call Thermo_Anelastic_WEIGHT_INPLACE(imax, jmax, kmax, rbackground, tmp2)
-        !     call Thermo_Anelastic_WEIGHT_INPLACE(imax, jmax, kmax, rbackground, tmp3)
-        !     call Thermo_Anelastic_WEIGHT_INPLACE(imax, jmax, kmax, rbackground, tmp4)
-        ! end if
+        if (nse_eqns == DNS_EQNS_ANELASTIC) then
+            ! call Thermo_Anelastic_WEIGHT_INPLACE(imax, jmax, kmax, rbackground, tmp2)
+            ! call Thermo_Anelastic_WEIGHT_INPLACE(imax, jmax, kmax, rbackground, tmp3)
+            ! call Thermo_Anelastic_WEIGHT_INPLACE(imax, jmax, kmax, rbackground, tmp4)
+        end if
         ! if (stagger_on) then ! staggering on horizontal pressure nodes
         !     !  Oy derivative
         !     call OPR_Partial_X(OPR_P0_INT_VP, imax, jmax, kmax, g(1), tmp2, tmp5)
@@ -221,9 +210,9 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
         !     call OPR_Partial_X(OPR_P0_INT_VP, imax, jmax, kmax, g(1), tmp4, tmp5)
         !     call OPR_Partial_Z(OPR_P1_INT_VP, imax, jmax, kmax, g(3), tmp5, tmp3)
         ! else
-            call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), tmp2, tmp1)
-            call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), tmp3, tmp2)
-            call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), tmp4, tmp3)
+        call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), tmp2, tmp1)
+        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), tmp3, tmp2)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), tmp4, tmp3)
         ! end if
 
     else
@@ -240,9 +229,9 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
         !     call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), tmp3, tmp2)
         !     call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), tmp4, tmp3)
         ! else
-            call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), hq(:, 2), tmp1)
-            call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), hq(:, 1), tmp2)
-            call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), hq(:, 3), tmp3)
+        call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), hq(:, 2), tmp1)
+        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), hq(:, 1), tmp2)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), hq(:, 3), tmp3)
         ! end if
 
     end if
@@ -265,19 +254,19 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
     !     if (imode_ibm == 1) call IBM_BCS_FIELD_STAGGER(tmp4)
     !     p_bcs(1:imax, 1:jmax, 1:kmax) => txc(1:imax*jmax*kmax, 4)
     ! else
-        p_bcs(1:imax, 1:jmax, 1:kmax) => hq(1:imax*jmax*kmax, 2)
+    p_bcs(1:imax, 1:jmax, 1:kmax) => hq(1:imax*jmax*kmax, 2)
     ! end if
 
-    ! if (nse_eqns == DNS_EQNS_ANELASTIC) then
-    !     BcsFlowJmin%ref(:, :, 2) = p_bcs(:, 1, :)*rbackground(1)
-    !     BcsFlowJmax%ref(:, :, 2) = p_bcs(:, jmax, :)*rbackground(g(2)%size)
-    ! else
-        BcsFlowJmin%ref(:, :, 2) = p_bcs(:, 1, :)
-        BcsFlowJmax%ref(:, :, 2) = p_bcs(:, jmax, :)
-    ! end if
+    if (nse_eqns == DNS_EQNS_ANELASTIC) then
+        ! BcsFlowKmin%ref(:, :, 2) = p_bcs(:, :, 1)*rbackground(1)
+        ! BcsFlowKmax%ref(:, :, 2) = p_bcs(:, :, kmax)*rbackground(kmax)
+    else
+        BcsFlowKmin%ref(:, :, 2) = p_bcs(:, :, 1)
+        BcsFlowKmax%ref(:, :, 2) = p_bcs(:, :, kmax)
+    end if
 
     ! pressure in tmp1, Oz derivative in tmp3
-    call OPR_Poisson(imax, jmax, kmax, BCS_NN, tmp1, tmp2, tmp4, BcsFlowJmin%ref(1, 1, 2), BcsFlowJmax%ref(1, 1, 2))
+    call OPR_Poisson(imax, jmax, kmax, BCS_NN, tmp1, tmp2, tmp4, BcsFlowKmin%ref(1, 1, 2), BcsFlowKmax%ref(1, 1, 2))
     call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), tmp1, tmp3)
 
     ! ! filter pressure p and its vertical gradient dpdy
@@ -294,7 +283,7 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
     !     endif
     !     if ( use_tower ) &
     !         call DNS_TOWER_ACCUMULATE(tmp4, 4, wrk1d)
-    !     if ( PhAvg%active) then   
+    !     if ( PhAvg%active) then
     !         if (mod((itime+1),PhAvg%stride) == 0)  then
     !             call AvgPhaseSpace(wrk2d, 1, (itime+1)/PhAvg%stride, nitera_first, nitera_save/PhAvg%stride, tmp4)
     !         end if
@@ -312,20 +301,20 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
     !     call OPR_Partial_Z(OPR_P0_INT_PV, imax, jmax, kmax, g(3), tmp1, tmp5)
     !     call OPR_Partial_X(OPR_P1_INT_PV, imax, jmax, kmax, g(1), tmp5, tmp2)
     ! else
-        !  horizontal pressure derivatives
-        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), tmp1, tmp2)
-        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), tmp1, tmp4)
+    !  horizontal pressure derivatives
+    call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), tmp1, tmp2)
+    call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), tmp1, tmp4)
     ! end if
 
     ! -----------------------------------------------------------------------
     ! Add pressure gradient
     ! -----------------------------------------------------------------------
-    ! if (nse_eqns == DNS_EQNS_ANELASTIC) then
-    !     call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp2, hq(:, 1))
-    !     call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp3, hq(:, 2))
-    !     call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp4, hq(:, 3))
+    if (nse_eqns == DNS_EQNS_ANELASTIC) then
+        ! call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp2, hq(:, 1))
+        ! call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp3, hq(:, 2))
+        ! call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp4, hq(:, 3))
 
-    ! else
+    else
 #ifdef USE_ESSL
 !$omp parallel default( shared ) &
 !$omp private( ilen, srt,end,siz,dummy )
@@ -339,37 +328,37 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
         ilen = siz
         dummy = -1.0_wp
         call DAXPY(ilen, dummy, tmp2(srt), 1, hq(srt, 1), 1)
-        call DAXPY(ilen, dummy, tmp3(srt), 1, hq(srt, 2), 1)
-        call DAXPY(ilen, dummy, tmp4(srt), 1, hq(srt, 3), 1)
+        call DAXPY(ilen, dummy, tmp4(srt), 1, hq(srt, 2), 1)
+        call DAXPY(ilen, dummy, tmp3(srt), 1, hq(srt, 3), 1)
 #else
         do ij = srt, end
             hq(ij, 1) = hq(ij, 1) - tmp2(ij)
-            hq(ij, 2) = hq(ij, 2) - tmp3(ij)
-            hq(ij, 3) = hq(ij, 3) - tmp4(ij)
+            hq(ij, 2) = hq(ij, 2) - tmp4(ij)
+            hq(ij, 3) = hq(ij, 3) - tmp3(ij)
         end do
 #endif
 !$omp end parallel
-    ! end if
+    end if
 
     ! #######################################################################
     ! Boundary conditions
     ! #######################################################################
-    BcsFlowJmin%ref = 0.0_wp ! default is no-slip (dirichlet)
-    BcsFlowJmax%ref = 0.0_wp ! Scalar BCs initialized at start of routine
+    BcsFlowKmin%ref = 0.0_wp ! default is no-slip (dirichlet)
+    BcsFlowKmax%ref = 0.0_wp ! Scalar BCs initialized at start of routine
 
     do iq = 1, inb_flow
         ibc = 0
         if (BcsFlowJmin%type(iq) == DNS_BCS_NEUMANN) ibc = ibc + 1
         if (BcsFlowJmax%type(iq) == DNS_BCS_NEUMANN) ibc = ibc + 2
         if (ibc > 0) then
-            call BOUNDARY_BCS_NEUMANN_Y(ibc, imax, jmax, kmax, g(2), hq(1, iq), &
-                                        BcsFlowJmin%ref(1, 1, iq), BcsFlowJmax%ref(1, 1, iq), tmp1)
+            call BOUNDARY_BCS_NEUMANN_Z(ibc, imax, jmax, kmax, g(3), hq(1, iq), &
+                                        BcsFlowKmin%ref(1, 1, iq), BcsFlowKmax%ref(1, 1, iq), tmp1)
         end if
         ! if (imode_ibm == 1) call IBM_BCS_FIELD(hq(1, iq)) ! set tendency in solid to zero
 
         p_bcs(1:imax, 1:jmax, 1:kmax) => hq(1:imax*jmax*kmax, iq)
-        p_bcs(:, 1, :) = BcsFlowJmin%ref(:, :, iq)
-        p_bcs(:, jmax, :) = BcsFlowJmax%ref(:, :, iq)
+        p_bcs(:, :, 1) = BcsFlowKmin%ref(:, :, iq)
+        p_bcs(:, :, kmax) = BcsFlowKmax%ref(:, :, iq)
 
     end do
 
@@ -378,19 +367,19 @@ subroutine RHS_GLOBAL_INCOMPRESSIBLE_1()
         if (BcsScalJmin%type(is) == DNS_BCS_NEUMANN) ibc = ibc + 1
         if (BcsScalJmax%type(is) == DNS_BCS_NEUMANN) ibc = ibc + 2
         if (ibc > 0) then
-            call BOUNDARY_BCS_NEUMANN_Y(ibc, imax, jmax, kmax, g(2), hs(1, is), &
-                                        BcsScalJmin%ref(1, 1, is), BcsScalJmax%ref(1, 1, is), tmp1)
+            call BOUNDARY_BCS_NEUMANN_Z(ibc, imax, jmax, kmax, g(3), hs(1, is), &
+                                        BcsScalKmin%ref(1, 1, is), BcsScalKmax%ref(1, 1, is), tmp1)
         end if
 
         if (BcsScalJmin%type(is) /= DNS_SFC_STATIC .or. &
-            BcsScalJmax%type(is) /= DNS_SFC_STATIC) then
-            call BOUNDARY_BCS_SURFACE_Y(is, s, hs, tmp1, tmp2)
+            BcsScalKmax%type(is) /= DNS_SFC_STATIC) then
+            call BOUNDARY_BCS_SURFACE_Z(is, s, hs, tmp1, tmp2)
         end if
         ! if (imode_ibm == 1) call IBM_BCS_FIELD(hs(1, is)) ! set tendency in solid to zero
 
         p_bcs(1:imax, 1:jmax, 1:kmax) => hs(1:imax*jmax*kmax, is)
-        p_bcs(:, 1, :) = BcsScalJmin%ref(:, :, is)
-        p_bcs(:, jmax, :) = BcsScalJmax%ref(:, :, is)
+        p_bcs(:, :, 1) = BcsScalKmin%ref(:, :, is)
+        p_bcs(:, :, kmax) = BcsScalKmax%ref(:, :, is)
 
     end do
 

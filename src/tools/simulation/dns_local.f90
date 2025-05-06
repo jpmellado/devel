@@ -29,7 +29,6 @@ module DNS_LOCAL
     real(wp) :: wall_time        ! Actual elapsed time during the simulation in seconds
     integer :: start_clock      ! Starting time of the simulation on the system
 
-    integer :: imode_rhs            ! Type of implementation of the RHS of evolution equations
     logical :: remove_divergence    ! Remove residual divergence every time step
 
     ! Variable viscosity
@@ -42,13 +41,11 @@ contains
     subroutine DNS_READ_LOCAL(inifile)
         use TLab_Constants, only: wp, wi, big_wp, efile, lfile, wfile
         use FDM, only: g
-        use TLab_Memory, only: inb_scal, inb_txc!, isize_wrk3d, isize_wrk2d, isize_wrk1d, isize_txc_field, inb_txc
+        use TLab_Memory, only: inb_scal, inb_txc
         use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
-        ! use TIME
         use NavierStokes, only: DNS_EQNS_ANELASTIC, DNS_EQNS_INCOMPRESSIBLE
         ! use BOUNDARY_BUFFER
         use BOUNDARY_BCS
-        ! use BOUNDARY_INFLOW
         ! use PARTICLE_VARS
         ! use DNS_STATISTICS, only: stats_averages, stats_pdfs, stats_intermittency
         ! use PLANES
@@ -62,9 +59,6 @@ contains
         ! -------------------------------------------------------------------
         character(len=32) bakfile, block, eStr
         character(len=512) sRes
-        ! integer is, inb_scal_local1
-        ! integer(wi) idummy
-        ! real(wp) dummy(inb_flow + inb_scal + 1)
         integer is
 
         ! ###################################################################
@@ -76,6 +70,7 @@ contains
 
         call TLab_Write_ASCII(bakfile, '#')
         call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
+        call TLab_Write_ASCII(bakfile, '#TermDivergence=<none/remove>')
 
         call ScanFile_Char(bakfile, inifile, 'Main', 'TermDivergence', 'remove', sRes)
         if (trim(adjustl(sRes)) == 'none') then; remove_divergence = .false.

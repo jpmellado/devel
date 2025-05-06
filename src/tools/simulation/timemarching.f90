@@ -7,7 +7,7 @@
 !# Runge-Kutta semi-implicit 3th order from Spalart, Moser & Rogers (1991)
 !#
 !########################################################################
-module TIME
+module TimeMarching
 
 #ifdef USE_OPENMP
     use OMP_LIB
@@ -27,34 +27,46 @@ module TIME
     use TLabMPI_VARS
 #endif
     use TLab_Grid, only: x, y, z
-    use NavierStokes
+    use NavierStokes, only: nse_eqns, DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC
+    use NavierStokes, only: nse_advection, EQNS_CONVECTIVE, EQNS_DIVERGENCE, EQNS_SKEWSYMMETRIC
+    use NavierStokes, only: visc, schmidt, prandtl
     use BOUNDARY_BCS
     implicit none
     private
 
-    public :: TIME_INITIALIZE
-    public :: TIME_RUNGEKUTTA
-    public :: TIME_COURANT
+    public :: TMarch_Initialize
+    public :: TMarch_RungeKutta
+    public :: TMarch_Courant
 
-    integer(wi), public :: rkm_mode             ! Type of Runge-Kutta scheme
-    integer, parameter, public :: RKM_EXP3 = 3
-    integer, parameter, public :: RKM_EXP4 = 4
-    integer, parameter, public :: RKM_IMP3_DIFFUSION = 5
-    integer, parameter, public :: RKM_IMP3_SOURCE = 6
-    integer, parameter, public :: RKM_IMP3_DIFFSOURCE = 7
-
-    integer(wi), public :: rkm_endstep          ! number of substeps
-    integer(wi), public :: rkm_substep          ! substep counter
-
-    real(wp), public :: cfla, cfld, cflr        ! CFL numbers
     real(wp), public :: dtime                   ! time step
     real(wp), public :: dte                     ! time step of each substep
 
-    integer, parameter, public :: EQNS_RHS_SPLIT = 18
-    integer, parameter, public :: EQNS_RHS_COMBINED = 19
-    integer, parameter, public :: EQNS_RHS_NONBLOCKING = 20
-
     ! -------------------------------------------------------------------
+    integer :: imode_rhs                        ! Type of implementation of the RHS of evolution equations
+    integer, parameter :: EQNS_RHS_SPLIT = 18
+    integer, parameter :: EQNS_RHS_COMBINED = 19
+    integer, parameter :: EQNS_RHS_NONBLOCKING = 20
+
+    ! type :: tmarch_dt
+    !     sequence
+    !     integer type
+    !     integer nb_stages                           ! number of stages
+    !     real(wp) kdt(5), kco(4), ktime(5)           ! explicit scheme coefficients
+    !     real(wp) kex(3), kim(3)                     ! implicit scheme coefficients
+    !     procedure(tmarch_interface), pointer, nopass :: tmarch_scheme
+    ! end type tmarch_dt
+
+    integer(wi) :: rkm_mode                     ! Type of Runge-Kutta scheme
+    integer, parameter :: RKM_EXP3 = 3
+    integer, parameter :: RKM_EXP4 = 4
+    integer, parameter :: RKM_IMP3_DIFFUSION = 5
+    integer, parameter :: RKM_IMP3_SOURCE = 6
+    integer, parameter :: RKM_IMP3_DIFFSOURCE = 7
+
+    integer(wi) :: rkm_endstep          ! number of substeps
+    integer(wi) :: rkm_substep          ! substep counter
+
+    real(wp) :: cfla, cfld, cflr        ! CFL numbers
     real(wp) etime                              ! time at each substep
 
     real(wp) kdt(5), kco(4), ktime(5)           ! explicit scheme coefficients
@@ -74,7 +86,7 @@ contains
 
     ! ###################################################################
     ! ###################################################################
-    subroutine TIME_INITIALIZE(inifile)
+    subroutine TMarch_Initialize(inifile)
         use FDM, only: g
 
         character*(*) inifile
@@ -97,7 +109,6 @@ contains
         call TLab_Write_ASCII(bakfile, '#TimeCFL=<value>')
         call TLab_Write_ASCII(bakfile, '#TimeDiffusiveCFL=<value>')
         call TLab_Write_ASCII(bakfile, '#TimeReactiveCFL=<value>')
-        call TLab_Write_ASCII(bakfile, '#TermDivergence=<none/remove>')
         call TLab_Write_ASCII(bakfile, '#RhsMode=<split/combined/nonblocking>')
 
         call ScanFile_Char(bakfile, inifile, 'Main', 'TimeOrder', 'dummy', sRes)
@@ -118,36 +129,29 @@ contains
         call ScanFile_Real(bakfile, inifile, 'Main', 'TimeReactiveCFL', trim(adjustl(lstr)), cflr)
         call ScanFile_Real(bakfile, inifile, 'Main', 'TimeStep', '0.05', dtime)
 
-        ! -------------------------------------------------------------------
-        ! Implicit RKM part
-        ! -------------------------------------------------------------------
-        if (rkm_mode == RKM_IMP3_DIFFUSION) then
-
-            ! Check if Neumann BCs for scalar are present and warn if so
-            do is = 1, inb_scal
-                if (BcsScalJmin%type(is) == DNS_BCS_NEUMANN .or. &
-                    BcsScalJmax%type(is) == DNS_BCS_NEUMANN) then
-                    write (sRes, *) is; sRes = 'DNS_REAL_LOCAL. Scalar'//trim(adjustl(sRes))// &
- ': Finite flux BC not implemented for SEMI-IMPLICITE DIFFUSION'
-                    call TLab_Write_ASCII(wfile, trim(adjustl(sRes)))
-                    write (sRes, *) is; sRes = 'DNS_REAL_LOCAL. Scalar'//trim(adjustl(sRes))// &
- ': Setting fluxes at boundary to zero'
-                    call TLab_Write_ASCII(wfile, trim(adjustl(sRes)))
-                end if
-            end do
-
-            ! Check if grid is non-uniform
-            ! if (.not. g(1)%uniform .and. g(1)%der1%mode_fdm /= FDM_COM6_DIRECT) then
-            !     call TLab_Write_ASCII(efile, 'DNS_READ_LOCAL. Non-uniform grid requires a direct FDM formulation.')
-            !     call TLab_Stop(DNS_ERROR_UNDEVELOP)
-            ! end if
-
-            ! if (nse_eqns /= DNS_EQNS_INCOMPRESSIBLE) then
-            !     call TLab_Write_ASCII(efile, 'DNS_READ_LOCAL. Implicit formulation only available for incompressible case.')
-            !     call TLab_Stop(DNS_ERROR_UNDEVELOP)
-            ! end if
-
+        call ScanFile_Char(bakfile, inifile, 'Main', 'RhsMode', 'combined', sRes)
+        if (trim(adjustl(sRes)) == 'split') then; imode_rhs = EQNS_RHS_SPLIT
+        else if (trim(adjustl(sRes)) == 'combined') then; imode_rhs = EQNS_RHS_COMBINED
+        else
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong RhsMode option.')
+            call TLab_Stop(DNS_ERROR_OPTION)
         end if
+
+        ! ! -------------------------------------------------------------------
+        ! ! Implicit RKM part
+        ! ! -------------------------------------------------------------------
+        ! if (rkm_mode == RKM_IMP3_DIFFUSION) then
+        !     do is = 1, inb_scal
+        !         if (BcsScalJmin%type(is) == DNS_BCS_NEUMANN .or. &
+        !             BcsScalJmax%type(is) == DNS_BCS_NEUMANN) then
+        !             write (sRes, *) is; sRes = trim(adjustl(eStr))//'Scalar'//trim(adjustl(sRes))//'. Finite flux BC not implemented for SEMI-IMPLICITE DIFFUSION'
+        !             call TLab_Write_ASCII(wfile, trim(adjustl(sRes)))
+        !             write (sRes, *) is; sRes = trim(adjustl(eStr))//'Scalar'//trim(adjustl(sRes))//'. Setting fluxes at boundary to zero'
+        !             call TLab_Write_ASCII(wfile, trim(adjustl(sRes)))
+        !         end if
+        !     end do
+
+        ! end if
 
         ! ###################################################################
         ! RK coefficients
@@ -203,7 +207,7 @@ contains
         end select
 
         ! ###################################################################
-        ! maximum diffusivities for TIME_COURANT
+        ! maximum diffusivities for TMarch_Courant
         schmidtfactor = 1.0_wp
         dummy = 1.0_wp/prandtl
         schmidtfactor = max(schmidtfactor, dummy)
@@ -221,7 +225,7 @@ contains
 
         end do
 
-        ! Maximum of (1/dx^2 + 1/dy^2 + 1/dz^2) for TIME_COURANT
+        ! Maximum of (1/dx^2 + 1/dy^2 + 1/dz^2) for TMarch_Courant
 #ifdef USE_MPI
         idsp = ims_offset_i
         jdsp = ims_offset_j
@@ -246,11 +250,11 @@ contains
         end do
 
         return
-    end subroutine TIME_INITIALIZE
+    end subroutine TMarch_Initialize
 
     ! ###################################################################
     ! ###################################################################
-    subroutine TIME_RUNGEKUTTA()
+    subroutine TMarch_RungeKutta()
         use TLab_Arrays
         ! use PARTICLE_ARRAYS
         use DNS_LOCAL
@@ -298,26 +302,26 @@ contains
             call system_clock(t_srt, PROC_CYCLES, MAX_CYCLES)
 #endif
             ! if (part%type /= PART_TYPE_NONE) then
-            !     call TIME_SUBSTEP_PARTICLE()
+            !     call TMarch_SUBSTEP_PARTICLE()
             ! end if
 
             select case (nse_eqns)
             case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
                 if (rkm_mode == RKM_EXP3 .or. rkm_mode == RKM_EXP4) then
-                    call TIME_SUBSTEP_INCOMPRESSIBLE_EXPLICIT()
+                    call TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT()
                 else
-                    ! call TIME_SUBSTEP_INCOMPRESSIBLE_IMPLICIT()
+                    ! call TMarch_SUBSTEP_INCOMPRESSIBLE_IMPLICIT()
                 end if
 
                 ! case (DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL)
-                !     call TIME_SUBSTEP_COMPRESSIBLE()
+                !     call TMarch_SUBSTEP_COMPRESSIBLE()
 
             end select
 
             ! call FI_DIAGNOSTIC(imax, jmax, kmax, q, s)
 
             call DNS_BOUNDS_LIMIT()
-            !            if (int(logs_data(1)) /= 0) return ! Error detected
+            if (int(logs_data(1)) /= 0) return ! Error detected
 
             ! if (part%type == PART_TYPE_BIL_CLOUD_4) then
             !     call PARTICLE_TIME_RESIDENCE(dtime, l_g%np, l_q)
@@ -399,7 +403,7 @@ contains
         end do
 
         return
-    end subroutine TIME_RUNGEKUTTA
+    end subroutine TMarch_RungeKutta
 
     !########################################################################
     !#
@@ -431,13 +435,13 @@ contains
     !# In incompressible mode the arrays rho, p and vis are not used
     !#
     !########################################################################
-    subroutine TIME_COURANT()
+    subroutine TMarch_Courant()
         use DNS_Control, only: logs_data, logs_dtime
         ! use Thermodynamics, only: gama0, itransport, EQNS_TRANS_POWERLAW
         use TLab_Pointers_3D, only: u, v, w, p_wrk3d !, p, rho, vis
 
         ! -------------------------------------------------------------------
-        integer(wi) ipmax, k_glo
+        integer(wi) ipmax, j_glo
         real(wp) dt_loc
         real(wp) pmax(3), dtc, dtd, dtr
 #ifdef USE_MPI
@@ -447,10 +451,10 @@ contains
         ! ###################################################################
 #ifdef USE_MPI
         idsp = ims_offset_i
-        kdsp = ims_offset_k
+        jdsp = ims_offset_j
 #else
         idsp = 0
-        kdsp = 0
+        jdsp = 0
 #endif
 
         dtc = big_wp   ! So that the minimum non-zero determines dt at the end
@@ -469,14 +473,14 @@ contains
         ! -------------------------------------------------------------------
         select case (nse_eqns)
         case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
-            if (z%size > 1) then
+            if (y%size > 1) then
                 do k = 1, kmax
-                    k_glo = k + kdsp
                     do j = 1, jmax
+                        j_glo = j + jdsp
                         do i = 1, imax
                             p_wrk3d(i, j, k) = abs(u(i, j, k))*ds(1)%one_ov_ds1(i + idsp) &
-                                               + abs(v(i, j, k))*ds(2)%one_ov_ds1(j) &
-                                               + abs(w(i, j, k))*ds(3)%one_ov_ds1(k_glo)
+                                               + abs(v(i, j, k))*ds(2)%one_ov_ds1(j_glo) &
+                                               + abs(w(i, j, k))*ds(3)%one_ov_ds1(k)
                         end do
                     end do
                 end do
@@ -485,7 +489,7 @@ contains
                     do j = 1, jmax
                         do i = 1, imax
                             p_wrk3d(i, j, k) = abs(u(i, j, k))*ds(1)%one_ov_ds1(i + idsp) &
-                                               + abs(v(i, j, k))*ds(2)%one_ov_ds1(j)
+                                               + abs(w(i, j, k))*ds(3)%one_ov_ds1(k)
                         end do
                     end do
                 end do
@@ -498,12 +502,12 @@ contains
             !     p_wrk3d = sqrt(gama0*p(:, :, :)/rho(:, :, :)) ! sound speed; positiveness of p and rho checked in routine DNS_CONTROL
             !     if (z%size > 1) then
             !         do k = 1, kmax
-            !             k_glo = k + kdsp
+            !             j_glo = j + jdsp
             !             do j = 1, jmax
             !                 do i = 1, imax
             !                     p_wrk3d(i, j, k) = (abs(u(i, j, k)) + p_wrk3d(i, j, k))*ds(1)%one_ov_ds1(i + idsp) &
-            !                                        + (abs(v(i, j, k)) + p_wrk3d(i, j, k))*ds(2)%one_ov_ds1(j) &
-            !                                        + (abs(w(i, j, k)) + p_wrk3d(i, j, k))*ds(3)%one_ov_ds1(k_glo)
+            !                                        + (abs(v(i, j, k)) + p_wrk3d(i, j, k))*ds(2)%one_ov_ds1(j_glo) &
+            !                                        + (abs(w(i, j, k)) + p_wrk3d(i, j, k))*ds(3)%one_ov_ds1(k)
             !                 end do
             !             end do
             !         end do
@@ -512,7 +516,7 @@ contains
             !             do j = 1, jmax
             !                 do i = 1, imax
             !                     p_wrk3d(i, j, k) = (abs(u(i, j, k)) + p_wrk3d(i, j, k))*ds(1)%one_ov_ds1(i + idsp) &
-            !                                        + (abs(v(i, j, k)) + p_wrk3d(i, j, k))*ds(2)%one_ov_ds1(j)
+            !                                        + (abs(v(i, j, k)) + p_wrk3d(i, j, k))*ds(2)%one_ov_ds1(j_glo)
             !                 end do
             !             end do
             !         end do
@@ -541,10 +545,10 @@ contains
             !     if (itransport == EQNS_TRANS_POWERLAW) then
             !         if (z%size > 1) then
             !             do k = 1, kmax
-            !                 k_glo = k + kdsp
+            !                 j_glo = j + jdsp
             !                 do j = 1, jmax
             !                     do i = 1, imax
-            !                         p_wrk3d(i, j, k) = (ds(1)%one_ov_ds2(i + idsp) + ds(2)%one_ov_ds2(j) + ds(3)%one_ov_ds2(k_glo))*vis(i, j, k)/rho(i, j, k)
+            !                         p_wrk3d(i, j, k) = (ds(1)%one_ov_ds2(i + idsp) + ds(2)%one_ov_ds2(j) + ds(3)%one_ov_ds2(k))*vis(i, j, k)/rho(i, j, k)
             !                     end do
             !                 end do
             !             end do
@@ -561,10 +565,10 @@ contains
             !     else ! constant dynamic viscosity
             !         if (z%size > 1) then
             !             do k = 1, kmax
-            !                 k_glo = k + kdsp
+            !                 j_glo = j + jdsp
             !                 do j = 1, jmax
             !                     do i = 1, imax
-            !                         p_wrk3d(i, j, k) = (ds(1)%one_ov_ds2(i + idsp) + ds(2)%one_ov_ds2(j) + ds(3)%one_ov_ds2(k_glo))/rho(i, j, k)
+            !                         p_wrk3d(i, j, k) = (ds(1)%one_ov_ds2(i + idsp) + ds(2)%one_ov_ds2(j) + ds(3)%one_ov_ds2(k))/rho(i, j, k)
             !                     end do
             !                 end do
             !             end do
@@ -615,7 +619,7 @@ contains
 
         return
 
-    end subroutine TIME_COURANT
+    end subroutine TMarch_Courant
 
     !########################################################################
     !#
@@ -626,7 +630,7 @@ contains
     !# decreased performance considerably (at least in JUGENE)
     !#
     !########################################################################
-    subroutine TIME_SUBSTEP_INCOMPRESSIBLE_EXPLICIT()
+    subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT()
         use TLab_Arrays, only: q, s!, txc
         ! use PARTICLE_ARRAYS
         use DNS_ARRAYS, only: hq, hs
@@ -642,66 +646,54 @@ contains
 #endif
 
         ! #######################################################################
+        select case (nse_advection)
+        case (EQNS_DIVERGENCE)
+            ! call TLab_Sources_Flow(q, s, hq, txc(1, 1))
+            ! call RHS_FLOW_GLOBAL_INCOMPRESSIBLE_3()
+
+            ! call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
+            ! do is = 1, inb_scal
+            !     call RHS_SCAL_GLOBAL_INCOMPRESSIBLE_3(is)
+            ! end do
+
+        case (EQNS_SKEWSYMMETRIC)
+            ! call TLab_Sources_Flow(q, s, hq, txc(1, 1))
+            ! call RHS_FLOW_GLOBAL_INCOMPRESSIBLE_2()
+
+            ! call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
+            ! do is = 1, inb_scal
+            !     call RHS_SCAL_GLOBAL_INCOMPRESSIBLE_2(is)
+            ! end do
+
+        case (EQNS_CONVECTIVE)
+            select case (imode_rhs)
+            case (EQNS_RHS_SPLIT)
+                ! call TLab_Sources_Flow(q, s, hq, txc(1, 1))
+                ! call RHS_FLOW_GLOBAL_INCOMPRESSIBLE_1()
+
+                ! call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
+                ! do is = 1, inb_scal
+                !     call RHS_SCAL_GLOBAL_INCOMPRESSIBLE_1(is)
+                ! end do
+
+            case (EQNS_RHS_COMBINED)
+                ! call TLab_Sources_Flow(q, s, hq, txc(1, 1))
+                ! call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
+                call RHS_GLOBAL_INCOMPRESSIBLE_1()
+            end select
+        end select
+
+        ! if (BuffType == DNS_BUFFER_RELAX .or. BuffType == DNS_BUFFER_BOTH) then
+        !     call BOUNDARY_BUFFER_RELAX_SCAL() ! Flow part needs to be taken into account in the pressure
+        ! end if
+
+        ! #######################################################################
+        ! Perform the time stepping
+        ! #######################################################################
 #ifdef USE_BLAS
         ij_len = isize_field
 #endif
 
-        ! select case (nse_advection)
-        ! case (EQNS_DIVERGENCE)
-        !     call TLab_Sources_Flow(q, s, hq, txc(1, 1))
-        !     call RHS_FLOW_GLOBAL_INCOMPRESSIBLE_3()
-
-        !     call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
-        !     do is = 1, inb_scal
-        !         call RHS_SCAL_GLOBAL_INCOMPRESSIBLE_3(is)
-        !     end do
-
-        ! case (EQNS_SKEWSYMMETRIC)
-        !     call TLab_Sources_Flow(q, s, hq, txc(1, 1))
-        !     call RHS_FLOW_GLOBAL_INCOMPRESSIBLE_2()
-
-        !     call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
-        !     do is = 1, inb_scal
-        !         call RHS_SCAL_GLOBAL_INCOMPRESSIBLE_2(is)
-        !     end do
-
-        ! case (EQNS_CONVECTIVE)
-        !     select case (imode_rhs)
-        !     case (EQNS_RHS_SPLIT)
-        !         call TLab_Sources_Flow(q, s, hq, txc(1, 1))
-        !         call RHS_FLOW_GLOBAL_INCOMPRESSIBLE_1()
-
-        !         call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
-        !         do is = 1, inb_scal
-        !             call RHS_SCAL_GLOBAL_INCOMPRESSIBLE_1(is)
-        !         end do
-
-        !     case (EQNS_RHS_COMBINED)
-        !         call TLab_Sources_Flow(q, s, hq, txc(1, 1))
-        !         call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
-        call RHS_GLOBAL_INCOMPRESSIBLE_1()
-
-        !             case (EQNS_RHS_NONBLOCKING)
-        ! #ifdef USE_PSFFT
-        !                 call RHS_GLOBAL_INCOMPRESSIBLE_NBC(q(1, 1), q(1, 2), q(1, 3), s(1, 1), &
-        !                                                    txc(1, 1), txc(1, 2), &
-        !                                                    txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), txc(1, 7), txc(1, 8), txc(1, 9), txc(1, 10), &
-        !                                                    txc(1, 11), txc(1, 12), txc(1, 13), txc(1, 14), &
-        !                                                    hq(1, 1), hq(1, 2), hq(1, 3), hs(1, 1))
-        ! #else
-        !                 call TLab_Write_ASCII(efile, 'TIME_SUBSTEP_INCOMPRESSIBLE_EXPLICIT. Need compiling flag -DUSE_PSFFT.')
-        !                 call TLab_Stop(DNS_ERROR_PSFFT)
-        ! #endif
-        !             end select
-        !         end select
-
-        !         if (BuffType == DNS_BUFFER_RELAX .or. BuffType == DNS_BUFFER_BOTH) then
-        !             call BOUNDARY_BUFFER_RELAX_SCAL() ! Flow part needs to be taken into account in the pressure
-        !         end if
-
-        ! #######################################################################
-        ! Perform the time stepping for incompressible equations
-        ! #######################################################################
 #ifdef USE_OPENMP
 #ifdef USE_BLAS
         !$omp parallel default(shared) &
@@ -737,11 +729,11 @@ contains
 #endif
 
         return
-    end subroutine TIME_SUBSTEP_INCOMPRESSIBLE_EXPLICIT
+    end subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT
 
     !########################################################################
     !########################################################################
-    subroutine TIME_SUBSTEP_INCOMPRESSIBLE_IMPLICIT()
+    subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_IMPLICIT()
 
         ! ######################################################################
         if (rkm_mode == RKM_IMP3_DIFFUSION) then
@@ -759,11 +751,11 @@ contains
         end if
 
         return
-    end subroutine TIME_SUBSTEP_INCOMPRESSIBLE_IMPLICIT
+    end subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_IMPLICIT
 
     ! !########################################################################
     ! !########################################################################
-    !     subroutine TIME_SUBSTEP_COMPRESSIBLE()
+    !     subroutine TMarch_SUBSTEP_COMPRESSIBLE()
     !         use TLab_Arrays
     !         use TLab_Pointers
     !         use THERMO_CALORIC, only: THERMO_GAMMA
@@ -969,11 +961,11 @@ contains
     !         end if
 
     !         return
-    !     end subroutine TIME_SUBSTEP_COMPRESSIBLE
+    !     end subroutine TMarch_SUBSTEP_COMPRESSIBLE
 
     !     !########################################################################
     !     !########################################################################
-    !     subroutine TIME_SUBSTEP_PARTICLE()
+    !     subroutine TMarch_SUBSTEP_PARTICLE()
     !         use DNS_ARRAYS, only: l_hq
     !         use PARTICLE_VARS
     !         use PARTICLE_ARRAYS
@@ -1137,6 +1129,6 @@ contains
     !         call LOCATE_Y(l_g%np, l_q(1, 2), l_g%nodes, y%size, y%nodes)
 
     !         return
-    !     end subroutine TIME_SUBSTEP_PARTICLE
+    !     end subroutine TMarch_SUBSTEP_PARTICLE
 
-end module TIME
+end module TimeMarching

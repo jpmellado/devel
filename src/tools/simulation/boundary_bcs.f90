@@ -13,8 +13,8 @@ module BOUNDARY_BCS
 
     public :: BOUNDARY_BCS_SCAL_READBLOCK, BOUNDARY_BCS_FLOW_READBLOCK
     public :: BOUNDARY_BCS_INITIALIZE
-    public :: BOUNDARY_BCS_NEUMANN_Y
-    public :: BOUNDARY_BCS_SURFACE_Y
+    public :: BOUNDARY_BCS_NEUMANN_Z
+    public :: BOUNDARY_BCS_SURFACE_Z
 
     type bcs_dt
         sequence
@@ -164,16 +164,16 @@ contains
 ! we add space at the end for the shape factor
         allocate (BcsFlowImin%ref(jmax, kmax, inb_flow_array + 1))
         allocate (BcsFlowImax%ref(jmax, kmax, inb_flow_array + 1))
-        allocate (BcsFlowJmin%ref(imax, kmax, inb_flow_array + 1))
+        allocate (BcsFlowJmin%ref(imax, kmax, inb_flow_array + 1)) ! not yet used
         allocate (BcsFlowJmax%ref(imax, kmax, inb_flow_array + 1))
-        allocate (BcsFlowKmin%ref(imax, jmax, inb_flow_array + 1)) ! not yet used
+        allocate (BcsFlowKmin%ref(imax, jmax, inb_flow_array + 1))
         allocate (BcsFlowKmax%ref(imax, jmax, inb_flow_array + 1))
 
         allocate (BcsScalImin%ref(jmax, kmax, inb_scal_array + 1))
         allocate (BcsScalImax%ref(jmax, kmax, inb_scal_array + 1))
-        allocate (BcsScalJmin%ref(imax, kmax, inb_scal_array + 1))
+        allocate (BcsScalJmin%ref(imax, kmax, inb_scal_array + 1)) ! not yet used
         allocate (BcsScalJmax%ref(imax, kmax, inb_scal_array + 1))
-        allocate (BcsScalKmin%ref(imax, jmax, inb_scal_array + 1)) ! not yet used
+        allocate (BcsScalKmin%ref(imax, jmax, inb_scal_array + 1))
         allocate (BcsScalKmax%ref(imax, jmax, inb_scal_array + 1))
 
 ! #######################################################################
@@ -359,7 +359,7 @@ contains
 !# Calculate the boundary values of a field s.t. the normal derivative is zero
 !# Routine format extracted from OPR_Partial_Y
 !########################################################################
-    subroutine BOUNDARY_BCS_NEUMANN_Y(ibc, nx, ny, nz, g, u, bcs_hb, bcs_ht, tmp1)
+    subroutine BOUNDARY_BCS_NEUMANN_Z(ibc, nx, ny, nz, g, u, bcs_hb, bcs_ht, tmp1)
         use FDM, only: fdm_dt
 
         integer(wi), intent(in) :: ibc     ! BCs at jmin/jmax: 1, for Neumann/-
@@ -367,109 +367,65 @@ contains
         !                                                   3, for Neumann/Neumann
         integer(wi) nx, ny, nz
         type(fdm_dt), intent(in) :: g
-        real(wp), intent(in) :: u(nx*nz, ny)         ! they are transposed below
-        real(wp), intent(inout) :: tmp1(nx*nz, ny)      ! they are transposed below
-        real(wp), intent(out) :: bcs_hb(nx*nz), bcs_ht(nx*nz)
-
-        target u, bcs_hb, bcs_ht, tmp1
+        real(wp), intent(in) :: u(nx*ny, nz)         ! they are transposed below
+        real(wp), intent(inout) :: tmp1(nx*ny, nz)      ! they are transposed below
+        real(wp), intent(out) :: bcs_hb(nx*ny), bcs_ht(nx*ny)
 
         ! -------------------------------------------------------------------
-        integer(wi) nxz, nxy, ip, idl, ic
-
-        real(wp), pointer :: p_org(:, :), p_dst(:, :)
-        real(wp), pointer :: p_bcs_hb(:), p_bcs_ht(:)
+        integer(wi) ip, idl, ic
 
         ! ###################################################################
         if (g%size == 1) then ! Set to zero in 2D case
             bcs_hb = 0.0_wp; bcs_ht = 0.0_wp
+            return
+        end if
 
-        else
-            ! ###################################################################
-            nxy = nx*ny
-            nxz = nx*nz
+        ! ###################################################################
+        ip = ibc*5
 
-            ! -------------------------------------------------------------------
-            ! Make y  direction the last one
-            ! -------------------------------------------------------------------
-            if (nz > 1) then
-#ifdef USE_ESSL
-                call DGETMO(u, nxy, nxy, nz, tmp1, nz)
-#else
-                call TLab_Transpose(u, nxy, nz, nxy, tmp1, nz)
-#endif
-                p_org => tmp1
-                p_dst(1:nx*nz, 1:ny) => wrk3d(1:nx*ny*nz)
-                p_bcs_hb => tmp1(:, 1)
-                p_bcs_ht => tmp1(:, 2)
-            else
-                p_org => u
-                p_dst => tmp1
-                p_bcs_hb => bcs_hb
-                p_bcs_ht => bcs_ht
-            end if
+        nmin = 1; nmax = g%size
+        if (any([BCS_ND, BCS_NN] == ibc)) then
+            tmp1(:, 1) = 0.0_wp      ! homogeneous bcs
+            nmin = nmin + 1
+        end if
+        if (any([BCS_DN, BCS_NN] == ibc)) then
+            tmp1(:, nz) = 0.0_wp
+            nmax = nmax - 1
+        end if
+        nsize = nmax - nmin + 1
 
-            ! ###################################################################
-            ip = ibc*5
+        ! -------------------------------------------------------------------
+        ! Calculate RHS in system of equations A u' = B u
+        call g%der1%matmul(g%der1%rhs, u, tmp1, ibc, g%der1%rhs_b, g%der1%rhs_t, bcs_hb, bcs_ht)
 
-            nmin = 1; nmax = g%size
-            if (any([BCS_ND, BCS_NN] == ibc)) then
-                p_dst(:, 1) = 0.0_wp      ! homogeneous bcs
-                nmin = nmin + 1
-            end if
-            if (any([BCS_DN, BCS_NN] == ibc)) then
-                p_dst(:, ny) = 0.0_wp
-                nmax = nmax - 1
-            end if
-            nsize = nmax - nmin + 1
+        ! -------------------------------------------------------------------
+        ! Solve for u' in system of equations A u' = B u
+        select case (g%der1%nb_diag(1))
+        case (3)
+            call TRIDSS(nsize, nx*ny, g%der1%lu(nmin:nmax, ip + 1), g%der1%lu(nmin:nmax, ip + 2), g%der1%lu(nmin:nmax, ip + 3), tmp1(:, nmin:nmax))
+        case (5)
+                call PENTADSS2(nsize, nx*ny, g%der1%lu(nmin:nmax, ip + 1), g%der1%lu(nmin:nmax, ip + 2), g%der1%lu(nmin:nmax, ip + 3), g%der1%lu(nmin:nmax, ip + 4), g%der1%lu(nmin:nmax, ip + 5), tmp1(:, nmin:nmax))
+        end select
 
-            ! -------------------------------------------------------------------
-            ! Calculate RHS in system of equations A u' = B u
-            call g%der1%matmul(g%der1%rhs, p_org, p_dst, ibc, g%der1%rhs_b, g%der1%rhs_t, p_bcs_hb, p_bcs_ht)
-
-            ! -------------------------------------------------------------------
-            ! Solve for u' in system of equations A u' = B u
-            select case (g%der1%nb_diag(1))
-            case (3)
-                call TRIDSS(nsize, nxz, g%der1%lu(nmin:nmax, ip + 1), g%der1%lu(nmin:nmax, ip + 2), g%der1%lu(nmin:nmax, ip + 3), p_dst(:, nmin:nmax))
-            case (5)
-                call PENTADSS2(nsize, nxz, g%der1%lu(nmin:nmax, ip + 1), g%der1%lu(nmin:nmax, ip + 2), g%der1%lu(nmin:nmax, ip + 3), g%der1%lu(nmin:nmax, ip + 4), g%der1%lu(nmin:nmax, ip + 5), p_dst(:, nmin:nmax))
-            end select
-
-            idl = g%der1%nb_diag(1)/2 + 1
-            if (any([BCS_ND, BCS_NN] == ibc)) then
-                do ic = 1, idl - 1
-                    p_bcs_hb(:) = p_bcs_hb(:) + g%der1%lu(1, ip + idl + ic)*p_dst(:, 1 + ic)
-                end do
-            end if
-            if (any([BCS_DN, BCS_NN] == ibc)) then
-                do ic = 1, idl - 1
-                    p_bcs_ht(:) = p_bcs_ht(:) + g%der1%lu(ny, ip + idl - ic)*p_dst(:, ny - ic)
-                end do
-            end if
-
-            ! ###################################################################
-            ! -------------------------------------------------------------------
-            ! Put bcs arrays in correct order
-            ! -------------------------------------------------------------------
-            if (nz > 1) then
-#ifdef USE_ESSL
-                if (any([BCS_ND, BCS_NN] == ibc)) call DGETMO(p_bcs_hb, nz, nz, nx, bcs_hb, nx)
-                if (any([BCS_DN, BCS_NN] == ibc)) call DGETMO(p_bcs_ht, nz, nz, nx, bcs_ht, nx)
-#else
-                if (any([BCS_ND, BCS_NN] == ibc)) call TLab_Transpose(p_bcs_hb, nz, nx, nz, bcs_hb, nx)
-                if (any([BCS_DN, BCS_NN] == ibc)) call TLab_Transpose(p_bcs_ht, nz, nx, nz, bcs_ht, nx)
-#endif
-            end if
-
+        idl = g%der1%nb_diag(1)/2 + 1
+        if (any([BCS_ND, BCS_NN] == ibc)) then
+            do ic = 1, idl - 1
+                bcs_hb(:) = bcs_hb(:) + g%der1%lu(1, ip + idl + ic)*tmp1(:, 1 + ic)
+            end do
+        end if
+        if (any([BCS_DN, BCS_NN] == ibc)) then
+            do ic = 1, idl - 1
+                bcs_ht(:) = bcs_ht(:) + g%der1%lu(nz, ip + idl - ic)*tmp1(:, nz - ic)
+            end do
         end if
 
         return
-    end subroutine BOUNDARY_BCS_NEUMANN_Y
+    end subroutine BOUNDARY_BCS_NEUMANN_Z
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Calculates and updates interactive surface boundary condition
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    subroutine BOUNDARY_BCS_SURFACE_Y(is, s, hs, tmp1, aux)
+    subroutine BOUNDARY_BCS_SURFACE_Z(is, s, hs, tmp1, aux)
 #ifdef TRACE_ON
         use TLab_Constants, only: tfile
         use TLab_WorkFlow, only: TLab_Write_ASCII
@@ -536,6 +492,6 @@ contains
 
         return
 
-    end subroutine BOUNDARY_BCS_SURFACE_Y
+    end subroutine BOUNDARY_BCS_SURFACE_Z
 
 end module BOUNDARY_BCS
