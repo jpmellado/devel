@@ -38,7 +38,7 @@ module DNS_LOCAL
 contains
     ! ###################################################################
     ! ###################################################################
-    subroutine DNS_READ_LOCAL(inifile)
+    subroutine DNS_Initialize_Parameters(inifile)
         use TLab_Constants, only: wp, wi, big_wp, efile, lfile, wfile
         use FDM, only: g
         use TLab_Memory, only: inb_scal, inb_txc
@@ -106,6 +106,11 @@ contains
         ! ! Domain Filter (Should we move it to Iteration?)
         ! call ScanFile_Int(bakfile, inifile, 'Filter', 'Step', '0', nitera_filter)
         ! if (nitera_filter == 0) FilterDomain(:)%type = DNS_FILTER_NONE
+
+        if (nitera_first > nitera_last) then
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Not started because nitera_first > nitera_last.')
+            call TLab_Stop(DNS_ERROR_OPTION)
+        end if
 
         ! ###################################################################
         block = 'BoundaryConditions'
@@ -178,15 +183,13 @@ contains
         do is = 1, inb_scal
             if (BcsScalJmin%type(is) /= DNS_BCS_DIRICHLET .and. &
                 BcsScalJmin%SfcType(is) /= DNS_SFC_STATIC) then
-                call TLab_Write_ASCII(efile, &
-                                      'DNS_READ_LOCAL. Interactive BC at jmin not implemented for non-Dirichlet BC')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Interactive BC at kmin not implemented for non-Dirichlet BC')
                 call TLab_Stop(DNS_ERROR_JBC)
             end if
             if (BcsScalJmax%type(is) /= DNS_BCS_DIRICHLET .and. &
                 BcsScalJmax%SfcType(is) /= DNS_SFC_STATIC) then
                 write (*, *) BcsScalJmax%type(is), BcsScalJmax%SfcType(is), BcsScalJmax%cpl(is)
-                call TLab_Write_ASCII(efile, &
-                                      'DNS_READ_LOCAL. Interactive BC at jmax not implemented for non-Dirichlet BC')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Interactive BC at kmax not implemented for non-Dirichlet BC')
                 call TLab_Stop(DNS_ERROR_JBC)
             end if
         end do
@@ -218,7 +221,7 @@ contains
         !         else if (trim(adjustl(sRes)) == 'filter') then; BuffType = DNS_BUFFER_FILTER
         !         else if (trim(adjustl(sRes)) == 'both') then; BuffType = DNS_BUFFER_BOTH
         !         else
-        !             call TLab_Write_ASCII(efile, 'DNS_READ_LOCAL. Wrong BufferType option.')
+        !             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong BufferType option.')
         !             call TLab_Stop(DNS_ERROR_OPTION)
         !         end if
 
@@ -248,7 +251,7 @@ contains
         !             BuffScalImax%size /= BuffFlowImax%size .or. &
         !             BuffScalJmin%size /= BuffFlowJmin%size .or. &
         !             BuffScalJmax%size /= BuffFlowJmax%size) then ! Because of io_subarray
-        !             call TLab_Write_ASCII(wfile, 'DNS_READ_LOCAL. Buffer zone sizes must be equal in flow and scal.')
+        !             call TLab_Write_ASCII(wfile, trim(adjustl(eStr))//'Buffer zone sizes must be equal in flow and scal.')
         !             call TLab_Stop(DNS_ERROR_OPTION)
         !         end if
 
@@ -302,12 +305,12 @@ contains
         !         if (idummy /= 3) then
         !             tower_stride(:) = 0
         !             call TLab_Write_ASCII(bakfile, 'Stride=0,0,0')
-        !             call TLab_Write_ASCII(wfile, 'DNS_READ_LOCAL. Cannot read stride for towers; set to 0,0,0.')
+        !             call TLab_Write_ASCII(wfile, 'DNS_Initialize_Parameters. Cannot read stride for towers; set to 0,0,0.')
         !         end if
 
-        ! ###################################################################
-        ! Statistics Control
-        ! ###################################################################
+        ! ! ###################################################################
+        ! ! Statistics Control
+        ! ! ###################################################################
         ! call TLab_Write_ASCII(bakfile, '#')
         ! call TLab_Write_ASCII(bakfile, '#[Statsitics]')
         ! call TLab_Write_ASCII(bakfile, '#Averages=<yes/no>')
@@ -335,11 +338,6 @@ contains
         ! ###################################################################
         ! Final initialization and consistency check
         ! ###################################################################
-        if (nitera_first > nitera_last) then
-            call TLab_Write_ASCII(efile, 'DNS_READ_LOCAL. Not started because nitera_first > nitera_last.')
-            call TLab_Stop(DNS_ERROR_OPTION)
-        end if
-
         ! Avoid dividing by zero in time_integration routine
         if (nitera_save <= 0) nitera_save = nitera_last - nitera_first + 1
         if (nitera_stats <= 0) nitera_stats = nitera_last - nitera_first + 1
@@ -359,7 +357,7 @@ contains
         !         if (use_tower) then
         !             idummy = tower_stride(1)*tower_stride(2)*tower_stride(3)
         !             if (idummy < 5) then
-        !                 call TLab_Write_ASCII(efile, 'DNS_READ_LOCAL. Not enough space in wrk3d array to handle tower information. Increase strides.')
+        !                 call TLab_Write_ASCII(efile, 'DNS_Initialize_Parameters. Not enough space in wrk3d array to handle tower information. Increase strides.')
         !                 call TLab_Stop(DNS_ERROR_UNDEVELOP)
         !             end if
         !         end if
@@ -369,7 +367,7 @@ contains
         ! ! -------------------------------------------------------------------
         !         if (stagger_on .or. any(PressureFilter(:)%type /= DNS_FILTER_NONE)) then
         !             if (.not. (imode_rhs == EQNS_RHS_COMBINED)) then
-        !                 call TLab_Write_ASCII(efile, 'DNS_READ_LOCAL. Horizontal pressure staggering or Pressure filter not implemented for this RHS type.')
+        !                 call TLab_Write_ASCII(efile, 'DNS_Initialize_Parameters. Horizontal pressure staggering or Pressure filter not implemented for this RHS type.')
         !                 call TLab_Stop(DNS_ERROR_UNDEVELOP)
         !             end if
         !         end if
@@ -412,6 +410,6 @@ contains
         !         end if
 
         return
-    end subroutine DNS_READ_LOCAL
+    end subroutine DNS_Initialize_Parameters
 
 end module DNS_LOCAL

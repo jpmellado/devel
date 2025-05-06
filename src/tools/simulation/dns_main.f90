@@ -86,7 +86,7 @@ program DNS
 
     call TLab_Consistency_Check()
 
-    call DNS_READ_LOCAL(ifile)
+    call DNS_Initialize_Parameters(ifile)
 
     ! #######################################################################
     call TLab_Initialize_Memory(__FILE__)

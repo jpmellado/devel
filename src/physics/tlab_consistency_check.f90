@@ -32,7 +32,6 @@ subroutine TLab_Consistency_Check()
     character(len=32) lstr
 
     ! ###################################################################
-    ! consistency check
 #ifdef USE_MPI
     grid_sizes = [imax*ims_npro_i, jmax*ims_npro_j, kmax*ims_npro_k]
 #else

@@ -64,7 +64,7 @@ contains
         if (trim(adjustl(sRes)) == 'none') then; dns_obs_log = OBS_TYPE_NONE
         else if (trim(adjustl(sRes)) == 'ekman') then; dns_obs_log = OBS_TYPE_EKMAN
         else
-            call TLab_Write_ASCII(efile, 'DNS_READ_LOCAL. ObsLog.')
+            call TLab_Write_ASCII(efile, 'DNS_Initialize_Parameters. ObsLog.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 

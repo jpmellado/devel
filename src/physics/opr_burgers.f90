@@ -32,7 +32,7 @@ module OPR_Burgers
     ! -----------------------------------------------------------------------
     ! type(filter_dt) :: Dealiasing(3)
     integer :: Dealiasing(3) ! tobefixed
-    real(wp), allocatable, target :: wrkdea(:, :)       ! Work arrays for dealiasing (scratch space)
+    ! real(wp), allocatable, target :: wrkdea(:, :)       ! Work arrays for dealiasing (scratch space)
 
     type :: rho_anelastic                               ! 1/rho in diffusion term in anelastic formulation
         sequence

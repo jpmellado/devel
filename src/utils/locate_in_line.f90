@@ -1,5 +1,5 @@
 ! Locate the closest node from below to a list of vertical coordinates
-subroutine LOCATE_Y(pmax, y_part, j_part, jmax, y_grid)
+subroutine LOCATE_IN_LINE(pmax, y_part, j_part, jmax, y_grid)
     use TLab_Constants, only: wp, wi
     implicit none
 
@@ -24,4 +24,4 @@ subroutine LOCATE_Y(pmax, y_part, j_part, jmax, y_grid)
     end do
 
     return
-end subroutine LOCATE_Y
+end subroutine LOCATE_IN_LINE

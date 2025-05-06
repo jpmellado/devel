@@ -22,10 +22,14 @@ module NavierStokes
 
     ! Nondimensional numbers
     real(wp), public :: visc, schmidt(MAX_VARS)                     ! molecular transport
-    real(wp), public, protected :: prandtl                          ! molecular transport
-    real(wp), public, protected :: damkohler(MAX_VARS)              ! reaction
     real(wp), public, protected :: froude                           ! gravity force
     real(wp), public, protected :: rossby                           ! Coriolis force
+
+    real(wp), public, protected :: prandtl                          ! molecular transport
+    real(wp), public, protected :: mach                             ! Mach number
+
+    real(wp), public, protected :: damkohler(MAX_VARS)              ! reaction
+
     real(wp), public, protected :: stokes                           ! particle inertial effects
     real(wp), public, protected :: settling                         ! sedimentation effects
 
@@ -178,7 +182,7 @@ contains
 
         ! Compressible flows
         call ScanFile_Real(bakfile, inifile, block, 'Prandtl', '1.0', prandtl)   ! molecular transport, but only appearing in compressible formulation
-        ! call ScanFile_Real(bakfile, inifile, block, 'Mach', '1.0', mach)
+        call ScanFile_Real(bakfile, inifile, block, 'Mach', '1.0', mach)
 
         ! Particle-laden flows
         call ScanFile_Real(bakfile, inifile, block, 'Stokes', '0.0', stokes)
