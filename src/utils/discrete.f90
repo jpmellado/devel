@@ -25,23 +25,23 @@ contains
 
 ! -------------------------------------------------------------------
         integer(wi) idummy
-        character(LEN=512) sRes
+        character(len=128) eStr
+        character(len=512) sRes
 
-! -------------------------------------------------------------------
+        ! ###################################################################
+        eStr = __FILE__//'. '//trim(adjustl(block))//'. '
+
         call TLab_Write_ASCII(bakfile, '#')
         call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
-        call TLab_Write_ASCII(bakfile, '#Type=<Varicose/Sinuous/Gaussian/Step>')
         call TLab_Write_ASCII(bakfile, '#Amplitude=<value>')
         call TLab_Write_ASCII(bakfile, '#ModeX=<value>')
         call TLab_Write_ASCII(bakfile, '#ModeY=<value>')
         call TLab_Write_ASCII(bakfile, '#PhaseX=<value>')
         call TLab_Write_ASCII(bakfile, '#PhaseY=<value>')
-        call TLab_Write_ASCII(bakfile, '#Broadening=<value>')
-!    CALL TLab_Write_ASCII(bakfile, '#Parameters=<values>')
+        call TLab_Write_ASCII(bakfile, '#Type=<Varicose/Sinuous/Gaussian/Step>')
+        call TLab_Write_ASCII(bakfile, '#Parameters=<value>')
 
-        call ScanFile_Char(bakfile, inifile, block, 'Amplitude', 'void', sRes)
-        if (trim(adjustl(sRes)) == 'void') &        ! backwards compatilibity
-            call ScanFile_Char(bakfile, inifile, block, '2DAmpl', '0.0', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'Amplitude', '0.0', sRes)
         var%amplitude(:) = 0.0_wp; var%size = MAX_MODES
         call LIST_REAL(sRes, var%size, var%amplitude)
 
@@ -52,33 +52,31 @@ contains
             idummy = MAX_MODES
             call LIST_INTEGER(sRes, idummy, var%modex)
             if (idummy /= var%size) then
-                call TLab_Write_ASCII(efile, __FILE__//'. Inconsistent Discrete.ModeX.')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Inconsistent ModeX.')
                 call TLab_Stop(DNS_ERROR_INFDISCR)
             end if
         end if
 
-        call ScanFile_Char(bakfile, inifile, block, 'Modey', 'void', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'ModeY', 'void', sRes)
         if (trim(adjustl(sRes)) == 'void') then     ! Default
             var%modey = 0
         else
             idummy = MAX_MODES
             call LIST_INTEGER(sRes, idummy, var%modey)
             if (idummy /= var%size) then
-                call TLab_Write_ASCII(efile, __FILE__//'. Inconsistent Discrete.Modey.')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Inconsistent Modey.')
                 call TLab_Stop(DNS_ERROR_INFDISCR)
             end if
         end if
 
         call ScanFile_Char(bakfile, inifile, block, 'PhaseX', 'void', sRes)
-        if (trim(adjustl(sRes)) == 'void') &        ! backwards compatilibity
-            call ScanFile_Char(bakfile, inifile, block, '2DPhi', 'void', sRes)
         if (trim(adjustl(sRes)) == 'void') then     ! Default
             var%phasex = 0.0_wp
         else
             idummy = MAX_MODES
             call LIST_REAL(sRes, idummy, var%phasex)
             if (idummy /= var%size) then
-                call TLab_Write_ASCII(efile, __FILE__//'. Inconsistent Discrete.PhaseX.')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Inconsistent PhaseX.')
                 call TLab_Stop(DNS_ERROR_INFDISCR)
             end if
         end if
@@ -90,7 +88,7 @@ contains
             idummy = MAX_MODES
             call LIST_REAL(sRes, idummy, var%phasey)
             if (idummy /= var%size) then
-                call TLab_Write_ASCII(efile, __FILE__//'. Inconsistent Discrete.PhaseY.')
+                call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Inconsistent PhaseY.')
                 call TLab_Stop(DNS_ERROR_INFDISCR)
             end if
         end if
@@ -102,7 +100,7 @@ contains
         elseif (trim(adjustl(sRes)) == 'gaussian') then; var%type = PROFILE_GAUSSIAN
         elseif (trim(adjustl(sRes)) == 'step') then; var%type = PROFILE_TANH_COS
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. Error in Discrete.Type.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Error in Type.')
             call TLab_Stop(DNS_ERROR_INFDISCR)
         end if
 

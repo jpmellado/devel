@@ -69,8 +69,10 @@ contains
 ! -------------------------------------------------------------------
         call FI_INVARIANT_P(nx, ny, nz, u, v, w, tmp1, tmp2)
 
+        if (allocated(bcs_hb)) deallocate (bcs_hb)
+        if (allocated(bcs_ht)) deallocate (bcs_ht)
         allocate (bcs_hb(nx*ny), bcs_ht(nx*ny))
-        bcs_hb = 0.0_wp; bcs_ht = 0.0_wp
+        bcs_hb = 0.0_wp; bcs_ht = 0.0_wp            ! No penetration boundary condition
         call OPR_Poisson(nx, ny, nz, BCS_NN, tmp1, tmp2, tmp3, bcs_hb, bcs_ht)
 
 ! -------------------------------------------------------------------

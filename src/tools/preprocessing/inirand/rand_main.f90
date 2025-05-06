@@ -41,7 +41,7 @@ program IniRand
 
     call OPR_Fourier_Initialize()
 
-    call OPR_CHECK()
+    call OPR_Check()
 
     ! ###################################################################
     itime = 0; rtime = 0.0_wp

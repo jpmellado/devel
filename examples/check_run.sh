@@ -20,8 +20,8 @@ if [ -e "tlab.ini" ]; then
 	    $BINPATH/iniscal.x
 	    if [ $? = 0 ]; then
 		$BINPATH/iniflow.x
-		if [ $? = 0 ]; then
-		    $BINPATH/inipart.x
+		# if [ $? = 0 ]; then
+		#     $BINPATH/inipart.x
 
 #Simulation
 		    if [ $? = 0 ]; then
@@ -43,9 +43,9 @@ if [ -e "tlab.ini" ]; then
 			else
     			    echo -e "\033[1;31mFailed \033[0m[dns]."; exit 8
 			fi
-		    else
-			echo -e "\033[1;31mFailed \033[0m[inipart]."; exit 7
-		    fi
+		    # else
+			# echo -e "\033[1;31mFailed \033[0m[inipart]."; exit 7
+		    # fi
 		else
 		    echo -e "\033[1;31mFailed \033[0m[iniflow]."; exit 6
 		fi

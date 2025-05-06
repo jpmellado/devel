@@ -15,16 +15,12 @@ program IniFlow
     use IO_Fields
     use TLab_Grid
     use FDM, only: FDM_Initialize
-    ! use Thermodynamics, only: imixture, Thermodynamics_Initialize_Parameters
     use NavierStokes, only: NavierStokes_Initialize_Parameters
+    ! use Thermodynamics, only: imixture, Thermodynamics_Initialize_Parameters
     ! use NavierStokes, only: nse_eqns, DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL
-    ! use Gravity, only: Gravity_Initialize
     ! use Rotation, only: Rotation_Initialize
-    ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
     use TLab_Background, only: TLab_Initialize_Background, qbg
     use Profiles, only: Profiles_Calculate
-    ! use THERMO_THERMAL
-    ! use THERMO_CALORIC
     use OPR_Fourier, only: OPR_Fourier_Initialize
     use OPR_Elliptic, only: OPR_Elliptic_Initialize
     use FLOW_LOCAL
@@ -47,9 +43,7 @@ program IniFlow
 
     call NavierStokes_Initialize_Parameters(ifile)
     ! call Thermodynamics_Initialize_Parameters(ifile)
-    ! call Gravity_Initialize(ifile)
     ! call Rotation_Initialize(ifile)
-    ! call LargeScaleForcing_Initialize(ifile)
 
     call TLab_Consistency_Check()
 
@@ -61,10 +55,10 @@ program IniFlow
     call TLab_Initialize_Background(ifile)
     if (IniK%relative) IniK%zmean = z%nodes(1) + z%scale*IniK%zmean_rel
 
-    if (flag_u /= 0) then ! Initialize Poisson Solver
+    if (flag_u /= 0) then
         call OPR_Fourier_Initialize()
         call OPR_Elliptic_Initialize(ifile)
-        call OPR_CHECK()
+        call OPR_Check()
     end if
 
     ! ###################################################################
@@ -86,11 +80,11 @@ program IniFlow
     ! Fluctuation
     select case (flag_u)
     case (PERT_DISCRETE)
-        call VELOCITY_DISCRETE(txc(1, 1), txc(1, 2), txc(1, 3))
+        call Iniflow_U_Discrete(txc(1, 1), txc(1, 2), txc(1, 3))
         q(1:isize_field, 1:3) = q(1:isize_field, 1:3) + txc(1:isize_field, 1:3)
 
     case (PERT_BROADBAND, PERT_BROADBAND_POTENTIAL, PERT_BROADBAND_VORTICITY)
-        call VELOCITY_BROADBAND(txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), txc(1, 7), txc(1, 8))
+        call Iniflow_U_Broadband(txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), txc(1, 7), txc(1, 8))
         q(1:isize_field, 1:3) = q(1:isize_field, 1:3) + txc(1:isize_field, 1:3)
 
     end select

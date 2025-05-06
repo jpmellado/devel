@@ -47,7 +47,8 @@ contains
         character(len=*), intent(in) :: inifile
 
         ! -------------------------------------------------------------------
-        character(len=32) bakfile, block, eStr
+        character(len=32) bakfile, block
+        character(len=128) eStr
         character(len=512) sRes
         integer idummy
         real(wp) dummy(inb_flow + inb_scal + 1)

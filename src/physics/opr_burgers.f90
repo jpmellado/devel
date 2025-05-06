@@ -63,8 +63,7 @@ contains
         character(len=*), intent(in) :: inifile
 
         ! -----------------------------------------------------------------------
-        character(len=32) bakfile!, block, eStr
-        ! character(len=512) sRes
+        character(len=32) bakfile
 
         integer(wi) ig, is, ip, idummy
         integer(wi) nlines, offset

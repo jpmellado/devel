@@ -15,26 +15,21 @@ module FLOW_LOCAL
     use IO_Fields
     use TLab_Grid, only: x, y, z
     use FDM, only: g
-    ! use Tlab_Background, only: tbg, hbg
-    ! use THERMO_THERMAL
-    ! use THERMO_AIRWATER
-    ! use Thermo_Anelastic
     use Averages, only: AVG1V2D
     use Profiles, only: profiles_dt, Profiles_ReadBlock, Profiles_Calculate
     use Profiles, only: PROFILE_NONE, PROFILE_GAUSSIAN, PROFILE_GAUSSIAN_ANTISYM, PROFILE_GAUSSIAN_SYM, PROFILE_GAUSSIAN_SURFACE, PROFILE_PARABOLIC_SURFACE
-    use FI_VECTORCALCULUS
     use OPR_Partial
     use OPR_Elliptic
-    ! use OPR_Filters, only: PressureFilter, DNS_FILTER_NONE
     use Discrete, only: discrete_dt, Discrete_ReadBlock
+    use FI_VECTORCALCULUS
     implicit none
     private
 
     public :: Iniflow_Initialize_Parameters
-    public :: VELOCITY_BROADBAND, VELOCITY_DISCRETE
+    public :: Iniflow_U_Broadband, Iniflow_U_Discrete
     ! public :: DENSITY_FLUCTUATION, PRESSURE_FLUCTUATION ! Only in compressible formulation
 
-    integer(wi), public :: flag_u, flag_t               ! Type of perturbation in velocity and thermodynamic fields
+    integer(wi), public :: flag_u               ! Type of perturbation in velocity
     integer, parameter, public :: PERT_NONE = 0
     integer, parameter, public :: PERT_DISCRETE = 1
     integer, parameter, public :: PERT_BROADBAND = 2
@@ -43,6 +38,8 @@ module FLOW_LOCAL
 
     type(profiles_dt), public :: IniK           ! Geometry of perturbation of initial boundary condition
 
+    ! integer(wi), public :: flag_t               ! Type of perturbation in thermodynamic fields
+
     ! -------------------------------------------------------------------
     integer(wi) :: ibc_pert                     ! BCs at kmin/kmax: 0, No-Slip/No-Slip
     !                                                               1, Free-Slip/No-Slip
@@ -50,9 +47,9 @@ module FLOW_LOCAL
     !                                                               3, Free-Slip/Free-Slip
     logical :: RemoveDilatation
 
-    real(wp) :: norm_ini_u, norm_ini_p          ! Scaling of perturbation
+    real(wp) :: norm_ini_u                      ! Scaling of perturbation
+    ! real(wp) :: norm_ini_p
     type(discrete_dt) :: fp                     ! Discrete perturbation
-    integer(wi) j, k
     integer(wi) im, idsp, jdsp
     real(wp) wx, wy, wx_1, wy_1
 
@@ -63,7 +60,8 @@ contains
         character(len=*), intent(in) :: inifile
 
         ! -------------------------------------------------------------------
-        character(len=32) bakfile, block, eStr
+        character(len=32) bakfile, block
+        character(len=128) eStr
         character(len=512) sRes
 
         integer :: IniKvalid(6) = [PROFILE_NONE, PROFILE_GAUSSIAN, PROFILE_GAUSSIAN_ANTISYM, &
@@ -107,7 +105,6 @@ contains
         IniK%mean = 0.0_wp
 
         call ScanFile_Real(bakfile, inifile, block, 'NormalizeK', '-1.0', norm_ini_u)
-        call ScanFile_Real(bakfile, inifile, block, 'NormalizeP', '-1.0', norm_ini_p)
 
         ! ! Compressible formulation
         ! call ScanFile_Char(bakfile, inifile, block, 'Temperature', 'None', sRes)
@@ -118,6 +115,8 @@ contains
         !     call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Temperature forcing type unknown')
         !     call TLab_Stop(DNS_ERROR_OPTION)
         ! end if
+
+        ! call ScanFile_Real(bakfile, inifile, block, 'NormalizeP', '-1.0', norm_ini_p)
 
         ! ###################################################################
         block = 'BoundaryConditions'      ! Boundary conditions for the perturbation
@@ -148,18 +147,6 @@ contains
         call ScanFile_Real(bakfile, inifile, block, 'Broadening', '-1.0', fp%parameters(1))
         call ScanFile_Real(bakfile, inifile, block, 'ThickStep', '-1.0', fp%parameters(2))
 
-        ! ! ###################################################################
-        ! ! Consistency check
-        ! ! ###################################################################
-        ! ! Staggering of the pressure grid not implemented here
-        ! if (stagger_on) then
-        !     call TLab_Write_ASCII(wfile, __FILE__//'. Staggering of the pressure grid not yet implemented.')
-        !     stagger_on = .false. ! turn staggering off for OPR_Poisson_FourierXZ_Factorize(...)
-        ! end if
-        ! if (any(PressureFilter%type /= DNS_FILTER_NONE)) then
-        !     call TLab_Write_ASCII(wfile, __FILE__//'. Pressure and dpdy Filter not implemented here.')
-        ! end if
-
         ! ###################################################################
         ! Initialization of array sizes
         ! ###################################################################
@@ -173,11 +160,12 @@ contains
 
     ! ###################################################################
     ! ###################################################################
-    subroutine VELOCITY_DISCRETE(u, v, w)
+    subroutine Iniflow_U_Discrete(u, v, w)
         real(wp), dimension(imax, jmax, kmax), intent(out) :: u, v, w
 
         ! -------------------------------------------------------------------
         real(wp) factorx, factory
+        integer(wi) j, k
 
         ! ###################################################################
 #ifdef USE_MPI
@@ -233,10 +221,10 @@ contains
 #undef yn
 
         return
-    end subroutine VELOCITY_DISCRETE
+    end subroutine Iniflow_U_Discrete
 
     ! ###################################################################
-    subroutine VELOCITY_BROADBAND(u, v, w, ax, ay, az, tmp4, tmp5)
+    subroutine Iniflow_U_Broadband(u, v, w, ax, ay, az, tmp4, tmp5)
         use FI_VECTORCALCULUS
 
         real(wp), dimension(imax, jmax, kmax), intent(OUT) :: u, v, w
@@ -245,6 +233,7 @@ contains
         ! -------------------------------------------------------------------
         integer ibc_loc
         real(wp) dummy, params(0)
+        integer(wi) k
 
         real(wp), allocatable :: bcs_hb(:), bcs_ht(:)
 
@@ -297,6 +286,8 @@ contains
             w = w - tmp4
 
         case (PERT_BROADBAND_VORTICITY)                 ! Vorticity given, solve lap(u) = - rot(vort), vort = rot(u)
+            if (allocated(bcs_hb)) deallocate (bcs_hb)
+            if (allocated(bcs_ht)) deallocate (bcs_ht)
             allocate (bcs_hb(imax*jmax), bcs_ht(imax*jmax))
 
             call FI_CURL(imax, jmax, kmax, u, v, w, ax, ay, az, tmp4)
@@ -308,27 +299,18 @@ contains
             call FI_CURL(imax, jmax, kmax, ax, ay, az, u, v, w, tmp4)
 
             ! Solve lap(u) = - (rot(vort))_x
-            ! if (g(1)%periodic .and. g(2)%periodic) then
             bcs_hb = 0.0_wp; bcs_ht = 0.0_wp
             call OPR_Poisson(imax, jmax, kmax, ibc_pert, u, tmp4, tmp5, bcs_hb, bcs_ht)
-            ! else                                        ! General treatment; undevelop
-            ! end if
 
             ! Solve lap(v) = - (rot(vort))_y with no penetration bcs
-            ! if (g(1)%periodic .and. g(2)%periodic) then
             if (y%size > 1) then
                 bcs_hb = 0.0_wp; bcs_ht = 0.0_wp
                 call OPR_Poisson(imax, jmax, kmax, ibc_pert, v, tmp4, tmp5, bcs_hb, bcs_ht)
-                ! else                                        ! General treatment; undevelop
-                ! end if
             end if
 
             ! Solve lap(w) = - (rot(vort))_z
-            ! if (g(1)%periodic .and. g(2)%periodic) then
             bcs_hb = 0.0_wp; bcs_ht = 0.0_wp
             call OPR_Poisson(imax, jmax, kmax, BCS_DD, w, tmp4, tmp5, bcs_hb, bcs_ht)
-            ! else                                    ! General treatment; undevelop
-            ! end if
 
         end select
 
@@ -342,14 +324,15 @@ contains
         if (norm_ini_u >= 0.0_wp) call FLOW_NORMALIZE(u, v, w)
 
         return
-    end subroutine VELOCITY_BROADBAND
+    end subroutine Iniflow_U_Broadband
 
     ! ###################################################################
     subroutine FLOW_SHAPE(profs)
-        real(wp), intent(inout) :: profs(kmax, 5)
+        real(wp), intent(inout) :: profs(kmax, 2)
 
         ! -------------------------------------------------------------------
         real(wp) zr
+        integer(wi) k
 
 #define zn(k) z%nodes(k)
 
@@ -399,6 +382,7 @@ contains
 
         ! -------------------------------------------------------------------
         real(wp) dummy, amplify
+        integer(wi) k
 
         ! ###################################################################
         amplify = 0.0_wp                                ! Maximum across the layer

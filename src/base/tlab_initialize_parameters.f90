@@ -15,7 +15,8 @@ subroutine TLab_Initialize_Parameters(inifile)
     character(len=*), intent(in) :: inifile
 
     ! -------------------------------------------------------------------
-    character(len=32) bakfile, block, eStr
+    character(len=32) bakfile, block
+    character(len=128) eStr
     character(len=512) sRes
     integer(wi) idummy
 

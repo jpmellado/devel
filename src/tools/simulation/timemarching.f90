@@ -92,7 +92,8 @@ contains
         character*(*) inifile
 
         ! -------------------------------------------------------------------
-        character(len=32) bakfile, block, eStr, lstr
+        character(len=32) bakfile, block, lstr
+        character(len=128) eStr
         character(len=512) sRes
         integer ig
 

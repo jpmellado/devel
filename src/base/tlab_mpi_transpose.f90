@@ -72,7 +72,8 @@ contains
         ! -----------------------------------------------------------------------
         integer(wi) ip
 
-        character(len=32) bakfile, block, eStr
+        character(len=32) bakfile, block
+        character(len=128) eStr
         character(len=512) sRes, line
         character*64 lstr
 
