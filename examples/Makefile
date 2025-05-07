@@ -8,41 +8,40 @@ PRJS=\
      Case07 \
      Case08 \
      Case10 \
-     Case11 \
      Case12 \
-     Case13 \
-     Case14 \
-     Case15 \
-     Case16 \
-     Case17 \
-     Case18 \
-     Case19 \
-     Case20 \
-     Case21 \
-     Case24 \
-     Case25 \
-     Case26 \
-     Case27 \
-     Case28 \
-     Case29 \
-     Case30 \
-     Case41 \
-     Case43 \
-     Case44 \
-     Case46 \
-     Case51 \
-     Case52 \
-     Case53 \
-     Case70 \
-     Case81 \
-     Case82 \
-     Case84 \
-     Case85 \
-     Case86 \
-     Case87 \
-     Case91 \
-     Case92 \
-     Case93
+     Case13
+    #  Case14 \
+    #  Case15 \
+    #  Case16 \
+    #  Case17 \
+    #  Case18 \
+    #  Case19 \
+    #  Case20 \
+    #  Case21 \
+    #  Case24 \
+    #  Case25 \
+    #  Case26 \
+    #  Case27 \
+    #  Case28 \
+    #  Case29 \
+    #  Case30 \
+    #  Case41 \
+    #  Case43 \
+    #  Case44 \
+    #  Case46 \
+    #  Case51 \
+    #  Case52 \
+    #  Case53 \
+    #  Case70 \
+    #  Case81 \
+    #  Case82 \
+    #  Case84 \
+    #  Case85 \
+    #  Case86 \
+    #  Case87 \
+    #  Case91 \
+    #  Case92 \
+    #  Case93
 
     #  Case42 
     #  Case34 

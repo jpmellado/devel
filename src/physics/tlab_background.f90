@@ -25,16 +25,16 @@ contains
 !# Initialize data of reference profiles
 !########################################################################
     subroutine TLab_Initialize_Background(inifile)
-        ! use TLab_Pointers_3D, only: p_wrk1d
+        use TLab_Arrays, only: wrk1d
+        use TLab_Memory, only: inb_scal, inb_scal_array
         use TLab_Grid, only: z
         ! use FDM, only: fdm_Int0
-        use TLab_Memory, only: inb_scal, inb_scal_array
         ! use NavierStokes, only: froude, schmidt
         ! use Thermodynamics
         ! use Thermo_Anelastic
         use Profiles, only: Profiles_ReadBlock
         use Profiles, only: PROFILE_NONE, PROFILE_EKMAN_U, PROFILE_EKMAN_U_P, PROFILE_EKMAN_V
-        ! use Gravity, only: buoyancy, bbackground, Gravity_Buoyancy, Gravity_Hydrostatic_Enthalpy, EQNS_BOD_NONE
+        use Gravity
 
         character(len=*), intent(in) :: inifile
 
@@ -169,16 +169,16 @@ contains
 
         ! end if
 
-        ! if (buoyancy%type /= EQNS_BOD_NONE) then
-        !     allocate (bbackground(z%size))                   ! buoyancy profiles
+        if (any(gravityProps%active(1:3))) then
+            allocate (bbackground(z%size))                   ! buoyancy profiles
+            bbackground(:) = 0.0_wp
 
-        !     bbackground(:) = 0.0_wp
-        !     if (buoyancy%active(2)) then
-        !         call Gravity_Buoyancy(buoyancy, 1, z%size, 1, sbackground(:, 1), p_wrk1d, bbackground)
-        !         bbackground(:) = p_wrk1d(:, 1)
-        !     end if
+            if (gravityProps%active(2)) then
+                call Gravity_Source(gravityProps, 1, z%size, 1, sbackground(:, 1), wrk1d)
+                bbackground(1:z%size) = wrk1d(1:z%size, 1)
+            end if
 
-        ! end if
+        end if
 
         ! ! -----------------------------------------------------------------------
         ! ! Add diagnostic fields to reference profile data, if any

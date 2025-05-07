@@ -642,12 +642,12 @@ contains
     !#
     !########################################################################
     subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT()
-        use TLab_Arrays, only: q, s!, txc
+        use TLab_Arrays, only: q, s, txc
         ! use PARTICLE_ARRAYS
         use DNS_Arrays, only: hq, hs
         ! use DNS_LOCAL, only: imode_rhs
         ! use BOUNDARY_BUFFER
-        ! use TLab_Sources
+        use TLab_Sources
 
         ! -----------------------------------------------------------------------
         integer(wi) ij_srt, ij_end, ij_siz    !  Variables for OpenMP Partitioning
@@ -688,7 +688,7 @@ contains
                 ! end do
 
             case (EQNS_RHS_COMBINED)
-                ! call TLab_Sources_Flow(q, s, hq, txc(1, 1))
+                call TLab_Sources_Flow(q, s, hq, txc(:, 1))
                 ! call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
                 call RHS_GLOBAL_INCOMPRESSIBLE_1()
             end select

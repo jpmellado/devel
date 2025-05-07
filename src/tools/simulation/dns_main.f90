@@ -18,7 +18,7 @@ program DNS
     ! use Thermodynamics, only: Thermodynamics_Initialize_Parameters
     use NavierStokes, only: NavierStokes_Initialize_Parameters, DNS_EQNS_ANELASTIC, DNS_EQNS_INCOMPRESSIBLE
     use NavierStokes, only: visc
-    ! use Gravity, only: Gravity_Initialize
+    use Gravity, only: Gravity_Initialize
     ! use Rotation, only: Rotation_Initialize
     ! use Rotation, only: Rotation_Initialize
     ! use Radiation, only: Radiation_Initialize
@@ -66,7 +66,8 @@ program DNS
 
     call NavierStokes_Initialize_Parameters(ifile)
     ! call Thermodynamics_Initialize_Parameters(ifile)
-    ! call Gravity_Initialize(ifile)
+    
+    call Gravity_Initialize(ifile)
     ! call Rotation_Initialize(ifile)
     ! call Radiation_Initialize(ifile)
     ! call Microphysics_Initialize(ifile)
