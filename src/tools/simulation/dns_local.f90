@@ -1,14 +1,17 @@
 #include "tlab_error.h"
 
-module DNS_ARRAYS
+module DNS_Arrays
     use TLab_Constants, only: wp
     implicit none
 
     real(wp), allocatable, target :: hq(:, :)       ! Right-hand sides Eulerian fields
     real(wp), allocatable, target :: hs(:, :)       ! Right-hand sides Eulerian fields
-    real(wp), allocatable, target :: l_hq(:, :)     ! Right-hand sides Lagrangian fields
+    ! real(wp), allocatable, target :: l_hq(:, :)     ! Right-hand sides Lagrangian fields
 
-end module DNS_ARRAYS
+    real(wp), pointer :: p_hq(:, :, :, :) => null()
+    real(wp), pointer :: p_hs(:, :, :, :) => null()
+
+end module DNS_Arrays
 
 ! ###################################################################
 ! ###################################################################

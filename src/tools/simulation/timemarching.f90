@@ -30,6 +30,7 @@ module TimeMarching
     use NavierStokes, only: nse_eqns, DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC
     use NavierStokes, only: nse_advection, EQNS_CONVECTIVE, EQNS_DIVERGENCE, EQNS_SKEWSYMMETRIC
     use NavierStokes, only: visc, schmidt, prandtl
+    use DNS_Arrays
     use BOUNDARY_BCS
     implicit none
     private
@@ -87,6 +88,7 @@ contains
     ! ###################################################################
     ! ###################################################################
     subroutine TMarch_Initialize(inifile)
+        use TLab_Memory, only: TLab_Allocate_Real
         use FDM, only: g
 
         character*(*) inifile
@@ -208,6 +210,14 @@ contains
         end select
 
         ! ###################################################################
+        ! Memory management
+        call TLab_Allocate_Real(__FILE__, hq, [isize_field, inb_flow], 'flow-rhs')
+        call TLab_Allocate_Real(__FILE__, hs, [isize_field, inb_scal], 'scal-rhs')
+
+        p_hq(1:imax, 1:jmax, 1:kmax, 1:inb_flow) => hq(1:imax*jmax*kmax*inb_flow, 1)
+        p_hs(1:imax, 1:jmax, 1:kmax, 1:inb_scal) => hs(1:imax*jmax*kmax*inb_scal, 1)
+
+        ! ###################################################################
         ! maximum diffusivities for TMarch_Courant
         schmidtfactor = 1.0_wp
         dummy = 1.0_wp/prandtl
@@ -260,7 +270,7 @@ contains
         ! use PARTICLE_ARRAYS
         use DNS_LOCAL
         use DNS_Control
-        use DNS_ARRAYS
+        use DNS_Arrays
 
         ! -------------------------------------------------------------------
         real(wp) alpha
@@ -533,7 +543,7 @@ contains
         ipmax = ipmax + 1
 
         ! -------------------------------------------------------------------
-        ! Incompressible: Calculate global maximum of \nu*(1/dx^2 + 1/dy^2 + 1/dz^2)
+        ! Incompressible: Calculate global maximum of \mu*(1/dx^2 + 1/dy^2 + 1/dz^2)
         ! -------------------------------------------------------------------
         select case (nse_eqns)
         case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
@@ -634,7 +644,7 @@ contains
     subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT()
         use TLab_Arrays, only: q, s!, txc
         ! use PARTICLE_ARRAYS
-        use DNS_ARRAYS, only: hq, hs
+        use DNS_Arrays, only: hq, hs
         ! use DNS_LOCAL, only: imode_rhs
         ! use BOUNDARY_BUFFER
         ! use TLab_Sources
@@ -761,7 +771,7 @@ contains
     !         use TLab_Pointers
     !         use THERMO_CALORIC, only: THERMO_GAMMA
     !         use Thermodynamics, only: CRATIO_INV
-    !         use DNS_ARRAYS
+    !         use DNS_Arrays
     !         use BOUNDARY_BUFFER
     !         use BOUNDARY_BCS, only: BcsDrift
     !         use BOUNDARY_BCS_COMPRESSIBLE
@@ -967,7 +977,7 @@ contains
     !     !########################################################################
     !     !########################################################################
     !     subroutine TMarch_SUBSTEP_PARTICLE()
-    !         use DNS_ARRAYS, only: l_hq
+    !         use DNS_Arrays, only: l_hq
     !         use PARTICLE_VARS
     !         use PARTICLE_ARRAYS
 
