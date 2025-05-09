@@ -320,8 +320,8 @@ contains
             case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
                 if (rkm_mode == RKM_EXP3 .or. rkm_mode == RKM_EXP4) then
                     call TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT()
-                else
-                    ! call TMarch_SUBSTEP_INCOMPRESSIBLE_IMPLICIT()
+                else if (rkm_mode == RKM_IMP3_DIFFUSION) then
+                    call TMarch_SUBSTEP_INCOMPRESSIBLE_IMPLICIT()
                 end if
 
                 ! case (DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL)
@@ -633,111 +633,33 @@ contains
     end subroutine TMarch_Courant
 
     !########################################################################
-    !#
-    !# Branching among different formulations of the RHS.
-    !#
-    !# Be careful to define here the pointers and to enter the RHS routines
-    !# with individual fields. Definition of pointer inside of RHS routines
-    !# decreased performance considerably (at least in JUGENE)
-    !#
     !########################################################################
     subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT()
         use TLab_Arrays, only: q, s, txc
-        ! use PARTICLE_ARRAYS
         use DNS_Arrays, only: hq, hs
-        ! use DNS_LOCAL, only: imode_rhs
-        ! use BOUNDARY_BUFFER
         use TLab_Sources
 
-        ! -----------------------------------------------------------------------
-        integer(wi) ij_srt, ij_end, ij_siz    !  Variables for OpenMP Partitioning
-
-#ifdef USE_BLAS
-        integer ij_len
-#endif
-
         ! #######################################################################
-        select case (nse_advection)
-        case (EQNS_DIVERGENCE)
-            ! call TLab_Sources_Flow(q, s, hq, txc(1, 1))
-            ! call RHS_FLOW_GLOBAL_INCOMPRESSIBLE_3()
-
-            ! call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
-            ! do is = 1, inb_scal
-            !     call RHS_SCAL_GLOBAL_INCOMPRESSIBLE_3(is)
-            ! end do
-
-        case (EQNS_SKEWSYMMETRIC)
-            ! call TLab_Sources_Flow(q, s, hq, txc(1, 1))
-            ! call RHS_FLOW_GLOBAL_INCOMPRESSIBLE_2()
-
-            ! call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
-            ! do is = 1, inb_scal
-            !     call RHS_SCAL_GLOBAL_INCOMPRESSIBLE_2(is)
-            ! end do
-
-        case (EQNS_CONVECTIVE)
-            select case (imode_rhs)
-            case (EQNS_RHS_SPLIT)
-                ! call TLab_Sources_Flow(q, s, hq, txc(1, 1))
-                ! call RHS_FLOW_GLOBAL_INCOMPRESSIBLE_1()
-
-                ! call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
-                ! do is = 1, inb_scal
-                !     call RHS_SCAL_GLOBAL_INCOMPRESSIBLE_1(is)
-                ! end do
-
-            case (EQNS_RHS_COMBINED)
-                call TLab_Sources_Flow(q, s, hq, txc(:, 1))
-                ! call TLab_Sources_Scal(s, hs, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
-                call RHS_GLOBAL_INCOMPRESSIBLE_1()
-            end select
-        end select
+        call TLab_Sources_Flow(q, s, hq, txc(:, 1))
 
         ! if (BuffType == DNS_BUFFER_RELAX .or. BuffType == DNS_BUFFER_BOTH) then
-        !     call BOUNDARY_BUFFER_RELAX_SCAL() ! Flow part needs to be taken into account in the pressure
+        !     call BOUNDARY_BUFFER_RELAX_FLOW()
+        !     call BOUNDARY_BUFFER_RELAX_SCAL()
         ! end if
+
+        ! call RHS_GLOBAL_INCOMPRESSIBLE_1()
+        call NSE_Incompressible()
 
         ! #######################################################################
         ! Perform the time stepping
         ! #######################################################################
-#ifdef USE_BLAS
-        ij_len = isize_field
-#endif
-
-#ifdef USE_OPENMP
-#ifdef USE_BLAS
-        !$omp parallel default(shared) &
-        !$omp private (ij_len,is,ij_srt,ij_end,ij_siz)
-#else
-        !$omp parallel default(shared) &
-        !$omp private (ij,  is,ij_srt,ij_end,ij_siz)
-#endif
-#endif
-
-        call TLab_OMP_PARTITION(isize_field, ij_srt, ij_end, ij_siz)
-#ifdef USE_BLAS
-        ij_len = ij_siz
-#endif
         do is = 1, inb_flow
-
-#ifdef USE_BLAS
-            call DAXPY(ij_len, dte, hq(ij_srt, is), 1, q(ij_srt, is), 1)
-#else
-            q(ij_srt:ij_end, is) = q(ij_srt:ij_end, is) + dte*hq(ij_srt:ij_end, is)
-#endif
+            q(:, is) = q(:, is) + dte*hq(:, is)
         end do
 
         do is = 1, inb_scal
-#ifdef BLAS
-            call DAXPY(ij_len, dte, hs(ij_srt, is), 1, s(ij_srt, is), 1)
-#else
-            s(ij_srt:ij_end, is) = s(ij_srt:ij_end, is) + dte*hs(ij_srt:ij_end, is)
-#endif
+            s(:, is) = s(:, is) + dte*hs(:, is)
         end do
-#ifdef USE_OPENMP
-        !$omp end parallel
-#endif
 
         return
     end subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT
@@ -746,20 +668,13 @@ contains
     !########################################################################
     subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_IMPLICIT()
 
-        ! ######################################################################
-        if (rkm_mode == RKM_IMP3_DIFFUSION) then
-            ! call RHS_GLOBAL_INCOMPRESSIBLE_IMPLICIT_2(kex(rkm_substep), kim(rkm_substep), kco(rkm_substep))
+        ! call RHS_GLOBAL_INCOMPRESSIBLE_IMPLICIT_2(kex(rkm_substep), kim(rkm_substep), kco(rkm_substep))
 
-            ! pressure-correction algorithm; to be checked
-            ! CALL RHS_GLOBAL_INCOMPRESSIBLE_IMPLICIT_3(&
-            !      kex,kim,kco,  &
-            !      q, hq, q(:,1),q(:,2),q(:,3), hq(1,1),hq(1,2),hq(1,3), s,hs, &
-            !      txc(1,1),txc(1,2),txc(1,3),txc(1,4),txc(1,5),txc(1,6),txc(1,7), txc(1,8))
-        else
-            call TLab_Write_ASCII(efile, 'TIME_SUBSTEP_INCOMPRESSIBLE_IMPLICIT. Undeveloped formulation.')
-            call TLab_Stop(DNS_ERROR_UNDEVELOP)
-
-        end if
+        ! ! ! pressure-correction algorithm; to be checked
+        ! ! CALL RHS_GLOBAL_INCOMPRESSIBLE_IMPLICIT_3(&
+        ! !      kex,kim,kco,  &
+        ! !      q, hq, q(:,1),q(:,2),q(:,3), hq(1,1),hq(1,2),hq(1,3), s,hs, &
+        ! !      txc(1,1),txc(1,2),txc(1,3),txc(1,4),txc(1,5),txc(1,6),txc(1,7), txc(1,8))
 
         return
     end subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_IMPLICIT
