@@ -46,7 +46,7 @@ contains
         use FDM, only: g
         use TLab_Memory, only: inb_scal, inb_txc
         use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
-        use NavierStokes, only: DNS_EQNS_ANELASTIC, DNS_EQNS_INCOMPRESSIBLE
+        use NavierStokes, only: DNS_EQNS_ANELASTIC, DNS_EQNS_BOUSSINESQ
         ! use BOUNDARY_BUFFER
         use BOUNDARY_BCS
         ! use PARTICLE_VARS

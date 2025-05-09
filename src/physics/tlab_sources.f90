@@ -7,7 +7,7 @@ module TLab_Sources
     use TLab_OpenMP
     use FDM, only: g
     ! use FDM, only: fdm_Int0
-    use NavierStokes, only: nse_eqns, DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC
+    use NavierStokes, only: nse_eqns, DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC
     ! use Thermo_Anelastic
     use Gravity, only: gravityProps, Gravity_Source
     ! use Rotation, only: coriolis, Rotation_Coriolis
@@ -26,7 +26,7 @@ contains
 ! #######################################################################
 ! #######################################################################
     subroutine TLab_Sources_Flow(q, s, hq, tmp1)
-        use TLab_Time, only: rtime
+        ! use TLab_Time, only: rtime
         real(wp), intent(in) :: q(isize_field, *), s(isize_field, *)
         real(wp), intent(out) :: hq(isize_field, *)
         real(wp), intent(inout) :: tmp1(isize_field)
@@ -44,7 +44,7 @@ contains
                 if (nse_eqns == DNS_EQNS_ANELASTIC) then
                     ! call Thermo_Anelastic_BUOYANCY(imax, jmax, kmax, s, tmp1)
 
-                else if (nse_eqns == DNS_EQNS_INCOMPRESSIBLE) then
+                else if (nse_eqns == DNS_EQNS_BOUSSINESQ) then
                     call Gravity_Source(gravityProps, imax, jmax, kmax, s, tmp1)
 
                 end if

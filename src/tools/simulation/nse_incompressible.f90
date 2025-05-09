@@ -52,30 +52,30 @@ subroutine NSE_Incompressible()
     ! Diffusion and advection terms
     ! #######################################################################
     ! Diagonal terms and transposed velocity arrays
-    call OPR_Burgers_X(0, imax, jmax, kmax, u, u, tmp1, tmp4) ! store u transposed in tmp4
-    call OPR_Burgers_Y(0, imax, jmax, kmax, v, v, tmp2, tmp5) ! store v transposed in tmp5
-    call OPR_Burgers_Z(0, imax, jmax, kmax, w, w, tmp3)
+    call OPR_Burgers_X(0, imax, jmax, kmax, u, tmp1, tmp4) ! store u transposed in tmp4
+    call OPR_Burgers_Y(0, imax, jmax, kmax, v, tmp2, tmp5) ! store v transposed in tmp5
+    call OPR_Burgers_Z(0, imax, jmax, kmax, w, tmp3, w)
 
     ! Ox momentum equation
-    call OPR_Burgers_Y(0, imax, jmax, kmax, u, v, tmp7, tmp9, tmp5) ! tmp5 contains v transposed
-    call OPR_Burgers_Z(0, imax, jmax, kmax, u, w, tmp8)
+    call OPR_Burgers_Y(0, imax, jmax, kmax, u, tmp7, tmp9, tmp5) ! tmp5 contains v transposed
+    call OPR_Burgers_Z(0, imax, jmax, kmax, u, tmp8, w)
     hq(:, 1) = hq(:, 1) + tmp1(:) + tmp7(:) + tmp8(:)
 
     ! Oy momentum equation
-    call OPR_Burgers_X(0, imax, jmax, kmax, v, u, tmp7, tmp9, tmp4) ! tmp4 contains u transposed
-    call OPR_Burgers_Z(0, imax, jmax, kmax, v, w, tmp8)
+    call OPR_Burgers_X(0, imax, jmax, kmax, v, tmp7, tmp9, tmp4) ! tmp4 contains u transposed
+    call OPR_Burgers_Z(0, imax, jmax, kmax, v, tmp8, w)
     hq(:, 2) = hq(:, 2) + tmp2(:) + tmp7(:) + tmp8(:)
 
     ! Oz momentum equation
-    call OPR_Burgers_X(0, imax, jmax, kmax, w, u, tmp7, tmp9, tmp4) ! tmp4 contains u transposed
-    call OPR_Burgers_Y(0, imax, jmax, kmax, w, v, tmp8, tmp9, tmp5) ! tmp5 contains v transposed
+    call OPR_Burgers_X(0, imax, jmax, kmax, w, tmp7, tmp9, tmp4) ! tmp4 contains u transposed
+    call OPR_Burgers_Y(0, imax, jmax, kmax, w, tmp8, tmp9, tmp5) ! tmp5 contains v transposed
     hq(:, 3) = hq(:, 3) + tmp3(:) + tmp7(:) + tmp8(:)
 
     ! Scalar equations
     do is = 1, inb_scal
-        call OPR_Burgers_X(is, imax, jmax, kmax, s(:, is), u, tmp1, tmp9, tmp4) ! tmp4 contains u transposed
-        call OPR_Burgers_Y(is, imax, jmax, kmax, s(:, is), v, tmp2, tmp9, tmp5) ! tmp5 contains v transposed
-        call OPR_Burgers_Z(is, imax, jmax, kmax, s(:, is), w, tmp3)
+        call OPR_Burgers_X(is, imax, jmax, kmax, s(:, is), tmp1, tmp9, tmp4) ! tmp4 contains u transposed
+        call OPR_Burgers_Y(is, imax, jmax, kmax, s(:, is), tmp2, tmp9, tmp5) ! tmp5 contains v transposed
+        call OPR_Burgers_Z(is, imax, jmax, kmax, s(:, is), tmp3, w)
         hs(:, is) = hs(:, is) + tmp1(:) + tmp2(:) + tmp3(:)
 
     end do

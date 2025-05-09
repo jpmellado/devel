@@ -99,7 +99,7 @@ contains
         call ScanFile_Real(bakfile, inifile, 'Control', 'MaxDensity', '-1.0', bound_r%max)
 
         bound_d%active = .false.
-        if (any([DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC] == nse_eqns)) then
+        if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
             bound_d%active = .true.
             bound_d%max = big_wp ! default
             call ScanFile_Char(bakfile, inifile, 'Control', 'MaxDilatation', 'void', sRes)
@@ -199,7 +199,7 @@ contains
     !########################################################################
     subroutine DNS_BOUNDS_CONTROL()
         use TLab_Constants, only: efile, lfile, fmt_r
-        use NavierStokes, only: nse_eqns, DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL, DNS_EQNS_ANELASTIC, DNS_EQNS_INCOMPRESSIBLE
+        use NavierStokes, only: nse_eqns, DNS_EQNS_COMPRESSIBLE, DNS_EQNS_ANELASTIC, DNS_EQNS_BOUSSINESQ
         ! use TLab_WorkFlow, only: stagger_on
         use TLab_Memory, only: imax, jmax, kmax
         use TLab_Arrays
@@ -240,7 +240,7 @@ contains
         ! Compressible flow
         ! ###################################################################
         select case (nse_eqns)
-        case (DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL)
+        case (DNS_EQNS_COMPRESSIBLE)
 
 #define p_min_loc logs_data(5)
 #define p_max_loc logs_data(6)
@@ -261,7 +261,7 @@ contains
                 logs_data(1) = DNS_ERROR_NEGPRESS
             end if
 
-        case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
+        case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)
             ! if (nse_eqns == DNS_EQNS_ANELASTIC) then
             !     call Thermo_Anelastic_WEIGHT_OUTPLACE(imax, jmax, kmax, rbackground, q(1, 1), txc(1, 3))
             !     call Thermo_Anelastic_WEIGHT_OUTPLACE(imax, jmax, kmax, rbackground, q(1, 2), txc(1, 4))
@@ -457,11 +457,11 @@ contains
         line1 = line1(1:ip)//' '//' visc'; ip = ip + 1 + 10
 
         select case (nse_eqns)
-        case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
+        case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)
             line1 = line1(1:ip)//' '//' DilMin'; ip = ip + 1 + 13
             line1 = line1(1:ip)//' '//' DilMax'; ip = ip + 1 + 13
 
-        case (DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL)
+        case (DNS_EQNS_COMPRESSIBLE)
             line1 = line1(1:ip)//' '//' PMin'; ip = ip + 1 + 10
             line1 = line1(1:ip)//' '//' PMax'; ip = ip + 1 + 10
             line1 = line1(1:ip)//' '//' RMin'; ip = ip + 1 + 10
@@ -498,12 +498,12 @@ contains
 100     format((1x, I1), (1x, I7), (1x, E13.6), 4(1x, E10.3))
 
         select case (nse_eqns)
-        case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
+        case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)
             write (line2, 200) logs_data(10), logs_data(11)
 200         format(2(1x, E13.6))
             line1 = trim(line1)//trim(line2)
 
-        case (DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL)
+        case (DNS_EQNS_COMPRESSIBLE)
             write (line2, 300) (logs_data(ip), ip=5, 8)
 300         format(4(1x, E10.3))
             line1 = trim(line1)//trim(line2)

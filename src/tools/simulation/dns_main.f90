@@ -16,7 +16,7 @@ program DNS
     use TLab_Grid
     use FDM, only: FDM_Initialize
     ! use Thermodynamics, only: Thermodynamics_Initialize_Parameters
-    use NavierStokes, only: NavierStokes_Initialize_Parameters, DNS_EQNS_ANELASTIC, DNS_EQNS_INCOMPRESSIBLE
+    use NavierStokes, only: NavierStokes_Initialize_Parameters, DNS_EQNS_ANELASTIC, DNS_EQNS_BOUSSINESQ
     use NavierStokes, only: visc
     use Gravity, only: Gravity_Initialize
     ! use Rotation, only: Rotation_Initialize

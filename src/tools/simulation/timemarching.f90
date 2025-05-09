@@ -27,7 +27,7 @@ module TimeMarching
     use TLabMPI_VARS
 #endif
     use TLab_Grid, only: x, y, z
-    use NavierStokes, only: nse_eqns, DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC
+    use NavierStokes, only: nse_eqns, DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC
     use NavierStokes, only: nse_advection, EQNS_CONVECTIVE, EQNS_DIVERGENCE, EQNS_SKEWSYMMETRIC
     use NavierStokes, only: visc, schmidt, prandtl
     use DNS_Arrays
@@ -317,15 +317,15 @@ contains
             ! end if
 
             select case (nse_eqns)
-            case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
+            case (DNS_EQNS_BOUSSINESQ)
                 if (rkm_mode == RKM_EXP3 .or. rkm_mode == RKM_EXP4) then
-                    call TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT()
+                    call TMarch_Substep_Boussinesq_Explicit()
                 else if (rkm_mode == RKM_IMP3_DIFFUSION) then
-                    call TMarch_SUBSTEP_INCOMPRESSIBLE_IMPLICIT()
+                    call TMarch_Substep_Boussinesq_Implicit()
                 end if
 
-                ! case (DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL)
-                !     call TMarch_SUBSTEP_COMPRESSIBLE()
+            case (DNS_EQNS_ANELASTIC)
+            case (DNS_EQNS_COMPRESSIBLE)
 
             end select
 
@@ -483,7 +483,7 @@ contains
         ! Incompressible: Calculate global maximum of u/dx + v/dy + w/dz
         ! -------------------------------------------------------------------
         select case (nse_eqns)
-        case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
+        case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)
             if (y%size > 1) then
                 do k = 1, kmax
                     do j = 1, jmax
@@ -509,7 +509,7 @@ contains
             ! -------------------------------------------------------------------
             ! Compressible: Calculate global maximum of (u+c)/dx + (v+c)/dy + (w+c)/dz
             ! -------------------------------------------------------------------
-            ! case (DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL)
+            ! case (DNS_EQNS_COMPRESSIBLE, DNS_EQNS_TOTAL)
             !     p_wrk3d = sqrt(gama0*p(:, :, :)/rho(:, :, :)) ! sound speed; positiveness of p and rho checked in routine DNS_CONTROL
             !     if (z%size > 1) then
             !         do k = 1, kmax
@@ -546,13 +546,13 @@ contains
         ! Incompressible: Calculate global maximum of \mu*(1/dx^2 + 1/dy^2 + 1/dz^2)
         ! -------------------------------------------------------------------
         select case (nse_eqns)
-        case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
+        case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)
             pmax(2) = schmidtfactor*dx2i
 
             ! -------------------------------------------------------------------
             ! Compressible: Calculate global maximum of \mu/rho*(1/dx^2 + 1/dy^2 + 1/dz^2)
             ! -------------------------------------------------------------------
-            ! case (DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL)
+            ! case (DNS_EQNS_COMPRESSIBLE, DNS_EQNS_TOTAL)
             !     if (itransport == EQNS_TRANS_POWERLAW) then
             !         if (z%size > 1) then
             !             do k = 1, kmax
@@ -634,12 +634,13 @@ contains
 
     !########################################################################
     !########################################################################
-    subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT()
+    subroutine TMarch_Substep_Boussinesq_Explicit()
         use TLab_Arrays, only: q, s, txc
         use DNS_Arrays, only: hq, hs
         use TLab_Sources
 
         ! #######################################################################
+        ! Accumulate RHS terms
         call TLab_Sources_Flow(q, s, hq, txc(:, 1))
 
         ! if (BuffType == DNS_BUFFER_RELAX .or. BuffType == DNS_BUFFER_BOTH) then
@@ -647,12 +648,10 @@ contains
         !     call BOUNDARY_BUFFER_RELAX_SCAL()
         ! end if
 
-        ! call RHS_GLOBAL_INCOMPRESSIBLE_1()
         call NSE_Incompressible()
 
         ! #######################################################################
         ! Perform the time stepping
-        ! #######################################################################
         do is = 1, inb_flow
             q(:, is) = q(:, is) + dte*hq(:, is)
         end do
@@ -662,11 +661,11 @@ contains
         end do
 
         return
-    end subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_EXPLICIT
+    end subroutine TMarch_Substep_Boussinesq_Explicit
 
     !########################################################################
     !########################################################################
-    subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_IMPLICIT()
+    subroutine TMarch_Substep_Boussinesq_Implicit()
 
         ! call RHS_GLOBAL_INCOMPRESSIBLE_IMPLICIT_2(kex(rkm_substep), kim(rkm_substep), kco(rkm_substep))
 
@@ -677,7 +676,7 @@ contains
         ! !      txc(1,1),txc(1,2),txc(1,3),txc(1,4),txc(1,5),txc(1,6),txc(1,7), txc(1,8))
 
         return
-    end subroutine TMarch_SUBSTEP_INCOMPRESSIBLE_IMPLICIT
+    end subroutine TMarch_Substep_Boussinesq_Implicit
 
     ! !########################################################################
     ! !########################################################################
@@ -699,7 +698,7 @@ contains
     !         ! Evaluate standard RHS of equations
     !         ! global formulation
     !         ! ###################################################################
-    !         if (nse_eqns == DNS_EQNS_INTERNAL .and. &
+    !         if (nse_eqns == DNS_EQNS_COMPRESSIBLE .and. &
     !             nse_advection == EQNS_SKEWSYMMETRIC .and. &
     !             nse_viscous == EQNS_EXPLICIT .and. &
     !             nse_diffusion == EQNS_EXPLICIT) then
@@ -841,7 +840,7 @@ contains
     !                 ! -------------------------------------------------------------------
     !                 ! Internal energy formulation
     !                 ! -------------------------------------------------------------------
-    !             else if (nse_eqns == DNS_EQNS_INTERNAL) then
+    !             else if (nse_eqns == DNS_EQNS_COMPRESSIBLE) then
     ! !$omp parallel default( shared ) private( i, is, rho_ratio, dt_rho_ratio )
     ! !$omp do
     !                 do i = 1, isize_field

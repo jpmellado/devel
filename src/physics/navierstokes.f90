@@ -8,10 +8,9 @@ module NavierStokes
     public :: NavierStokes_Initialize_Parameters
 
     integer, public, protected :: nse_eqns                                  ! formulation of evolution equations
-    integer, parameter, public :: DNS_EQNS_TOTAL = 0                        ! compressible, total energy
-    integer, parameter, public :: DNS_EQNS_INTERNAL = 1                     ! compressible, internal energy
-    integer, parameter, public :: DNS_EQNS_INCOMPRESSIBLE = 2               ! incompressible, Boussinesq
-    integer, parameter, public :: DNS_EQNS_ANELASTIC = 3                    ! incompressible, anelastic
+    integer, parameter, public :: DNS_EQNS_BOUSSINESQ = 1
+    integer, parameter, public :: DNS_EQNS_ANELASTIC = 2
+    integer, parameter, public :: DNS_EQNS_COMPRESSIBLE = 3
 
     integer, public, protected :: nse_advection, nse_viscous, nse_diffusion ! formulation of Burgers operator
     integer, parameter, public :: EQNS_NONE = 0
@@ -65,10 +64,9 @@ contains
         call TLab_Write_ASCII(bakfile, '#TermDiffusion=<divergence/explicit>')
 
         call ScanFile_Char(bakfile, inifile, 'Main', 'Equations', 'internal', sRes)
-        if (trim(adjustl(sRes)) == 'total') then; nse_eqns = DNS_EQNS_TOTAL
-        elseif (trim(adjustl(sRes)) == 'internal') then; nse_eqns = DNS_EQNS_INTERNAL
-        elseif (trim(adjustl(sRes)) == 'incompressible') then; nse_eqns = DNS_EQNS_INCOMPRESSIBLE
-        elseif (trim(adjustl(sRes)) == 'anelastic') then; nse_eqns = DNS_EQNS_ANELASTIC
+        if (trim(adjustl(sRes)) == 'boussinesq') then; nse_eqns = DNS_EQNS_BOUSSINESQ
+        else if (trim(adjustl(sRes)) == 'anelastic') then; nse_eqns = DNS_EQNS_ANELASTIC
+        else if (trim(adjustl(sRes)) == 'compressible') then; nse_eqns = DNS_EQNS_COMPRESSIBLE
         else
             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong entry Main.Equations option.')
             call TLab_Stop(DNS_ERROR_OPTION)
@@ -86,7 +84,7 @@ contains
 
         call ScanFile_Char(bakfile, inifile, 'Main', 'TermViscous', 'void', sRes)
         if (trim(adjustl(sRes)) == 'none') then; nse_viscous = EQNS_NONE
-        ! else if (trim(adjustl(sRes)) == 'divergence') then; nse_viscous = EQNS_DIVERGENCE
+            ! else if (trim(adjustl(sRes)) == 'divergence') then; nse_viscous = EQNS_DIVERGENCE
         else if (trim(adjustl(sRes)) == 'explicit') then; nse_viscous = EQNS_EXPLICIT
         else
             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TermViscous option.')
@@ -95,7 +93,7 @@ contains
 
         call ScanFile_Char(bakfile, inifile, 'Main', 'TermDiffusion', 'void', sRes)
         if (trim(adjustl(sRes)) == 'none') then; nse_diffusion = EQNS_NONE
-        ! else if (trim(adjustl(sRes)) == 'divergence') then; nse_diffusion = EQNS_DIVERGENCE
+            ! else if (trim(adjustl(sRes)) == 'divergence') then; nse_diffusion = EQNS_DIVERGENCE
         else if (trim(adjustl(sRes)) == 'explicit') then; nse_diffusion = EQNS_EXPLICIT
         else
             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TermDiffusion option.')
@@ -104,7 +102,7 @@ contains
 
         ! ! consistency check
         ! select case (nse_eqns)
-        ! case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
+        ! case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)
         !     if (nse_viscous /= EQNS_EXPLICIT) then
         !         call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'TermViscous undeveloped.')
         !         call TLab_Stop(DNS_ERROR_OPTION)
@@ -194,11 +192,11 @@ contains
         ! ###################################################################
         ! prognostic and diagnostic variables
         select case (nse_eqns)
-        case (DNS_EQNS_INCOMPRESSIBLE, DNS_EQNS_ANELASTIC)
+        case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)
             inb_flow = 3                            ! space for u, v, w
             inb_flow_array = inb_flow
 
-        case (DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL)
+        case (DNS_EQNS_COMPRESSIBLE)
             inb_flow = 5                            ! space for u, v, w, e, rho
             inb_flow_array = inb_flow + 2           ! space for p, T
 

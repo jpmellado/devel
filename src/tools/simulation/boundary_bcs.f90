@@ -124,7 +124,7 @@ contains
 ! #ifdef TRACE_ON
 !         use TLab_Constants, only: tfile
 ! #endif
-!         use NavierStokes, only: nse_eqns, DNS_EQNS_INTERNAL, DNS_EQNS_TOTAL
+!         use NavierStokes, only: nse_eqns, DNS_EQNS_COMPRESSIBLE, DNS_EQNS_TOTAL
         use TLab_Memory, only: imax, jmax, kmax, inb_flow_array, inb_scal_array
 !         use FDM, only: g
 !         use Tlab_Background, only: pbg, qbg
@@ -179,7 +179,7 @@ contains
 ! #######################################################################
 ! Compressible mode
 ! #######################################################################
-!         if (any([DNS_EQNS_TOTAL, DNS_EQNS_INTERNAL] == nse_eqns)) then
+!         if (any([DNS_EQNS_TOTAL, DNS_EQNS_COMPRESSIBLE] == nse_eqns)) then
 ! #ifdef USE_MPI
 ! ! -------------------------------------------------------------------
 ! ! Characteristic BCs

@@ -25,6 +25,20 @@ module OPR_Burgers
     public :: OPR_Burgers_Z
 
     ! -----------------------------------------------------------------------
+    procedure(OPR_Burgers_interface) :: OPR_Burgers_dt
+    abstract interface
+        subroutine OPR_Burgers_interface(is, nx, ny, nz, s, result, tmp1, u_t)
+            use TLab_Constants, only: wi, wp
+            integer, intent(in) :: is                       ! scalar index; if 0, then velocity
+            integer(wi), intent(in) :: nx, ny, nz
+            real(wp), intent(in) :: s(nx*ny*nz)
+            real(wp), intent(out) :: result(nx*ny*nz)
+            real(wp), intent(out), target :: tmp1(nx*ny*nz)         ! transposed field s
+            real(wp), intent(in), optional, target :: u_t(nx*ny*nz)
+        end subroutine
+    end interface
+    procedure(OPR_Burgers_dt), pointer :: OPR_Burgers_X, OPR_Burgers_Y
+
     ! type(filter_dt) :: Dealiasing(3)
     integer :: Dealiasing(3) ! tobefixed
     ! real(wp), allocatable, target :: wrkdea(:, :)       ! Work arrays for dealiasing (scratch space)
@@ -41,6 +55,8 @@ module OPR_Burgers
         real(wp), allocatable :: lu(:, :, :)
     end type fdm_diffusion_dt
     type(fdm_diffusion_dt) :: fdmDiffusion(3)
+
+    real(wp), dimension(:), pointer :: p_vel
 
 contains
     !########################################################################
@@ -122,24 +138,85 @@ contains
         !     call TLab_Allocate_Real(__FILE__, wrkdea, [isize_field, 2], 'wrk-dealiasing')
         ! end if
 
+        ! ###################################################################
+        ! Setting procedure pointers
+#ifdef USE_MPI
+        if (ims_npro_i > 1) then
+            OPR_Burgers_X => OPR_Burgers_X_Parallel
+        else
+#endif
+            OPR_Burgers_X => OPR_Burgers_X_Serial
+#ifdef USE_MPI
+        end if
+#endif
+
+#ifdef USE_MPI
+        if (ims_npro_j > 1) then
+            OPR_Burgers_Y => OPR_Burgers_Y_Parallel
+        else
+#endif
+            OPR_Burgers_Y => OPR_Burgers_Y_Serial
+#ifdef USE_MPI
+        end if
+#endif
         return
     end subroutine OPR_Burgers_Initialize
 
     !########################################################################
     !########################################################################
-    subroutine OPR_Burgers_X(is, nx, ny, nz, s, u, result, tmp1, u_t)
+    subroutine OPR_Burgers_X_Serial(is, nx, ny, nz, s, result, tmp1, u_t)
         integer, intent(in) :: is                       ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
-        real(wp), intent(in) :: s(nx*ny*nz), u(nx*ny*nz)
+        real(wp), intent(in) :: s(nx*ny*nz)
         real(wp), intent(out) :: result(nx*ny*nz)
-        real(wp), intent(out) :: tmp1(nx*ny*nz)         ! transposed field s
-        real(wp), intent(in), optional :: u_t(nx*ny*nz)
-
-        target s, u, result, tmp1, u_t
+        real(wp), intent(out), target :: tmp1(nx*ny*nz)         ! transposed field s
+        real(wp), intent(in), optional, target :: u_t(nx*ny*nz)
 
         ! -------------------------------------------------------------------
-        integer(wi) nyz
-        real(wp), dimension(:), pointer :: p_a, p_b, p_c, p_d, p_vel
+        ! ###################################################################
+        if (x%size == 1) then ! Set to zero in 2D case
+            result = 0.0_wp
+            return
+        end if
+
+        ! Transposition: make x-direction the last one
+#ifdef USE_ESSL
+        call DGETMO(s, g(1)%size, g(1)%size, ny*nz, tmp1, ny*nz)
+#else
+        call TLab_Transpose(s, g(1)%size, ny*nz, g(1)%size, tmp1, ny*nz)
+#endif
+
+        if (present(u_t)) then  ! transposed velocity is passed as argument
+            p_vel => u_t
+        else
+            p_vel => tmp1
+        end if
+
+        call OPR_Burgers_1D(ny*nz, g(1), fdmDiffusion(1)%lu(:, :, is), Dealiasing(1), tmp1, p_vel, wrk3d, result)
+
+        ! Put arrays back in the order in which they came in
+#ifdef USE_ESSL
+        call DGETMO(wrk3d, ny*nz, ny*nz, g(1)%size, result, g(1)%size)
+#else
+        call TLab_Transpose(wrk3d, ny*nz, g(1)%size, ny*nz, result, g(1)%size)
+#endif
+
+        return
+    end subroutine OPR_Burgers_X_Serial
+
+    !########################################################################
+    !########################################################################
+#ifdef USE_MPI
+    subroutine OPR_Burgers_X_Parallel(is, nx, ny, nz, s, result, tmp1, u_t)
+        integer, intent(in) :: is                       ! scalar index; if 0, then velocity
+        integer(wi), intent(in) :: nx, ny, nz
+        real(wp), intent(in) :: s(nx*ny*nz)
+        real(wp), intent(out) :: result(nx*ny*nz)
+        real(wp), intent(out), target :: tmp1(nx*ny*nz)         ! transposed field s
+        real(wp), intent(in), optional, target :: u_t(nx*ny*nz)
+
+        ! -------------------------------------------------------------------
+        integer(wi) nlines
 
         ! ###################################################################
         if (x%size == 1) then ! Set to zero in 2D case
@@ -147,82 +224,48 @@ contains
             return
         end if
 
-        ! -------------------------------------------------------------------
-        ! MPI transposition
-        ! -------------------------------------------------------------------
-#ifdef USE_MPI
-        if (ims_npro_i > 1) then
-            call TLabMPI_Trp_ExecI_Forward(s, result, tmpi_plan_dx)
-            p_a => result
-            p_b => tmp1
-            p_c => wrk3d
-            p_d => result
-            nyz = tmpi_plan_dx%nlines
-        else
-#endif
-            p_a => s
-            p_b => tmp1
-            p_c => result
-            p_d => wrk3d
-            nyz = ny*nz
-#ifdef USE_MPI
-        end if
+        nlines = tmpi_plan_dx%nlines
+
+        ! Transposition: make x-direction the last one
+        call TLabMPI_Trp_ExecI_Forward(s, result, tmpi_plan_dx)
+#ifdef USE_ESSL
+        call DGETMO(result, g(1)%size, g(1)%size, nlines, tmp1, nlines)
+#else
+        call TLab_Transpose(result, g(1)%size, nlines, g(1)%size, tmp1, nlines)
 #endif
 
         if (present(u_t)) then  ! transposed velocity is passed as argument
             p_vel => u_t
         else
-            p_vel => p_b
+            p_vel => tmp1
         end if
 
-        ! maybe check that nx is equal to g(1)%size
+        call OPR_Burgers_1D(nlines, g(1), fdmDiffusion(1)%lu(:, :, is), Dealiasing(1), tmp1, p_vel, result, wrk3d)
 
-        ! -------------------------------------------------------------------
-        ! Local transposition: make x-direction the last one
-        ! -------------------------------------------------------------------
-#ifdef USE_ESSL
-        call DGETMO(p_a, g(1)%size, g(1)%size, nyz, p_b, nyz)
-#else
-        call TLab_Transpose(p_a, g(1)%size, nyz, g(1)%size, p_b, nyz)
-#endif
-
-        ! ###################################################################
-        call OPR_Burgers_1D(nyz, g(1), fdmDiffusion(1)%lu(:, :, is), Dealiasing(1), p_b, p_vel, p_d, p_c)
-
-        ! ###################################################################
         ! Put arrays back in the order in which they came in
 #ifdef USE_ESSL
-        call DGETMO(p_d, nyz, nyz, g(1)%size, p_c, g(1)%size)
+        call DGETMO(result, nlines, nlines, g(1)%size, wrk3d, g(1)%size)
 #else
-        call TLab_Transpose(p_d, nyz, g(1)%size, nyz, p_c, g(1)%size)
+        call TLab_Transpose(result, nlines, g(1)%size, nlines, wrk3d, g(1)%size)
 #endif
-
-#ifdef USE_MPI
-        if (ims_npro_i > 1) then
-            call TLabMPI_Trp_ExecI_Backward(p_c, result, tmpi_plan_dx)
-        end if
-#endif
-
-        nullify (p_a, p_b, p_c, p_d, p_vel)
+        call TLabMPI_Trp_ExecI_Backward(wrk3d, result, tmpi_plan_dx)
 
         return
-    end subroutine OPR_Burgers_X
+    end subroutine OPR_Burgers_X_Parallel
+#endif
 
     !########################################################################
     !########################################################################
-    subroutine OPR_Burgers_Y(is, nx, ny, nz, s, u, result, tmp1, u_t)
+    subroutine OPR_Burgers_Y_Serial(is, nx, ny, nz, s, result, tmp1, u_t)
         integer, intent(in) :: is                       ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
-        real(wp), intent(in) :: s(nx*ny*nz), u(nx*ny*nz)
+        real(wp), intent(in) :: s(nx*ny*nz)
         real(wp), intent(out) :: result(nx*ny*nz)
-        real(wp), intent(out) :: tmp1(nx*ny*nz)         ! transposed field s
-        real(wp), intent(in), optional :: u_t(nx*ny*nz)
-
-        target s, u, result, tmp1, u_t
+        real(wp), intent(out), target :: tmp1(nx*ny*nz)         ! transposed field s
+        real(wp), intent(in), target, optional :: u_t(nx*ny*nz)
 
         ! -------------------------------------------------------------------
-        integer(wi) nxz
-        real(wp), dimension(:), pointer :: p_org, p_vel, p_dst1, p_dst2
+        integer(wi) nlines
 
         ! ###################################################################
         if (y%size == 1) then ! Set to zero in 2D case
@@ -231,83 +274,88 @@ contains
         end if
 
         ! Transposition: make y-direction the last one
-#ifdef USE_MPI
-        if (ims_npro_j > 1) then
 #ifdef USE_ESSL
-            call DGETMO(s, nx*ny, nx*ny, nz, wrk3d, nz)
+        call DGETMO(s, nx*ny, nx*ny, nz, tmp1, nz)
 #else
-            call TLab_Transpose(s, nx*ny, nz, nx*ny, wrk3d, nz)
+        call TLab_Transpose(s, nx*ny, nz, nx*ny, tmp1, nz)
 #endif
-            call TLabMPI_Trp_ExecJ_Forward(result, tmp1, tmpi_plan_dy)
-            nxz = tmpi_plan_dy%nlines
-
-            p_org => tmp1
-            p_dst1 => wrk3d
-            p_dst2 => result
-
-        else
-#endif
-#ifdef USE_ESSL
-            call DGETMO(s, nx*ny, nx*ny, nz, tmp1, nz)
-#else
-            call TLab_Transpose(s, nx*ny, nz, nx*ny, tmp1, nz)
-#endif
-            nxz = nx*nz
-
-            p_org => tmp1
-            p_dst1 => result
-            p_dst2 => wrk3d
-
-#ifdef USE_MPI
-        end if
-#endif
+        nlines = nx*nz
 
         if (present(u_t)) then  ! transposed velocity is passed as argument
             p_vel => u_t
         else
-            p_vel => p_org
+            p_vel => tmp1
         end if
 
-        ! ###################################################################
-        call OPR_Burgers_1D(nxz, g(2), fdmDiffusion(2)%lu(:, :, is), Dealiasing(2), p_org, p_vel, p_dst2, p_dst1)
+        call OPR_Burgers_1D(nlines, g(2), fdmDiffusion(2)%lu(:, :, is), Dealiasing(2), tmp1, p_vel, wrk3d, result)
 
-        ! ###################################################################
         ! Put arrays back in the order in which they came in
-#ifdef USE_MPI
-        if (ims_npro_j > 1) then
-            call TLabMPI_Trp_ExecJ_Backward(p_dst2, p_dst1, tmpi_plan_dy)
-
 #ifdef USE_ESSL
-            call DGETMO(p_dst1, nz, nz, nx*ny, result, nx*ny)
+        call DGETMO(wrk3d, nz, nz, nx*ny, result, nx*ny)
 #else
-            call TLab_Transpose(p_dst1, nz, nx*ny, nz, result, nx*ny)
+        call TLab_Transpose(wrk3d, nz, nx*ny, nz, result, nx*ny)
 #endif
-
-        else
-#endif
-
-#ifdef USE_ESSL
-            call DGETMO(p_dst2, nz, nz, nx*ny, result, nx*ny)
-#else
-            call TLab_Transpose(p_dst2, nz, nx*ny, nz, result, nx*ny)
-#endif
-
-#ifdef USE_MPI
-        end if
-#endif
-
-        nullify (p_org, p_dst1, p_dst2, p_vel)
 
         return
-    end subroutine OPR_Burgers_Y
+    end subroutine OPR_Burgers_Y_Serial
 
     !########################################################################
     !########################################################################
-    subroutine OPR_Burgers_Z(is, nx, ny, nz, s, u, result)
+#ifdef USE_MPI
+    subroutine OPR_Burgers_Y_Parallel(is, nx, ny, nz, s, result, tmp1, u_t)
         integer, intent(in) :: is                       ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
-        real(wp), intent(in) :: s(nx*ny*nz), u(nx*ny*nz)
+        real(wp), intent(in) :: s(nx*ny*nz)
+        real(wp), intent(out) :: result(nx*ny*nz)
+        real(wp), intent(out), target :: tmp1(nx*ny*nz)         ! transposed field s
+        real(wp), intent(in), target, optional :: u_t(nx*ny*nz)
+
+        ! -------------------------------------------------------------------
+        integer(wi) nlines
+
+        ! ###################################################################
+        if (y%size == 1) then ! Set to zero in 2D case
+            result = 0.0_wp
+            return
+        end if
+
+        ! Transposition: make y-direction the last one
+#ifdef USE_ESSL
+        call DGETMO(s, nx*ny, nx*ny, nz, wrk3d, nz)
+#else
+        call TLab_Transpose(s, nx*ny, nz, nx*ny, wrk3d, nz)
+#endif
+        call TLabMPI_Trp_ExecJ_Forward(wrk3d, tmp1, tmpi_plan_dy)
+        nlines = tmpi_plan_dy%nlines
+
+        if (present(u_t)) then  ! transposed velocity is passed as argument
+            p_vel => u_t
+        else
+            p_vel => tmp1
+        end if
+
+        call OPR_Burgers_1D(nlines, g(2), fdmDiffusion(2)%lu(:, :, is), Dealiasing(2), tmp1, p_vel, result, wrk3d)
+
+        ! Put arrays back in the order in which they came in
+        call TLabMPI_Trp_ExecJ_Backward(result, wrk3d, tmpi_plan_dy)
+#ifdef USE_ESSL
+        call DGETMO(wrk3d, nz, nz, nx*ny, result, nx*ny)
+#else
+        call TLab_Transpose(wrk3d, nz, nx*ny, nz, result, nx*ny)
+#endif
+
+        return
+    end subroutine OPR_Burgers_Y_Parallel
+#endif
+
+    !########################################################################
+    !########################################################################
+    subroutine OPR_Burgers_Z(is, nx, ny, nz, s, result, u)
+        integer, intent(in) :: is                       ! scalar index; if 0, then velocity
+        integer(wi), intent(in) :: nx, ny, nz
+        real(wp), intent(in) :: s(nx*ny*nz)
         real(wp), intent(out) :: result(nx*ny, nz)
+        real(wp), intent(in) :: u(nx*ny*nz)
 
         ! -------------------------------------------------------------------
 
@@ -371,7 +419,7 @@ contains
         !     nullify (uf, dsf)
 
         ! else
-            result(:, :) = result(:, :) - u(:, :)*dsdx(:, :)
+        result(:, :) = result(:, :) - u(:, :)*dsdx(:, :)
         ! end if
 
         return
