@@ -127,6 +127,7 @@ contains
                     dummy = ref(k) - c0_loc
                     b(:, :, k) = c1_loc*s(:, :, k, 1) - dummy
                 end do
+
             case (2)
                 do k = 1, nz
                     dummy = ref(k) - c0_loc

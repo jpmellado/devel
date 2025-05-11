@@ -8,10 +8,10 @@ module OPR_Partial
 #endif
     use FDM, only: fdm_dt
     use FDM_Derivative, only: FDM_Der1_Solve, FDM_Der2_Solve
-    ! use FDM_Interpolate, only: FDM_Interpol, FDM_Interpol_Der1
     implicit none
     private
 
+    public :: OPR_Partial_Initialize
     public :: OPR_Partial_X     ! These first 2 could be written in terms of the last one...
     public :: OPR_Partial_Y
     public :: OPR_Partial_Z
@@ -20,10 +20,56 @@ module OPR_Partial
     integer, parameter, public :: OPR_P2 = 2                ! 2. order derivative
     integer, parameter, public :: OPR_P2_P1 = 3             ! 2. and 1.order derivatives
 
+    ! -----------------------------------------------------------------------
+    procedure(OPR_Partial_interface) :: OPR_Partial_dt
+    abstract interface
+        subroutine OPR_Partial_interface(type, nx, ny, nz, g, u, result, tmp1, ibc)
+            use TLab_Constants, only: wi, wp
+            use FDM, only: fdm_dt
+            integer(wi), intent(in) :: type                         ! OPR_P1, OPR_P2, OPR_P2_P1
+            integer(wi), intent(in) :: nx, ny, nz
+            type(fdm_dt), intent(in) :: g
+            real(wp), intent(in) :: u(nx*ny*nz)
+            real(wp), intent(out) :: result(nx*ny*nz)
+            real(wp), intent(inout), optional :: tmp1(nx*ny*nz)     ! 1. order derivative in 2. order calculation
+            integer, intent(in), optional :: ibc                    ! boundary conditions 1. order derivative
+        end subroutine
+    end interface
+    procedure(OPR_Partial_dt), pointer :: OPR_Partial_X, OPR_Partial_Y
+
 contains
     ! ###################################################################
     ! ###################################################################
-    subroutine OPR_Partial_X(type, nx, ny, nz, g, u, result, tmp1, ibc)
+    subroutine OPR_Partial_Initialize()
+
+        ! ###################################################################
+        ! Setting procedure pointers
+#ifdef USE_MPI
+        if (ims_npro_i > 1) then
+            OPR_Partial_X => OPR_Partial_X_Parallel
+        else
+#endif
+            OPR_Partial_X => OPR_Partial_X_Serial
+#ifdef USE_MPI
+        end if
+#endif
+
+#ifdef USE_MPI
+        if (ims_npro_j > 1) then
+            OPR_Partial_Y => OPR_Partial_Y_Parallel
+        else
+#endif
+            OPR_Partial_Y => OPR_Partial_Y_Serial
+#ifdef USE_MPI
+        end if
+#endif
+
+        return
+    end subroutine OPR_Partial_Initialize
+
+    ! ###################################################################
+    ! ###################################################################
+    subroutine OPR_Partial_X_Serial(type, nx, ny, nz, g, u, result, tmp1, ibc)
         integer(wi), intent(in) :: type                         ! OPR_P1, OPR_P2, OPR_P2_P1
         integer(wi), intent(in) :: nx, ny, nz
         type(fdm_dt), intent(in) :: g
@@ -32,13 +78,8 @@ contains
         real(wp), intent(inout), optional :: tmp1(nx*ny*nz)     ! 1. order derivative in 2. order calculation
         integer, intent(in), optional :: ibc                    ! boundary conditions 1. order derivative
 
-        target u, tmp1, result
-
         ! -------------------------------------------------------------------
-        integer(wi) nyz
         integer ibc_loc
-
-        real(wp), dimension(:), pointer :: p_a, p_b, p_c, p_d
 
         ! ###################################################################
         if (g%size == 1) then ! Set to zero in 2D case
@@ -48,38 +89,12 @@ contains
         end if
 
         ! Transposition: make x-direction the last one
-#ifdef USE_MPI
-        if (ims_npro_i > 1) then
-            call TLabMPI_Trp_ExecI_Forward(u, result, tmpi_plan_dx)
-            p_a => result
-            p_b => wrk3d
-            p_c => result
-            if (any([OPR_P2, OPR_P2_P1] == type)) then
-                p_d => tmp1
-            end if
-            nyz = tmpi_plan_dx%nlines
-        else
-#endif
-            p_a => u
-            p_b => result
-            if (any([OPR_P2, OPR_P2_P1] == type)) then
-                p_c => tmp1
-                p_d => wrk3d
-            else
-                p_c => wrk3d
-            end if
-            nyz = ny*nz
-#ifdef USE_MPI
-        end if
-#endif
-
 #ifdef USE_ESSL
-        call DGETMO(p_a, g%size, g%size, nyz, p_b, nyz)
+        call DGETMO(u, g%size, g%size, ny*nz, result, ny*nz)
 #else
-        call TLab_Transpose(p_a, g%size, nyz, g%size, p_b, nyz)
+        call TLab_Transpose(u, g%size, ny*nz, g%size, result, ny*nz)
 #endif
 
-        ! ###################################################################
         if (present(ibc)) then
             ibc_loc = ibc
         else
@@ -88,44 +103,42 @@ contains
 
         select case (type)
         case (OPR_P2)
-            if (g%der2%need_1der) call FDM_Der1_Solve(nyz, ibc_loc, g%der1, g%der1%lu, p_b, p_d, wrk2d)
-            call FDM_Der2_Solve(nyz, g%der2, g%der2%lu, p_b, p_c, p_d, wrk2d)
+            if (g%der2%need_1der) call FDM_Der1_Solve(ny*nz, ibc_loc, g%der1, g%der1%lu, result, tmp1, wrk2d)
+            call FDM_Der2_Solve(ny*nz, g%der2, g%der2%lu, result, wrk3d, tmp1, wrk2d)
 
         case (OPR_P2_P1)
-            call FDM_Der1_Solve(nyz, ibc_loc, g%der1, g%der1%lu, p_b, p_d, wrk2d)
-            call FDM_Der2_Solve(nyz, g%der2, g%der2%lu, p_b, p_c, p_d, wrk2d)
+            call FDM_Der1_Solve(ny*nz, ibc_loc, g%der1, g%der1%lu, result, wrk3d, wrk2d)
+            call FDM_Der2_Solve(ny*nz, g%der2, g%der2%lu, result, tmp1, wrk3d, wrk2d)
 
         case (OPR_P1)
-            call FDM_Der1_Solve(nyz, ibc_loc, g%der1, g%der1%lu, p_b, p_c, wrk2d)
+            call FDM_Der1_Solve(ny*nz, ibc_loc, g%der1, g%der1%lu, result, wrk3d, wrk2d)
 
         end select
 
-        ! ###################################################################
         ! Put arrays back in the order in which they came in
 #ifdef USE_ESSL
-        call DGETMO(p_c, nyz, nyz, g%size, p_b, g%size)
-        if (type == OPR_P2_P1) call DGETMO(p_d, nyz, nyz, g%size, p_c, g%size)
+        if (type == OPR_P2_P1) then
+            call DGETMO(tmp1, ny*nz, ny*nz, g%size, result, g%size)
+            call DGETMO(wrk3d, ny*nz, ny*nz, g%size, tmp1, g%size)
+        else
+            call DGETMO(wrk3d, ny*nz, ny*nz, g%size, result, g%size)
+        end if
 #else
-        call TLab_Transpose(p_c, nyz, g%size, nyz, p_b, g%size)
-        if (type == OPR_P2_P1) call TLab_Transpose(p_d, nyz, g%size, nyz, p_c, g%size)
-#endif
-
-#ifdef USE_MPI
-        if (ims_npro_i > 1) then
-            if (type == OPR_P2_P1) call TLabMPI_Trp_ExecI_Backward(p_c, tmp1, tmpi_plan_dx)
-            call TLabMPI_Trp_ExecI_Backward(p_b, result, tmpi_plan_dx)
+        if (type == OPR_P2_P1) then
+            call TLab_Transpose(tmp1, ny*nz, g%size, ny*nz, result, g%size)
+            call TLab_Transpose(wrk3d, ny*nz, g%size, ny*nz, tmp1, g%size)
+        else
+            call TLab_Transpose(wrk3d, ny*nz, g%size, ny*nz, result, g%size)
         end if
 #endif
 
-        nullify (p_a, p_b, p_c)
-        if (associated(p_d)) nullify (p_d)
-
         return
-    end subroutine OPR_Partial_X
+    end subroutine OPR_Partial_X_Serial
 
-    !########################################################################
-    !########################################################################
-    subroutine OPR_Partial_Y(type, nx, ny, nz, g, u, result, tmp1, ibc)
+    ! ###################################################################
+    ! ###################################################################
+#ifdef USE_MPI
+    subroutine OPR_Partial_X_Parallel(type, nx, ny, nz, g, u, result, tmp1, ibc)
         integer(wi), intent(in) :: type                         ! OPR_P1, OPR_P2, OPR_P2_P1
         integer(wi), intent(in) :: nx, ny, nz
         type(fdm_dt), intent(in) :: g
@@ -134,12 +147,88 @@ contains
         real(wp), intent(inout), optional :: tmp1(nx*ny*nz)     ! 1. order derivative in 2. order calculation
         integer, intent(in), optional :: ibc                    ! boundary conditions 1. order derivative
 
-        target u, tmp1, result
+        ! -------------------------------------------------------------------
+        integer(wi) nlines
+        integer ibc_loc
+
+        ! ###################################################################
+        if (g%size == 1) then ! Set to zero in 2D case
+            result = 0.0_wp
+            if (present(tmp1)) tmp1 = 0.0_wp
+            return
+        end if
+
+        nlines = tmpi_plan_dx%nlines
+
+        ! Transposition: make x-direction the last one
+        call TLabMPI_Trp_ExecI_Forward(u, result, tmpi_plan_dx)
+#ifdef USE_ESSL
+        call DGETMO(result, g%size, g%size, nlines, wrk3d, nlines)
+#else
+        call TLab_Transpose(result, g%size, nlines, g%size, wrk3d, nlines)
+#endif
+
+        if (present(ibc)) then
+            ibc_loc = ibc
+        else
+            ibc_loc = BCS_NONE
+        end if
+
+        select case (type)
+        case (OPR_P2)
+            if (g%der2%need_1der) call FDM_Der1_Solve(nlines, ibc_loc, g%der1, g%der1%lu, wrk3d, tmp1, wrk2d)
+            call FDM_Der2_Solve(nlines, g%der2, g%der2%lu, wrk3d, result, tmp1, wrk2d)
+
+        case (OPR_P2_P1)
+            call FDM_Der1_Solve(nlines, ibc_loc, g%der1, g%der1%lu, wrk3d, tmp1, wrk2d)
+            call FDM_Der2_Solve(nlines, g%der2, g%der2%lu, wrk3d, result, tmp1, wrk2d)
+
+        case (OPR_P1)
+            call FDM_Der1_Solve(nlines, ibc_loc, g%der1, g%der1%lu, wrk3d, result, wrk2d)
+
+        end select
+
+        ! Put arrays back in the order in which they came in
+#ifdef USE_ESSL
+        if (type == OPR_P2_P1) then
+            call DGETMO(tmp1, nlines, nlines, g%size, wrk3d, g%size)
+            call DGETMO(result, nlines, nlines, g%size, tmp1, g%size)
+            call TLabMPI_Trp_ExecI_Backward(tmp1, result, tmpi_plan_dx)
+            call TLabMPI_Trp_ExecI_Backward(wrk3d, tmp1, tmpi_plan_dx)
+        else
+            call DGETMO(result, nlines, nlines, g%size, wrk3d, g%size)
+            call TLabMPI_Trp_ExecI_Backward(wrk3d, result, tmpi_plan_dx)
+        end if
+#else
+        if (type == OPR_P2_P1) then
+            call TLab_Transpose(tmp1, nlines, g%size, nlines, wrk3d, g%size)
+            call TLab_Transpose(result, nlines, g%size, nlines, tmp1, g%size)
+            call TLabMPI_Trp_ExecI_Backward(tmp1, result, tmpi_plan_dx)
+            call TLabMPI_Trp_ExecI_Backward(wrk3d, tmp1, tmpi_plan_dx)
+        else
+            call TLab_Transpose(result, nlines, g%size, nlines, wrk3d, g%size)
+            call TLabMPI_Trp_ExecI_Backward(wrk3d, result, tmpi_plan_dx)
+        end if
+#endif
+
+        return
+    end subroutine OPR_Partial_X_Parallel
+#endif
+
+    !########################################################################
+    !########################################################################
+    subroutine OPR_Partial_Y_Serial(type, nx, ny, nz, g, u, result, tmp1, ibc)
+        integer(wi), intent(in) :: type                         ! OPR_P1, OPR_P2, OPR_P2_P1
+        integer(wi), intent(in) :: nx, ny, nz
+        type(fdm_dt), intent(in) :: g
+        real(wp), intent(in) :: u(nx*ny*nz)
+        real(wp), intent(out) :: result(nx*ny*nz)
+        real(wp), intent(inout), optional :: tmp1(nx*ny*nz)     ! 1. order derivative in 2. order calculation
+        integer, intent(in), optional :: ibc                    ! boundary conditions 1. order derivative
 
         ! -------------------------------------------------------------------
-        integer(wi) nxz
+        integer(wi) nlines
         integer ibc_loc
-        real(wp), dimension(:), pointer :: p_b, p_c, p_d
 
         ! ###################################################################
         if (g%size == 1) then ! Set to zero in 2D case
@@ -154,37 +243,8 @@ contains
 #else
         call TLab_Transpose(u, nx*ny, nz, nx*ny, result, nz)
 #endif
+        nlines = nx*nz
 
-#ifdef USE_MPI
-        if (ims_npro_j > 1) then
-            call TLabMPI_Trp_ExecJ_Forward(result, wrk3d, tmpi_plan_dy)
-            nxz = tmpi_plan_dy%nlines
-
-            p_b => wrk3d
-            if (any([OPR_P2, OPR_P2_P1] == type)) then
-                p_c => result
-                p_d => tmp1
-            else
-                p_c => result
-            end if
-
-        else
-#endif
-            nxz = nx*nz
-
-            p_b => result
-            if (any([OPR_P2, OPR_P2_P1] == type)) then
-                p_c => tmp1
-                p_d => wrk3d
-            else
-                p_c => wrk3d
-            end if
-
-#ifdef USE_MPI
-        end if
-#endif
-
-        ! ###################################################################
         if (present(ibc)) then
             ibc_loc = ibc
         else
@@ -193,53 +253,118 @@ contains
 
         select case (type)
         case (OPR_P2)
-            if (g%der2%need_1der) call FDM_Der1_Solve(nxz, ibc_loc, g%der1, g%der1%lu, p_b, p_d, wrk2d)
-            call FDM_Der2_Solve(nxz, g%der2, g%der2%lu, p_b, p_c, p_d, wrk2d)
+            if (g%der2%need_1der) call FDM_Der1_Solve(nlines, ibc_loc, g%der1, g%der1%lu, result, tmp1, wrk2d)
+            call FDM_Der2_Solve(nlines, g%der2, g%der2%lu, result, wrk3d, tmp1, wrk2d)
 
         case (OPR_P2_P1)
-            call FDM_Der1_Solve(nxz, ibc_loc, g%der1, g%der1%lu, p_b, p_d, wrk2d)
-            call FDM_Der2_Solve(nxz, g%der2, g%der2%lu, p_b, p_c, p_d, wrk2d)
+            call FDM_Der1_Solve(nlines, ibc_loc, g%der1, g%der1%lu, result, wrk3d, wrk2d)
+            call FDM_Der2_Solve(nlines, g%der2, g%der2%lu, result, tmp1, wrk3d, wrk2d)
 
         case (OPR_P1)
-            call FDM_Der1_Solve(nxz, ibc_loc, g%der1, g%der1%lu, p_b, p_c, wrk2d)
+            call FDM_Der1_Solve(nlines, ibc_loc, g%der1, g%der1%lu, result, wrk3d, wrk2d)
 
         end select
 
         ! ###################################################################
         ! Put arrays back in the order in which they came in
-#ifdef USE_MPI
-        if (ims_npro_j > 1) then
-            call TLabMPI_Trp_ExecJ_Backward(p_c, p_b, tmpi_plan_dy)
-            if (type == OPR_P2_P1) call TLabMPI_Trp_ExecJ_Backward(p_d, p_c, tmpi_plan_dy)
-
 #ifdef USE_ESSL
-            if (type == OPR_P2_P1) call DGETMO(p_c, nz, nz, nx*ny, tmp1, nx*ny)
-            call DGETMO(p_b, nz, nz, nx*ny, result, nx*ny)
-#else
-            if (type == OPR_P2_P1) call TLab_Transpose(p_c, nz, nx*ny, nz, tmp1, nx*ny)
-            call TLab_Transpose(p_b, nz, nx*ny, nz, result, nx*ny)
-#endif
-
+        if (type == OPR_P2_P1) then
+            call DGETMO(tmp1, nz, nz, nx*ny, result, nx*ny)
+            call DGETMO(wrk3d, nz, nz, nx*ny, tmp1, nx*ny)
         else
-#endif
-
-#ifdef USE_ESSL
-            call DGETMO(p_c, nz, nz, nx*ny, result, nx*ny)
-            if (type == OPR_P2_P1) call DGETMO(p_d, nz, nz, nx*ny, tmp1, nx*ny)
+            call DGETMO(wrk3d, nz, nz, nx*ny, result, nx*ny)
+        end if
 #else
-            call TLab_Transpose(p_c, nz, nx*ny, nz, result, nx*ny)
-            if (type == OPR_P2_P1) call TLab_Transpose(p_d, nz, nx*ny, nz, tmp1, nx*ny)
-#endif
-
-#ifdef USE_MPI
+        if (type == OPR_P2_P1) then
+            call TLab_Transpose(tmp1, nz, nx*ny, nz, result, nx*ny)
+            call TLab_Transpose(wrk3d, nz, nx*ny, nz, tmp1, nx*ny)
+        else
+            call TLab_Transpose(wrk3d, nz, nx*ny, nz, result, nx*ny)
         end if
 #endif
 
-        nullify (p_b, p_c)
-        if (associated(p_d)) nullify (p_d)
+        return
+    end subroutine OPR_Partial_Y_Serial
+
+    !########################################################################
+    !########################################################################
+#ifdef USE_MPI
+    subroutine OPR_Partial_Y_Parallel(type, nx, ny, nz, g, u, result, tmp1, ibc)
+        integer(wi), intent(in) :: type                         ! OPR_P1, OPR_P2, OPR_P2_P1
+        integer(wi), intent(in) :: nx, ny, nz
+        type(fdm_dt), intent(in) :: g
+        real(wp), intent(in) :: u(nx*ny*nz)
+        real(wp), intent(out) :: result(nx*ny*nz)
+        real(wp), intent(inout), optional :: tmp1(nx*ny*nz)     ! 1. order derivative in 2. order calculation
+        integer, intent(in), optional :: ibc                    ! boundary conditions 1. order derivative
+
+        ! -------------------------------------------------------------------
+        integer(wi) nlines
+        integer ibc_loc
+
+        ! ###################################################################
+        if (g%size == 1) then ! Set to zero in 2D case
+            result = 0.0_wp
+            if (present(tmp1)) tmp1 = 0.0_wp
+            return
+        end if
+
+        ! Transposition: make y-direction the last one
+#ifdef USE_ESSL
+        call DGETMO(u, nx*ny, nx*ny, nz, result, nz)
+#else
+        call TLab_Transpose(u, nx*ny, nz, nx*ny, result, nz)
+#endif
+        call TLabMPI_Trp_ExecJ_Forward(result, wrk3d, tmpi_plan_dy)
+        nlines = tmpi_plan_dy%nlines
+
+        if (present(ibc)) then
+            ibc_loc = ibc
+        else
+            ibc_loc = BCS_NONE
+        end if
+
+        select case (type)
+        case (OPR_P2)
+            if (g%der2%need_1der) call FDM_Der1_Solve(nlines, ibc_loc, g%der1, g%der1%lu, wrk3d, tmp1, wrk2d)
+            call FDM_Der2_Solve(nlines, g%der2, g%der2%lu, wrk3d, result, tmp1, wrk2d)
+
+        case (OPR_P2_P1)
+            call FDM_Der1_Solve(nlines, ibc_loc, g%der1, g%der1%lu, wrk3d, tmp1, wrk2d)
+            call FDM_Der2_Solve(nlines, g%der2, g%der2%lu, wrk3d, result, tmp1, wrk2d)
+
+        case (OPR_P1)
+            call FDM_Der1_Solve(nlines, ibc_loc, g%der1, g%der1%lu, wrk3d, result, wrk2d)
+
+        end select
+
+        ! ###################################################################
+        ! Put arrays back in the order in which they came in
+#ifdef USE_ESSL
+        if (type == OPR_P2_P1) then
+            call TLabMPI_Trp_ExecJ_Backward(tmp1, wrk3d, tmpi_plan_dy)
+            call TLabMPI_Trp_ExecJ_Backward(result, tmp1, tmpi_plan_dy)
+            call DGETMO(tmp1, nz, nz, nx*ny, result, nx*ny)
+            call DGETMO(wrk3d, nz, nz, nx*ny, tmp1, nx*ny)
+        else
+            call TLabMPI_Trp_ExecJ_Backward(result, wrk3d, tmpi_plan_dy)
+            call DGETMO(wrk3d, nz, nz, nx*ny, result, nx*ny)
+        end if
+#else
+        if (type == OPR_P2_P1) then
+            call TLabMPI_Trp_ExecJ_Backward(tmp1, wrk3d, tmpi_plan_dy)
+            call TLabMPI_Trp_ExecJ_Backward(result, tmp1, tmpi_plan_dy)
+            call TLab_Transpose(tmp1, nz, nx*ny, nz, result, nx*ny)
+            call TLab_Transpose(wrk3d, nz, nx*ny, nz, tmp1, nx*ny)
+        else
+            call TLabMPI_Trp_ExecJ_Backward(result, wrk3d, tmpi_plan_dy)
+            call TLab_Transpose(wrk3d, nz, nx*ny, nz, result, nx*ny)
+        end if
+#endif
 
         return
-    end subroutine OPR_Partial_Y
+    end subroutine OPR_Partial_Y_Parallel
+#endif
 
     !########################################################################
     !########################################################################

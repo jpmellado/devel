@@ -173,7 +173,7 @@ contains
             allocate (bbackground(z%size))                   ! buoyancy profiles
             bbackground(:) = 0.0_wp
 
-            if (gravityProps%active(2)) then
+            if (gravityProps%active(3)) then
                 call Gravity_Source(gravityProps, 1, z%size, 1, sbackground(:, 1), wrk1d)
                 bbackground(1:z%size) = wrk1d(1:z%size, 1)
             end if

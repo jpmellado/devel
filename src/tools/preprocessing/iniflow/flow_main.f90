@@ -19,6 +19,7 @@ program IniFlow
     ! use Thermodynamics, only: imixture, Thermodynamics_Initialize_Parameters
     ! use NavierStokes, only: nse_eqns, DNS_EQNS_COMPRESSIBLE, DNS_EQNS_TOTAL
     ! use Rotation, only: Rotation_Initialize
+    use OPR_Partial, only: OPR_Partial_Initialize
     use TLab_Background, only: TLab_Initialize_Background, qbg
     use Profiles, only: Profiles_Calculate
     use OPR_Fourier, only: OPR_Fourier_Initialize
@@ -51,6 +52,8 @@ program IniFlow
 
     ! #######################################################################
     call TLab_Initialize_Memory(__FILE__)
+    
+    call OPR_Partial_Initialize()
 
     call TLab_Initialize_Background(ifile)
     if (IniK%relative) IniK%zmean = z%nodes(1) + z%scale*IniK%zmean_rel

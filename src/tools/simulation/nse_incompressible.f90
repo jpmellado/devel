@@ -31,22 +31,21 @@ subroutine NSE_Incompressible()
     integer ibc
     real(wp) dummy
 
-    ! ! #######################################################################
-    ! ! Preliminaries for Scalar BC
-    ! ! (flow BCs initialized below as they are used for pressure in between)
-    ! ! #######################################################################
-    ! ! Default is zero
-    ! BcsScalKmin%ref(:, :, :) = 0.0_wp
-    ! BcsScalKmax%ref(:, :, :) = 0.0_wp
+    ! #######################################################################
+    ! Preliminaries for Scalar BC
+    ! (flow BCs initialized below as they are used for pressure in between)
+    ! #######################################################################
+    BcsScalKmin%ref(:, :, :) = 0.0_wp ! default is no-slip (dirichlet)
+    BcsScalKmax%ref(:, :, :) = 0.0_wp
 
-    ! ! Keep the old tendency of the scalar at the boundary to be used in dynamic BCs
-    ! if (any(BcsScalKmin%SfcType(1:inb_scal) == DNS_SFC_LINEAR) .or. &
-    !     any(BcsScalKmax%SfcType(1:inb_scal) == DNS_SFC_LINEAR)) then
-    !     do is = 1, inb_scal
-    !         if (BcsScalKmin%SfcType(is) == DNS_SFC_LINEAR) BcsScalKmin%ref(:, :, is) = p_hs(:, :, 1, is)
-    !         if (BcsScalKmax%SfcType(is) == DNS_SFC_LINEAR) BcsScalKmax%ref(:, :, is) = p_hs(:, :, kmax, is)
-    !     end do
-    ! end if
+    ! Keep the old tendency of the scalar at the boundary to be used in dynamic BCs
+    if (any(BcsScalKmin%SfcType(1:inb_scal) == DNS_SFC_LINEAR) .or. &
+        any(BcsScalKmax%SfcType(1:inb_scal) == DNS_SFC_LINEAR)) then
+        do is = 1, inb_scal
+            if (BcsScalKmin%SfcType(is) == DNS_SFC_LINEAR) BcsScalKmin%ref(:, :, is) = p_hs(:, :, 1, is)
+            if (BcsScalKmax%SfcType(is) == DNS_SFC_LINEAR) BcsScalKmax%ref(:, :, is) = p_hs(:, :, kmax, is)
+        end do
+    end if
 
     ! #######################################################################
     ! Diffusion and advection terms

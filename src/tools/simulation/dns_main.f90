@@ -26,6 +26,7 @@ program DNS
     ! use Chemistry, only: Chemistry_Initialize
     ! use SpecialForcing, only: SpecialForcing_Initialize
     ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
+    use OPR_Partial, only: OPR_Partial_Initialize
     use Tlab_Background, only: TLab_Initialize_Background!, pbg, rbg
     use OPR_Fourier, only: OPR_Fourier_Initialize
     use OPR_Elliptic, only: OPR_Elliptic_Initialize
@@ -80,6 +81,8 @@ program DNS
 
     ! #######################################################################
     call TLab_Initialize_Memory(__FILE__)
+
+    call OPR_Partial_Initialize()
 
     ! call SpecialForcing_Initialize(ifile)
 
