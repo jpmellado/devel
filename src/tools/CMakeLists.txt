@@ -22,13 +22,10 @@ FILE(GLOB sourcefiles "simulation/*.f90")
 add_executable(dns.x ${sourcefiles})
 target_link_libraries(dns.x physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
 
-# # Postprocessing
-# FILE(GLOB sourcefiles "plot/visuals*.f90")
-# add_executable(visuals.x ${sourcefiles})
-# target_link_libraries(visuals.x statistics physics mappings operators particles filters fdm ibm thermodynamics ${LEVEL1_LIBS} ${LIBS})
-# if (PSFFT_LIB)
-# set_target_properties(visuals.x PROPERTIES LINK_FLAGS "${PSFFT_LINK_FLAGS} ${LINK_FLAGS}")
-# endif()
+# Postprocessing
+FILE(GLOB sourcefiles "postprocessing/visuals.f90")
+add_executable(visuals.x ${sourcefiles})
+target_link_libraries(visuals.x physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
 
 # FILE(GLOB sourcefiles "statistics/averages*.f90")
 # add_executable(averages.x ${sourcefiles})
