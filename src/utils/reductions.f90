@@ -27,36 +27,5 @@ contains
 
         return
     end subroutine Reduce_Block_InPlace
-    ! ! #######################################################################
-    ! ! #######################################################################
-    ! subroutine Reduce_Block_InPlace(nx, ny, nz, nx1, ny1, nz1, nx_dst, ny_dst, nz_dst, a, wrk1d)
-    !     use TLab_Constants, only: wp, wi
-    !     implicit none
-
-    !     integer(wi), intent(IN) :: nx, ny, nz, nx1, ny1, nz1, nx_dst, ny_dst, nz_dst
-    !     real(wp), dimension(nx*ny*nz), intent(INOUT) :: a
-    !     real(wp), dimension(nx_dst), intent(INOUT) :: wrk1d
-
-    ! ! -------------------------------------------------------------------
-    !     integer(wi) j, k, nxy, nxy_dst, ip, ip_dst
-
-    ! ! -------------------------------------------------------------------
-    !     nxy = nx*ny
-    !     nxy_dst = nx_dst*ny_dst
-
-    !     do k = 1, nz_dst
-    !         ip = (k - 1)*nxy + (nz1 - 1)*nxy + (ny1 - 1)*nx + (nx1 - 1) + 1
-    !         ip_dst = (k - 1)*nxy_dst + 1
-    !         do j = 1, ny_dst
-    !             wrk1d(1:nx_dst) = a(ip:ip + nx_dst - 1)
-    !             a(ip_dst:ip_dst + nx_dst - 1) = wrk1d(1:nx_dst)
-
-    !             ip = ip + nx
-    !             ip_dst = ip_dst + nx_dst
-    !         end do
-    !     end do
-
-    !     return
-    ! end subroutine Reduce_Block_InPlace
 
 end module Reductions
