@@ -5,7 +5,7 @@ module Tensor
     implicit none
     private
 
-    public :: Tensor_Dot, Tensor_Curl
+    public :: Tensor_Dot, Tensor_Cross
     public :: Tensor_Eigenvalues, Tensor_Eigenframe
 
 contains
@@ -25,7 +25,7 @@ contains
         return
     end function Tensor_Dot
 
-    function Tensor_Curl(a, b) result(c)
+    function Tensor_Cross(a, b) result(c)
         real(wp), intent(in) :: a(:, :), b(:, :)
         real(wp) c(size(a, 1), size(a, 2))
 
@@ -34,7 +34,7 @@ contains
         c(:, 3) = a(:, 1)*b(:, 2) - a(:, 2)*b(:, 1)
 
         return
-    end function Tensor_Curl
+    end function Tensor_Cross
 
     !########################################################################
     ! Second-order tensors (matrices)

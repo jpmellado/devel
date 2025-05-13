@@ -501,7 +501,7 @@ program VISUALS
             ! ###################################################################
             ! Scalars
             ! ###################################################################
-            if (opt_vec(iv) == 9) then ! All prognostic scalars
+            if (opt_vec(iv) == 9) then
                 do is = 1, inb_scal_array
                     write (str, *) is; plot_file = 'Scalar'//trim(adjustl(str))//time_str(1:MaskSize)
                     txc(1:isize_field, 1) = s(1:isize_field, is)
@@ -880,37 +880,6 @@ program VISUALS
     call TLab_Stop(0)
 
 contains
-! !########################################################################
-! !# Accumulate itime_size fields before processing the temp. avg. fields
-! !########################################################################
-!     subroutine VISUALS_ACCUMULATE_FIELDS(q, p, q_avg, p_avg)
-
-!         real(wp), dimension(isize_field, 3), intent(inout) :: q     ! inst. vel. fields
-!         real(wp), dimension(isize_field), intent(inout) :: p     ! inst. pre. fields
-!         real(wp), dimension(isize_field, 3), intent(inout) :: q_avg ! time avg. vel. fields
-!         real(wp), dimension(isize_field), intent(inout) :: p_avg ! time avg. pre. fields
-
-!         integer(wi) :: is
-!         ! ================================================================== !
-!         ! if only one iteration is chosen, do nothing
-!         if (itime_size > 1) then
-!             if (it == 1) then
-!                 q_avg(:, :) = q(:, :); p_avg(:) = p(:)
-!             else if (it > 1) then
-!                 do is = 1, 3
-!                     q_avg(:, is) = q_avg(:, is) + q(:, is)
-!                 end do
-!                 p_avg(:) = p_avg(:) + p(:)
-!             end if
-!             if (it == itime_size) then
-!                 q = q_avg/itime_size
-!                 p = p_avg/itime_size
-!             end if
-!         end if
-
-!         return
-!     end subroutine VISUALS_ACCUMULATE_FIELDS
-
 !########################################################################
 !########################################################################
 #define LOC_UNIT_ID 55
@@ -921,45 +890,51 @@ contains
         real(wp), intent(inout) :: field(:, :)
 
         ! -------------------------------------------------------------------
-        integer(wi) sizes(5), nx_aux, ny_aux, nz_aux, ifield, i
+        integer(wi) nx_aux, ny_aux, nz_aux, ifield, i
 #ifdef USE_MPI
+        integer(wi) sizes(5)
         character*32 varname(16)
+        integer iflag_mode
 #endif
         character*32 name
-        integer iflag_mode, nfield
+        integer nfield
         integer, parameter :: i1 = 1
 
         ! ###################################################################
         nfield = size(field, 2)
-        sizes(5) = nfield
 
         nx_aux = subdomain(2) - subdomain(1) + 1
         ny_aux = subdomain(4) - subdomain(3) + 1
         nz_aux = subdomain(6) - subdomain(5) + 1
 
-        iflag_mode = 0 ! default
+#ifdef USE_MPI
+        sizes(5) = nfield
         sizes(1) = isize_txc_field     ! array size
         sizes(2) = 1                   ! lower bound
-        ! if (subdomain(2) - subdomain(1) + 1 == g(1)%size .and. &
-        !     subdomain(6) - subdomain(5) + 1 == 1) then! xOy plane
-        !     iflag_mode = IO_SUBARRAY_VISUALS_XOY
-        !     sizes(3) = ny_aux*nx     ! upper bound
-        !     sizes(4) = 1              ! stride
-
-        ! else if (subdomain(6) - subdomain(5) + 1 == g(3)%size .and. &
-        !          subdomain(2) - subdomain(1) + 1 == 1) then! zOy plane
-        !     iflag_mode = IO_SUBARRAY_VISUALS_YOZ
-        !     sizes(3) = ny_aux*nx*nz ! upper bound
-        !     sizes(4) = nx             ! stride
-
-        ! else
         if (subdomain(2) - subdomain(1) + 1 == x%size .and. &
-            subdomain(4) - subdomain(3) + 1 == y%size) then! xOy blocks
+            subdomain(4) - subdomain(3) + 1 == 1) then              ! xOz plane
+            iflag_mode = IO_SUBARRAY_VISUALS_XOZ
+            sizes(3) = imax*nz_aux      ! upper bound
+            sizes(4) = 1                ! stride
+
+        else if (subdomain(4) - subdomain(3) + 1 == y%size .and. &
+                 subdomain(2) - subdomain(1) + 1 == 1) then         ! yOz plane
+            iflag_mode = IO_SUBARRAY_VISUALS_YOZ
+            sizes(3) = jmax*nz_aux      ! upper bound
+            sizes(4) = 1                ! stride
+
+        else if (subdomain(2) - subdomain(1) + 1 == x%size .and. &
+                 subdomain(4) - subdomain(3) + 1 == y%size) then    ! xOy blocks
             iflag_mode = IO_SUBARRAY_VISUALS_XOY
             sizes(3) = imax*jmax*nz_aux ! upper bound
-            sizes(4) = 1              ! stride
+            sizes(4) = 1                ! stride
+
+        else
+            call TLab_Write_ASCII(efile, __FILE__//'. Invalid subdomain in parallel mode.')
+            call TLab_Stop(DNS_ERROR_INVALOPT)
 
         end if
+#endif
 
         ! ###################################################################
         select case (opt_format)
@@ -977,7 +952,7 @@ contains
 #ifdef USE_MPI
             if (nz_aux /= kmax) then
                 do ifield = 1, nfield
-                    call REDUCE_BLOCK_INPLACE(imax, jmax, kmax, i1, i1, subdomain(5), i1, imax, jmax, nz_aux, field(1, ifield), wrk1d)
+                    call REDUCE_BLOCK_INPLACE(imax, jmax, kmax, i1, i1, subdomain(5), nx_aux, ny_aux, nz_aux, field(1, ifield), wrk1d)
                 end do
             end if
 
@@ -1015,30 +990,30 @@ contains
 
     subroutine Create_IO_Subarrays()
         ! -----------------------------------------------------------------------
-        integer(wi) ny_loc
+        integer(wi) nz_loc
 
         ! #######################################################################
         io_subarrays(:)%active = .false.
         io_subarrays(:)%offset = 0
         io_subarrays(:)%precision = IO_TYPE_SINGLE
 
-        ny_loc = subdomain(6) - subdomain(5) + 1
+        nz_loc = subdomain(6) - subdomain(5) + 1
 
         ! ###################################################################
-        ! ! Saving full vertical xOz planes; using subdomain(3) to define the plane
-        ! if (ims_pro_j == ((subdomain(3) - 1)/jmax)) io_subarrays(IO_SUBARRAY_VISUALS_XOZ)%active = .true.
-        ! io_subarrays(IO_SUBARRAY_VISUALS_XOZ)%communicator = ims_comm_x
-        ! io_subarrays(IO_SUBARRAY_VISUALS_XOZ)%subarray = IO_Create_Subarray_XOZ(imax, ny_loc, MPI_REAL4)
+        ! Saving full vertical xOz planes; using subdomain(3) to define the plane
+        if (ims_pro_j == ((subdomain(3) - 1)/jmax)) io_subarrays(IO_SUBARRAY_VISUALS_XOZ)%active = .true.
+        io_subarrays(IO_SUBARRAY_VISUALS_XOZ)%communicator = ims_comm_x
+        io_subarrays(IO_SUBARRAY_VISUALS_XOZ)%subarray = IO_Create_Subarray_XOZ(imax, nz_loc, MPI_REAL4)
 
-        ! ! Saving full vertical yOz planes; using subiddomain(1) to define the plane
-        ! if (ims_pro_i == ((subdomain(1) - 1)/imax)) io_subarrays(IO_SUBARRAY_VISUALS_YOZ)%active = .true.
-        ! io_subarrays(IO_SUBARRAY_VISUALS_YOZ)%communicator = ims_comm_y
-        ! io_subarrays(IO_SUBARRAY_VISUALS_YOZ)%subarray = IO_Create_Subarray_YOZ(ny_loc, kmax, MPI_REAL4)
+        ! Saving full vertical yOz planes; using subiddomain(1) to define the plane
+        if (ims_pro_i == ((subdomain(1) - 1)/imax)) io_subarrays(IO_SUBARRAY_VISUALS_YOZ)%active = .true.
+        io_subarrays(IO_SUBARRAY_VISUALS_YOZ)%communicator = ims_comm_y
+        io_subarrays(IO_SUBARRAY_VISUALS_YOZ)%subarray = IO_Create_Subarray_YOZ(jmax, nz_loc, MPI_REAL4)
 
         ! Saving full blocks xOy planes
         io_subarrays(IO_SUBARRAY_VISUALS_XOY)%active = .true.
         io_subarrays(IO_SUBARRAY_VISUALS_XOY)%communicator = MPI_COMM_WORLD
-        io_subarrays(IO_SUBARRAY_VISUALS_XOY)%subarray = IO_Create_Subarray_XOY(imax, ny_loc, kmax, MPI_REAL4)
+        io_subarrays(IO_SUBARRAY_VISUALS_XOY)%subarray = IO_Create_Subarray_XOY(imax, jmax, nz_loc, MPI_REAL4)
 
         return
     end subroutine Create_IO_Subarrays

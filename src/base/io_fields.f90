@@ -59,7 +59,7 @@ module IO_Fields
     public :: IO_Read_Field_INT1, IO_Write_Field_INT1
     public :: IO_Read_Subarray, IO_Write_Subarray
 #ifdef USE_MPI
-    public :: IO_Create_Subarray_XOY !, IO_Create_Subarray_XOZ, IO_Create_Subarray_ZOY
+    public :: IO_Create_Subarray_XOY, IO_Create_Subarray_XOZ, IO_Create_Subarray_YOZ
 #endif
 
     ! -------------------------------------------------------------------
@@ -80,24 +80,24 @@ module IO_Fields
 contains
 
 #ifdef USE_MPI
-    ! !########################################################################
-    ! !########################################################################
-    ! function IO_Create_Subarray_XOY(nx, ny, locType) result(locSubarray)
-    !     integer(wi), intent(in) :: nx, ny
-    !     type(MPI_Datatype), intent(in) :: locType
+    !########################################################################
+    !########################################################################
+    function IO_Create_Subarray_XOZ(nx, nz, locType) result(locSubarray)
+        integer(wi), intent(in) :: nx, nz
+        type(MPI_Datatype), intent(in) :: locType
 
-    !     type(MPI_Datatype) :: locSubarray
-    !     integer, parameter :: ndims = 2
-    !     integer(wi) :: sizes(ndims), locsize(ndims), offset(ndims)
+        type(MPI_Datatype) :: locSubarray
+        integer, parameter :: ndims = 2
+        integer(wi) :: sizes(ndims), locsize(ndims), offset(ndims)
 
-    !     sizes = [nx*ims_npro_i, ny]
-    !     locsize = [nx, ny]
-    !     offset = [nx*ims_pro_i, 0]
+        sizes = [nx*ims_npro_i, nz]
+        locsize = [nx, nz]
+        offset = [nx*ims_pro_i, 0]
 
-    !     call MPI_Type_create_subarray(ndims, sizes, locsize, offset, MPI_ORDER_FORTRAN, locType, locSubarray, ims_err)
-    !     call MPI_Type_commit(locSubarray, ims_err)
+        call MPI_Type_create_subarray(ndims, sizes, locsize, offset, MPI_ORDER_FORTRAN, locType, locSubarray, ims_err)
+        call MPI_Type_commit(locSubarray, ims_err)
 
-    ! end function IO_Create_Subarray_XOY
+    end function IO_Create_Subarray_XOZ
 
     !########################################################################
     !########################################################################
@@ -118,24 +118,24 @@ contains
 
     end function IO_Create_Subarray_XOY
 
-    ! !########################################################################
-    ! !########################################################################
-    ! function IO_Create_Subarray_ZOY(ny, nz, locType) result(locSubarray)
-    !     integer(wi), intent(in) :: ny, nz
-    !     type(MPI_Datatype), intent(in) :: locType
+    !########################################################################
+    !########################################################################
+    function IO_Create_Subarray_YOZ(ny, nz, locType) result(locSubarray)
+        integer(wi), intent(in) :: ny, nz
+        type(MPI_Datatype), intent(in) :: locType
 
-    !     type(MPI_Datatype) :: locSubarray
-    !     integer, parameter :: ndims = 2
-    !     integer(wi) :: sizes(ndims), locsize(ndims), offset(ndims)
+        type(MPI_Datatype) :: locSubarray
+        integer, parameter :: ndims = 2
+        integer(wi) :: sizes(ndims), locsize(ndims), offset(ndims)
 
-    !     sizes = [ny, nz*ims_npro_j]
-    !     locsize = [ny, nz]
-    !     offset = [0, nz*ims_pro_j]
+        sizes = [ny*ims_npro_j, nz]
+        locsize = [ny, nz]
+        offset = [ny*ims_pro_j, 0]
 
-    !     call MPI_Type_create_subarray(ndims, sizes, locsize, offset, MPI_ORDER_FORTRAN, locType, locSubarray, ims_err)
-    !     call MPI_Type_commit(locSubarray, ims_err)
+        call MPI_Type_create_subarray(ndims, sizes, locsize, offset, MPI_ORDER_FORTRAN, locType, locSubarray, ims_err)
+        call MPI_Type_commit(locSubarray, ims_err)
 
-    ! end function IO_Create_Subarray_ZOY
+    end function IO_Create_Subarray_YOZ
 #endif
 
     !########################################################################
