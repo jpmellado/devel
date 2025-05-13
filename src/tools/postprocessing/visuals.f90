@@ -4,7 +4,7 @@ program VISUALS
     use TLab_Constants, only: wp, wi, small_wp, MAX_PARS, fmt_r
     use TLab_Constants, only: ifile, gfile, lfile, efile, wfile, tag_flow, tag_scal
     use TLab_Time, only: itime, rtime
-    use TLab_Memory, only: imax, jmax, kmax, inb_scal_array, inb_txc, inb_flow, inb_scal, isize_field, isize_txc_field
+    use TLab_Memory, only: imax, jmax, kmax, inb_scal_array, inb_txc, inb_flow, inb_scal, isize_field
     use TLab_Arrays
     use TLab_WorkFlow
     use TLab_Memory, only: TLab_Initialize_Memory
@@ -31,9 +31,6 @@ program VISUALS
     ! use Microphysics
     ! use Chemistry
     ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
-    ! use PARTICLE_VARS
-    ! use PARTICLE_ARRAYS
-    ! use PARTICLE_PROCS
     use OPR_Partial
     use OPR_Fourier
     use OPR_Elliptic
@@ -886,55 +883,61 @@ contains
 #define LOC_STATUS 'unknown'
 
     subroutine Write_Visuals(fname, field)
+        use Reductions, only: Reduce_Block_InPlace
+
         character(len=*) fname
         real(wp), intent(inout) :: field(:, :)
 
         ! -------------------------------------------------------------------
-        integer(wi) nx_aux, ny_aux, nz_aux, ifield, i
-#ifdef USE_MPI
+        integer(wi) nx, ny, nz, ifield, i
         integer(wi) sizes(5)
         character*32 varname(16)
-        integer iflag_mode
-#endif
-        character*32 name
+        integer subarray_plan
         integer nfield
-        integer, parameter :: i1 = 1
 
         ! ###################################################################
+        ! I think this first block should go into Visuals_Initialize
         nfield = size(field, 2)
 
-        nx_aux = subdomain(2) - subdomain(1) + 1
-        ny_aux = subdomain(4) - subdomain(3) + 1
-        nz_aux = subdomain(6) - subdomain(5) + 1
+        nx = subdomain(2) - subdomain(1) + 1
+        ny = subdomain(4) - subdomain(3) + 1
+        nz = subdomain(6) - subdomain(5) + 1
 
-#ifdef USE_MPI
         sizes(5) = nfield
-        sizes(1) = isize_txc_field     ! array size
-        sizes(2) = 1                   ! lower bound
+        sizes(1) = size(field, 1)           ! array size
+        sizes(2) = 1                        ! lower bound
         if (subdomain(2) - subdomain(1) + 1 == x%size .and. &
             subdomain(4) - subdomain(3) + 1 == 1) then              ! xOz plane
-            iflag_mode = IO_SUBARRAY_VISUALS_XOZ
-            sizes(3) = imax*nz_aux      ! upper bound
-            sizes(4) = 1                ! stride
+            subarray_plan = IO_SUBARRAY_VISUALS_XOZ
+            sizes(3) = imax*nz              ! upper bound
+            sizes(4) = 1                    ! stride
+            nx = imax
 
         else if (subdomain(4) - subdomain(3) + 1 == y%size .and. &
                  subdomain(2) - subdomain(1) + 1 == 1) then         ! yOz plane
-            iflag_mode = IO_SUBARRAY_VISUALS_YOZ
-            sizes(3) = jmax*nz_aux      ! upper bound
-            sizes(4) = 1                ! stride
+            subarray_plan = IO_SUBARRAY_VISUALS_YOZ
+            sizes(3) = jmax*nz              ! upper bound
+            sizes(4) = 1                    ! stride
+            ny = jmax
 
         else if (subdomain(2) - subdomain(1) + 1 == x%size .and. &
                  subdomain(4) - subdomain(3) + 1 == y%size) then    ! xOy blocks
-            iflag_mode = IO_SUBARRAY_VISUALS_XOY
-            sizes(3) = imax*jmax*nz_aux ! upper bound
-            sizes(4) = 1                ! stride
+            subarray_plan = IO_SUBARRAY_VISUALS_XOY
+            sizes(3) = imax*jmax*nz         ! upper bound
+            sizes(4) = 1                    ! stride
+            nx = imax
+            ny = jmax
 
         else
+#ifdef USE_MPI
             call TLab_Write_ASCII(efile, __FILE__//'. Invalid subdomain in parallel mode.')
             call TLab_Stop(DNS_ERROR_INVALOPT)
+#else
+            sizes(3) = nx*ny*nz             ! upper bound
+            sizes(4) = 1                    ! stride
+#endif
 
         end if
-#endif
 
         ! ###################################################################
         select case (opt_format)
@@ -949,35 +952,16 @@ contains
             call IO_Write_Fields(fname, imax, jmax, kmax, itime, nfield, field)
 
         case (FORMAT_SINGLE)
-#ifdef USE_MPI
-            if (nz_aux /= kmax) then
-                do ifield = 1, nfield
-                    call REDUCE_BLOCK_INPLACE(imax, jmax, kmax, i1, i1, subdomain(5), nx_aux, ny_aux, nz_aux, field(1, ifield), wrk1d)
-                end do
-            end if
+            do ifield = 1, nfield
+                call Reduce_Block_InPlace(imax, jmax, kmax, subdomain(1), subdomain(3), subdomain(5), nx, ny, nz, field(:, ifield))
+            end do
 
             varname = ''
             if (nfield > 1) then
                 do ifield = 1, nfield; write (varname(ifield), *) ifield; varname(ifield) = trim(adjustl(varname(ifield)))
                 end do
             end if
-            call IO_Write_Subarray(io_subarrays(iflag_mode), fname, varname, field, sizes)
-#else
-            do ifield = 1, nfield
-                call REDUCE_BLOCK_INPLACE(imax, jmax, kmax, subdomain(1), subdomain(3), subdomain(5), nx_aux, ny_aux, nz_aux, field(1, ifield), wrk1d)
-
-                if (nfield > 1) then
-                    write (name, *) ifield; name = trim(adjustl(fname))//'.'//trim(adjustl(name))
-                else
-                    name = fname
-                end if
-#include "tlab_open_file.h"
-                write (LOC_UNIT_ID) SNGL(field(1:nx_aux*ny_aux*nz_aux, ifield))
-                close (LOC_UNIT_ID)
-
-            end do
-
-#endif
+            call IO_Write_Subarray(io_subarrays(subarray_plan), fname, varname, field, sizes)
 
         end select
 

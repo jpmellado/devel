@@ -124,8 +124,8 @@ subroutine NSE_Incompressible()
 
     do iq = 1, inb_flow
         ibc = 0
-        if (BcsFlowJmin%type(iq) == DNS_BCS_NEUMANN) ibc = ibc + 1
-        if (BcsFlowJmax%type(iq) == DNS_BCS_NEUMANN) ibc = ibc + 2
+        if (BcsFlowKmin%type(iq) == DNS_BCS_NEUMANN) ibc = ibc + 1
+        if (BcsFlowKmax%type(iq) == DNS_BCS_NEUMANN) ibc = ibc + 2
         if (ibc > 0) then
             call BOUNDARY_BCS_NEUMANN_Z(ibc, imax, jmax, kmax, g(3), hq(:, iq), &
                                         BcsFlowKmin%ref(:, :, iq), BcsFlowKmax%ref(:, :, iq), tmp1)
@@ -138,8 +138,8 @@ subroutine NSE_Incompressible()
 
     do is = 1, inb_scal
         ibc = 0
-        if (BcsScalJmin%type(is) == DNS_BCS_NEUMANN) ibc = ibc + 1
-        if (BcsScalJmax%type(is) == DNS_BCS_NEUMANN) ibc = ibc + 2
+        if (BcsScalKmin%type(is) == DNS_BCS_NEUMANN) ibc = ibc + 1
+        if (BcsScalKmax%type(is) == DNS_BCS_NEUMANN) ibc = ibc + 2
         if (ibc > 0) then
             call BOUNDARY_BCS_NEUMANN_Z(ibc, imax, jmax, kmax, g(3), hs(:, is), &
                                         BcsScalKmin%ref(:, :, is), BcsScalKmax%ref(:, :, is), tmp1)
