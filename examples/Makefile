@@ -2,14 +2,14 @@
 #
 PRJS=\
      Case01 \
+     Case02 \
      Case03 \
-     Case05 \
      Case06 \
      Case07 \
      Case08 \
-     Case10 \
-     Case12 \
-     Case13
+     Case21 \
+     Case31 \
+     Case32
     #  Case14 \
     #  Case15 \
     #  Case16 \
