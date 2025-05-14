@@ -52,17 +52,16 @@ program IniFlow
 
     ! #######################################################################
     call TLab_Initialize_Memory(__FILE__)
-    
+
     call OPR_Partial_Initialize()
-
-    call TLab_Initialize_Background(ifile)
-    if (IniK%relative) IniK%zmean = z%nodes(1) + z%scale*IniK%zmean_rel
-
     if (flag_u /= 0) then
         call OPR_Fourier_Initialize()
         call OPR_Elliptic_Initialize(ifile)
         call OPR_Check()
     end if
+
+    call TLab_Initialize_Background(ifile)
+    if (IniK%relative) IniK%zmean = z%nodes(1) + z%scale*IniK%zmean_rel
 
     ! ###################################################################
     itime = 0; rtime = 0.0_wp
@@ -92,9 +91,9 @@ program IniFlow
 
     end select
 
-    ! ! ###################################################################
-    ! ! Compressible formulation
-    ! if (any([DNS_EQNS_TOTAL, DNS_EQNS_COMPRESSIBLE] == nse_eqns)) then
+    ! ###################################################################
+    ! Compressible formulation
+    ! if (nse_eqns == DNS_EQNS_COMPRESSIBLE) then
     !     call TLab_Write_ASCII(lfile, 'Initializing pressure and density.')
 
     !     call PRESSURE_MEAN(p, T, s)

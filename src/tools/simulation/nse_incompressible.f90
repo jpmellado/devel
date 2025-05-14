@@ -21,7 +21,7 @@ subroutine NSE_Incompressible()
     use TimeMarching, only: dte
     use BOUNDARY_BCS
     use OPR_Partial
-    use OPR_Burgers
+    use NSE_Burgers
     use OPR_Elliptic
 
     implicit none
@@ -51,30 +51,30 @@ subroutine NSE_Incompressible()
     ! Diffusion and advection terms
     ! #######################################################################
     ! Diagonal terms and transposed velocity arrays
-    call OPR_Burgers_X(0, imax, jmax, kmax, u, tmp1, tmp4) ! store u transposed in tmp4
-    call OPR_Burgers_Y(0, imax, jmax, kmax, v, tmp2, tmp5) ! store v transposed in tmp5
-    call OPR_Burgers_Z(0, imax, jmax, kmax, w, tmp3, w)
+    call NSE_Burgers_X(0, imax, jmax, kmax, u, tmp1, tmp4) ! store u transposed in tmp4
+    call NSE_Burgers_Y(0, imax, jmax, kmax, v, tmp2, tmp5) ! store v transposed in tmp5
+    call NSE_Burgers_Z(0, imax, jmax, kmax, w, tmp3, w)
 
     ! Ox momentum equation
-    call OPR_Burgers_Y(0, imax, jmax, kmax, u, tmp7, tmp9, tmp5) ! tmp5 contains v transposed
-    call OPR_Burgers_Z(0, imax, jmax, kmax, u, tmp8, w)
+    call NSE_Burgers_Y(0, imax, jmax, kmax, u, tmp7, tmp9, tmp5) ! tmp5 contains v transposed
+    call NSE_Burgers_Z(0, imax, jmax, kmax, u, tmp8, w)
     hq(:, 1) = hq(:, 1) + tmp1(:) + tmp7(:) + tmp8(:)
 
     ! Oy momentum equation
-    call OPR_Burgers_X(0, imax, jmax, kmax, v, tmp7, tmp9, tmp4) ! tmp4 contains u transposed
-    call OPR_Burgers_Z(0, imax, jmax, kmax, v, tmp8, w)
+    call NSE_Burgers_X(0, imax, jmax, kmax, v, tmp7, tmp9, tmp4) ! tmp4 contains u transposed
+    call NSE_Burgers_Z(0, imax, jmax, kmax, v, tmp8, w)
     hq(:, 2) = hq(:, 2) + tmp2(:) + tmp7(:) + tmp8(:)
 
     ! Oz momentum equation
-    call OPR_Burgers_X(0, imax, jmax, kmax, w, tmp7, tmp9, tmp4) ! tmp4 contains u transposed
-    call OPR_Burgers_Y(0, imax, jmax, kmax, w, tmp8, tmp9, tmp5) ! tmp5 contains v transposed
+    call NSE_Burgers_X(0, imax, jmax, kmax, w, tmp7, tmp9, tmp4) ! tmp4 contains u transposed
+    call NSE_Burgers_Y(0, imax, jmax, kmax, w, tmp8, tmp9, tmp5) ! tmp5 contains v transposed
     hq(:, 3) = hq(:, 3) + tmp3(:) + tmp7(:) + tmp8(:)
 
     ! Scalar equations
     do is = 1, inb_scal
-        call OPR_Burgers_X(is, imax, jmax, kmax, s(:, is), tmp1, tmp9, tmp4) ! tmp4 contains u transposed
-        call OPR_Burgers_Y(is, imax, jmax, kmax, s(:, is), tmp2, tmp9, tmp5) ! tmp5 contains v transposed
-        call OPR_Burgers_Z(is, imax, jmax, kmax, s(:, is), tmp3, w)
+        call NSE_Burgers_X(is, imax, jmax, kmax, s(:, is), tmp1, tmp9, tmp4) ! tmp4 contains u transposed
+        call NSE_Burgers_Y(is, imax, jmax, kmax, s(:, is), tmp2, tmp9, tmp5) ! tmp5 contains v transposed
+        call NSE_Burgers_Z(is, imax, jmax, kmax, s(:, is), tmp3, w)
         hs(:, is) = hs(:, is) + tmp1(:) + tmp2(:) + tmp3(:)
 
     end do

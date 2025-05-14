@@ -32,7 +32,7 @@ program VISUALS
     use OPR_Partial
     use OPR_Fourier
     use OPR_Elliptic
-    use OPR_Burgers, only: OPR_Burgers_Initialize
+    use NSE_Burgers, only: NSE_Burgers_Initialize
     use FI_VECTORCALCULUS
     use FI_STRAIN_EQN
     use FI_GRADIENT_EQN
@@ -56,15 +56,15 @@ program VISUALS
 
     integer(wi) subdomain(6)                        ! Subdomain to be saved
 
+    character(len=32) time_str                      ! Time stamp
+    integer, parameter :: MaskSize = 6
+
     character(len=32) bakfile, block
     character(len=128) eStr
     character(len=512) sRes
 
     character*32 flow_file, scal_file, plot_file
     character*64 str
-
-    character(len=32) time_str                      ! Time stamp
-    integer, parameter :: MaskSize = 6
 
     integer, parameter :: IO_SUBARRAY_VISUALS_XOY = 1
     integer, parameter :: IO_SUBARRAY_VISUALS_YOZ = 2
@@ -119,14 +119,13 @@ program VISUALS
     ! allocate (gate(isize_field))
 
     call OPR_Partial_Initialize()
-
-    call TLab_Initialize_Background(ifile)
-
-    call OPR_Burgers_Initialize(ifile)
-
     call OPR_Fourier_Initialize()
     call OPR_Elliptic_Initialize(ifile)
     call OPR_Check()
+
+    call TLab_Initialize_Background(ifile)
+
+    call NSE_Burgers_Initialize(ifile)
 
     ! ###################################################################
     ! Postprocess given list of files

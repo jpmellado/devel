@@ -9,18 +9,14 @@
 !########################################################################
 module TimeMarching
 
-#ifdef USE_OPENMP
-    use OMP_LIB
-#endif
     use TLab_Constants, only: efile, wfile, wp, wi, big_wp
-    use TLab_WorkFlow, only: flow_on, scal_on!, fourier_on, stagger_on
+    use TLab_WorkFlow, only: flow_on, scal_on
     use TLab_Memory, only: imax, jmax, kmax, isize_field
     use TLab_Memory, only: isize_wrk1d, isize_wrk2d, isize_wrk3d
     use TLab_Memory, only: isize_txc_field
     use TLab_Time, only: rtime
     use TLab_Memory, only: inb_flow, inb_scal
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
-    use TLab_OpenMP
     ! use PARTICLE_VARS
 #ifdef USE_MPI
     use mpi_f08
@@ -275,21 +271,12 @@ contains
         ! -------------------------------------------------------------------
         real(wp) alpha
 
-        integer(wi) ij_srt, ij_end, ij_siz ! Variables for OpenMP Paritioning
 #ifdef USE_PROFILE
         integer(wi) t_srt, t_end, t_dif, idummy, PROC_CYCLES, MAX_CYCLES
         character*256 time_string
 #endif
 
-#ifdef USE_BLAS
-        integer ij_len
-#endif
-
         !########################################################################
-#ifdef USE_BLAS
-        ij_len = isize_field
-#endif
-
         ! -------------------------------------------------------------------
         ! Initialize arrays to zero for the explcit low-storage algorithm
         ! -------------------------------------------------------------------
@@ -329,8 +316,6 @@ contains
 
             end select
 
-            ! call FI_DIAGNOSTIC(imax, jmax, kmax, q, s)
-
             call DNS_BOUNDS_LIMIT()
             if (int(logs_data(1)) /= 0) return ! Error detected
 
@@ -345,27 +330,14 @@ contains
             if ((rkm_mode == RKM_EXP3 .or. rkm_mode == RKM_EXP4) .and. &
                 rkm_substep < rkm_endstep) then
 
-#ifdef USE_BLAS
-                !$omp parallel default(shared) &
-                !$omp private (ij_len,ij_srt,ij_end,ij_siz,alpha,is)
-#else
-                !$omp parallel default(shared) &
-                !$omp private (i,   ij_srt,ij_end,ij_siz,alpha,is)
-#endif
-
-                call TLab_OMP_PARTITION(isize_field, ij_srt, ij_end, ij_siz)
-#ifdef USE_BLAS
-                ij_len = ij_siz
-#endif
-
                 alpha = kco(rkm_substep)
 
                 if (flow_on) then
                     do is = 1, inb_flow
 #ifdef USE_BLAS
-                        call DSCAL(ij_len, alpha, hq(ij_srt, is), 1)
+                        call DSCAL(isize_field, alpha, hq(:, is), 1)
 #else
-                        hq(ij_srt:ij_end, is) = alpha*hq(ij_srt:ij_end, is)
+                        hq(:, is) = alpha*hq(:, is)
 #endif
                     end do
                 end if
@@ -373,13 +345,12 @@ contains
                 if (scal_on) then
                     do is = 1, inb_scal
 #ifdef USE_BLAS
-                        call DSCAL(ij_len, alpha, hs(ij_srt, is), 1)
+                        call DSCAL(isize_field, alpha, hs(:, is), 1)
 #else
-                        hs(ij_srt:ij_end, is) = alpha*hs(ij_srt:ij_end, is)
+                        hs(:, is) = alpha*hs(:, is)
 #endif
                     end do
                 end if
-                !$omp end parallel
 
                 ! if (part%type /= PART_TYPE_NONE) then
                 !     do is = 1, inb_part
@@ -552,7 +523,7 @@ contains
             ! -------------------------------------------------------------------
             ! Compressible: Calculate global maximum of \mu/rho*(1/dx^2 + 1/dy^2 + 1/dz^2)
             ! -------------------------------------------------------------------
-            ! case (DNS_EQNS_COMPRESSIBLE, DNS_EQNS_TOTAL)
+            ! case (DNS_EQNS_COMPRESSIBLE)
             !     if (itransport == EQNS_TRANS_POWERLAW) then
             !         if (z%size > 1) then
             !             do k = 1, kmax
@@ -659,6 +630,8 @@ contains
         do is = 1, inb_scal
             s(:, is) = s(:, is) + dte*hs(:, is)
         end do
+
+        ! call FI_DIAGNOSTIC(imax, jmax, kmax, q, s) ! Should not need this here, only in anelastic and compressible
 
         return
     end subroutine TMarch_Substep_Boussinesq_Explicit

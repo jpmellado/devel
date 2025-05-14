@@ -2,7 +2,7 @@
 
 ! Calculate the non-linear operator N(u)(s) = visc* d^2/dx^2 s - u d/dx s
 
-module OPR_Burgers
+module NSE_Burgers
     use TLab_Constants, only: wp, wi, efile, lfile, BCS_NONE
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
     use TLab_Arrays, only: wrk2d, wrk3d
@@ -19,15 +19,15 @@ module OPR_Burgers
     implicit none
     private
 
-    public :: OPR_Burgers_Initialize
-    public :: OPR_Burgers_X
-    public :: OPR_Burgers_Y
-    public :: OPR_Burgers_Z
+    public :: NSE_Burgers_Initialize
+    public :: NSE_Burgers_X
+    public :: NSE_Burgers_Y
+    public :: NSE_Burgers_Z
 
     ! -----------------------------------------------------------------------
-    procedure(OPR_Burgers_interface) :: OPR_Burgers_dt
+    procedure(NSE_Burgers_interface) :: NSE_Burgers_dt
     abstract interface
-        subroutine OPR_Burgers_interface(is, nx, ny, nz, s, result, tmp1, u_t)
+        subroutine NSE_Burgers_interface(is, nx, ny, nz, s, result, tmp1, u_t)
             use TLab_Constants, only: wi, wp
             integer, intent(in) :: is                       ! scalar index; if 0, then velocity
             integer(wi), intent(in) :: nx, ny, nz
@@ -37,7 +37,7 @@ module OPR_Burgers
             real(wp), intent(in), optional, target :: u_t(nx*ny*nz)
         end subroutine
     end interface
-    procedure(OPR_Burgers_dt), pointer :: OPR_Burgers_X, OPR_Burgers_Y
+    procedure(NSE_Burgers_dt), pointer :: NSE_Burgers_X, NSE_Burgers_Y
 
     ! type(filter_dt) :: Dealiasing(3)
     integer :: Dealiasing(3) ! tobefixed
@@ -61,7 +61,7 @@ module OPR_Burgers
 contains
     !########################################################################
     !########################################################################
-    subroutine OPR_Burgers_Initialize(inifile)
+    subroutine NSE_Burgers_Initialize(inifile)
         ! use TLab_Memory, only: jmax, kmax !isize_field, imax,
         use TLab_Memory, only: TLab_Allocate_Real
         ! use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
@@ -142,29 +142,29 @@ contains
         ! Setting procedure pointers
 #ifdef USE_MPI
         if (ims_npro_i > 1) then
-            OPR_Burgers_X => OPR_Burgers_X_Parallel
+            NSE_Burgers_X => NSE_Burgers_X_Parallel
         else
 #endif
-            OPR_Burgers_X => OPR_Burgers_X_Serial
+            NSE_Burgers_X => NSE_Burgers_X_Serial
 #ifdef USE_MPI
         end if
 #endif
 
 #ifdef USE_MPI
         if (ims_npro_j > 1) then
-            OPR_Burgers_Y => OPR_Burgers_Y_Parallel
+            NSE_Burgers_Y => NSE_Burgers_Y_Parallel
         else
 #endif
-            OPR_Burgers_Y => OPR_Burgers_Y_Serial
+            NSE_Burgers_Y => NSE_Burgers_Y_Serial
 #ifdef USE_MPI
         end if
 #endif
         return
-    end subroutine OPR_Burgers_Initialize
+    end subroutine NSE_Burgers_Initialize
 
     !########################################################################
     !########################################################################
-    subroutine OPR_Burgers_X_Serial(is, nx, ny, nz, s, result, tmp1, u_t)
+    subroutine NSE_Burgers_X_Serial(is, nx, ny, nz, s, result, tmp1, u_t)
         integer, intent(in) :: is                       ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz)
@@ -192,7 +192,7 @@ contains
             p_vel => tmp1
         end if
 
-        call OPR_Burgers_1D(ny*nz, g(1), fdmDiffusion(1)%lu(:, :, is), Dealiasing(1), tmp1, p_vel, wrk3d, result)
+        call NSE_Burgers_1D(ny*nz, g(1), fdmDiffusion(1)%lu(:, :, is), Dealiasing(1), tmp1, p_vel, wrk3d, result)
 
         ! Put arrays back in the order in which they came in
 #ifdef USE_ESSL
@@ -202,12 +202,12 @@ contains
 #endif
 
         return
-    end subroutine OPR_Burgers_X_Serial
+    end subroutine NSE_Burgers_X_Serial
 
     !########################################################################
     !########################################################################
 #ifdef USE_MPI
-    subroutine OPR_Burgers_X_Parallel(is, nx, ny, nz, s, result, tmp1, u_t)
+    subroutine NSE_Burgers_X_Parallel(is, nx, ny, nz, s, result, tmp1, u_t)
         integer, intent(in) :: is                       ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz)
@@ -240,7 +240,7 @@ contains
             p_vel => tmp1
         end if
 
-        call OPR_Burgers_1D(nlines, g(1), fdmDiffusion(1)%lu(:, :, is), Dealiasing(1), tmp1, p_vel, result, wrk3d)
+        call NSE_Burgers_1D(nlines, g(1), fdmDiffusion(1)%lu(:, :, is), Dealiasing(1), tmp1, p_vel, result, wrk3d)
 
         ! Put arrays back in the order in which they came in
 #ifdef USE_ESSL
@@ -251,12 +251,12 @@ contains
         call TLabMPI_Trp_ExecI_Backward(wrk3d, result, tmpi_plan_dx)
 
         return
-    end subroutine OPR_Burgers_X_Parallel
+    end subroutine NSE_Burgers_X_Parallel
 #endif
 
     !########################################################################
     !########################################################################
-    subroutine OPR_Burgers_Y_Serial(is, nx, ny, nz, s, result, tmp1, u_t)
+    subroutine NSE_Burgers_Y_Serial(is, nx, ny, nz, s, result, tmp1, u_t)
         integer, intent(in) :: is                       ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz)
@@ -287,7 +287,7 @@ contains
             p_vel => tmp1
         end if
 
-        call OPR_Burgers_1D(nlines, g(2), fdmDiffusion(2)%lu(:, :, is), Dealiasing(2), tmp1, p_vel, wrk3d, result)
+        call NSE_Burgers_1D(nlines, g(2), fdmDiffusion(2)%lu(:, :, is), Dealiasing(2), tmp1, p_vel, wrk3d, result)
 
         ! Put arrays back in the order in which they came in
 #ifdef USE_ESSL
@@ -297,12 +297,12 @@ contains
 #endif
 
         return
-    end subroutine OPR_Burgers_Y_Serial
+    end subroutine NSE_Burgers_Y_Serial
 
     !########################################################################
     !########################################################################
 #ifdef USE_MPI
-    subroutine OPR_Burgers_Y_Parallel(is, nx, ny, nz, s, result, tmp1, u_t)
+    subroutine NSE_Burgers_Y_Parallel(is, nx, ny, nz, s, result, tmp1, u_t)
         integer, intent(in) :: is                       ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz)
@@ -334,7 +334,7 @@ contains
             p_vel => tmp1
         end if
 
-        call OPR_Burgers_1D(nlines, g(2), fdmDiffusion(2)%lu(:, :, is), Dealiasing(2), tmp1, p_vel, result, wrk3d)
+        call NSE_Burgers_1D(nlines, g(2), fdmDiffusion(2)%lu(:, :, is), Dealiasing(2), tmp1, p_vel, result, wrk3d)
 
         ! Put arrays back in the order in which they came in
         call TLabMPI_Trp_ExecJ_Backward(result, wrk3d, tmpi_plan_dy)
@@ -345,12 +345,12 @@ contains
 #endif
 
         return
-    end subroutine OPR_Burgers_Y_Parallel
+    end subroutine NSE_Burgers_Y_Parallel
 #endif
 
     !########################################################################
     !########################################################################
-    subroutine OPR_Burgers_Z(is, nx, ny, nz, s, result, u)
+    subroutine NSE_Burgers_Z(is, nx, ny, nz, s, result, u)
         integer, intent(in) :: is                       ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz)
@@ -365,7 +365,7 @@ contains
             return
         end if
 
-        call OPR_Burgers_1D(nx*ny, g(3), fdmDiffusion(3)%lu(:, :, is), Dealiasing(3), s, u, result, wrk3d)
+        call NSE_Burgers_1D(nx*ny, g(3), fdmDiffusion(3)%lu(:, :, is), Dealiasing(3), s, u, result, wrk3d)
 
         ! if (subsidenceProps%type == TYPE_SUB_CONSTANT_LOCAL) then
         !     do k = 1, nz
@@ -374,7 +374,7 @@ contains
         ! end if
 
         return
-    end subroutine OPR_Burgers_Z
+    end subroutine NSE_Burgers_Z
 
     !########################################################################
     !# Apply the non-linear operator N(u)(s) = visc* d^2/dx^2 s - u d/dx s
@@ -382,7 +382,7 @@ contains
     !#
     !# Second derivative uses LE decomposition including diffusivity coefficient
     !########################################################################
-    subroutine OPR_Burgers_1D(nlines, g, lu2d, dealiasing, s, u, result, dsdx)
+    subroutine NSE_Burgers_1D(nlines, g, lu2d, dealiasing, s, u, result, dsdx)
         use FDM_Derivative, only: FDM_Der1_Solve, FDM_Der2_Solve
         integer(wi), intent(in) :: nlines       ! # of lines to be solved
         type(fdm_dt), intent(in) :: g
@@ -423,6 +423,6 @@ contains
         ! end if
 
         return
-    end subroutine OPR_Burgers_1D
+    end subroutine NSE_Burgers_1D
 
-end module OPR_Burgers
+end module NSE_Burgers

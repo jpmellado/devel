@@ -13,22 +13,14 @@ program IniScal
 #endif
     use IO_Fields
     use TLab_Grid
-    ! use FDM, only: FDM_Initialize
-    ! use FDM, only: fdm_Int0
     use NavierStokes, only: NavierStokes_Initialize_Parameters
-    ! use Thermodynamics
     use TLab_Background, only: TLab_Initialize_Background, sbg
-    ! use Gravity, only: Gravity_Initialize
-    ! use Radiation, only: Radiation_Initialize, infraredProps, Radiation_Infrared_Y, radterm_dt, TYPE_RAD_NONE
-    ! use THERMO_AIRWATER
-    ! use Thermo_Anelastic
     use Profiles, only: Profiles_Calculate
     use SCAL_LOCAL
 
     implicit none
 
     integer(wi) is, k
-    ! type(radterm_dt) localInfraredProps
 
     ! ###################################################################
     call TLab_Start()
@@ -40,11 +32,8 @@ program IniScal
 #endif
 
     call TLab_Grid_Read(gfile, x, y, z)
-    ! call FDM_Initialize(ifile)
 
     call NavierStokes_Initialize_Parameters(ifile)
-    ! call Thermodynamics_Initialize_Parameters(ifile)
-    ! call Radiation_Initialize(ifile)
 
     call TLab_Consistency_Check()
 
@@ -82,40 +71,6 @@ program IniScal
         end select
 
     end do
-
-    ! ! ###################################################################
-    ! ! Initial liquid in equilibrium; overwrite previous values
-    ! if (flag_mixture == 1 .or. inb_scal_array > inb_scal) then
-    !     select case (imode_thermo)
-    !     case (THERMO_TYPE_ANELASTIC)
-    !         if (imixture == MIXT_TYPE_AIRWATER) then
-    !             call Thermo_Anelastic_PH(imax, jmax, kmax, s(1, 2), s(1, 1))
-    !         end if
-
-    !     case (THERMO_TYPE_LINEAR)
-    !         if (imixture == MIXT_TYPE_AIRWATER_LINEAR) then
-    !             call THERMO_AIRWATER_LINEAR(imax*jmax*kmax, s, s(1, inb_scal_array))
-    !         end if
-
-    !     end select
-
-    ! end if
-
-    ! ! ###################################################################
-    ! ! Initial radiation effect as an accumulation during a certain interval of time
-    ! if (infraredProps%type /= TYPE_RAD_NONE .and. norm_ini_radiation /= 0.0_wp) then
-    !     norm_ini_radiation = norm_ini_radiation/infraredProps%auxiliar(1)
-    !     localInfraredProps = infraredProps
-    !     localInfraredProps%auxiliar(:) = localInfraredProps%auxiliar(:)*norm_ini_radiation
-
-    !     do is = 1, inb_scal
-    !         if (localInfraredProps%active(is)) then
-    !             call Radiation_Infrared_Y(localInfraredProps, imax, jmax, kmax, fdm_Int0, s, txc(:, 1), txc(:, 2), txc(:, 3), txc(:, 4))
-    !             s(1:isize_field, is) = s(1:isize_field, is) + txc(1:isize_field, 1)
-    !         end if
-    !     end do
-
-    ! end if
 
     ! ###################################################################
     io_header_s(:)%params(1) = rtime

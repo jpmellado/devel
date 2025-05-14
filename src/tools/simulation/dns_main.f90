@@ -1,7 +1,7 @@
 #include "tlab_error.h"
 
 program DNS
-    use TLab_Constants, only: ifile, efile, wfile, lfile, gfile, tag_flow, tag_scal, tag_part, tag_traj
+    use TLab_Constants, only: ifile, efile, wfile, lfile, gfile, tag_flow, tag_scal
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop, TLab_Start
     use TLab_WorkFlow, only: scal_on, flow_on
     use TLab_Time, only: itime, rtime
@@ -30,20 +30,19 @@ program DNS
     use Tlab_Background, only: TLab_Initialize_Background!, pbg, rbg
     use OPR_Fourier, only: OPR_Fourier_Initialize
     use OPR_Elliptic, only: OPR_Elliptic_Initialize
-    use OPR_Burgers, only: OPR_Burgers_Initialize
+    use NSE_Burgers, only: NSE_Burgers_Initialize
     ! use OPR_FILTERS
     ! use PARTICLE_VARS
     ! use PARTICLE_ARRAYS
     ! use PARTICLE_PROCS
     use DNS_LOCAL
     use DNS_Control
-    use TimeMarching!, only: dtime
+    use TimeMarching
     ! use DNS_TOWER
-    ! use IBM_VARS
     ! use PLANES
     ! use BOUNDARY_BUFFER
     use BOUNDARY_BCS
-    ! use DNS_STATISTICS, only: DNS_STATISTICS_INITIALIZE, DNS_STATISTICS_SPATIAL, DNS_STATISTICS_TEMPORAL, mean_flow, mean_scal
+    ! use DNS_STATISTICS, only: DNS_STATISTICS_INITIALIZE, DNS_STATISTICS_TEMPORAL, mean_flow, mean_scal
     ! use ParticleTrajectories
     implicit none
 
@@ -67,13 +66,14 @@ program DNS
 
     call NavierStokes_Initialize_Parameters(ifile)
     ! call Thermodynamics_Initialize_Parameters(ifile)
-    
+
     call Gravity_Initialize(ifile)
     ! call Rotation_Initialize(ifile)
     ! call Radiation_Initialize(ifile)
     ! call Microphysics_Initialize(ifile)
     ! call LargeScaleForcing_Initialize(ifile)
     ! call Chemistry_Initialize(ifile)
+    ! call SpecialForcing_Initialize(ifile)
 
     call TLab_Consistency_Check()
 
@@ -83,8 +83,9 @@ program DNS
     call TLab_Initialize_Memory(__FILE__)
 
     call OPR_Partial_Initialize()
-
-    ! call SpecialForcing_Initialize(ifile)
+    call OPR_Fourier_Initialize()
+    call OPR_Elliptic_Initialize(ifile)
+    call OPR_Check()
 
     call TLab_Initialize_Background(ifile)
 
@@ -96,14 +97,7 @@ program DNS
 
     ! call PLANES_INITIALIZE()
 
-    ! ###################################################################
-    ! Initialize operators
-    ! ###################################################################
-    call OPR_Burgers_Initialize(ifile)
-
-    call OPR_Fourier_Initialize()
-    call OPR_Elliptic_Initialize(ifile)
-    call OPR_Check()
+    call NSE_Burgers_Initialize(ifile)
 
     ! call OPR_Filter_Initialize_Parameters(ifile)
     ! do ig = 1, 3
@@ -185,10 +179,6 @@ program DNS
         rtime = rtime + dtime
         ! if (mod(itime - nitera_first, nitera_filter) == 0) then
         !     call DNS_FILTER()
-        !     if (imode_ibm == 1) then
-        !         call IBM_BCS_FIELD_COMBINED(i0, q) ! apply IBM BCs
-        !         if (scal_on) call IBM_INITIALIZE_SCAL(i0, s)
-        !     end if
         ! end if
 
         if (flag_viscosity) then                ! Change viscosity if necessary
