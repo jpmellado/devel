@@ -2,8 +2,8 @@ module TLab_Constants
     implicit none
     save
 
-    integer, parameter :: MajorVersion = 7
-    integer, parameter :: MinorVersion = 0
+    integer, parameter :: MajorVersion = 0
+    integer, parameter :: MinorVersion = 1
 
     integer, parameter :: MAX_PARS = 10
     integer, parameter :: MAX_VARS = 10
