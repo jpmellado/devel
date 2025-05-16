@@ -14,7 +14,7 @@ module TLab_Sources
     ! use Radiation
     ! use Microphysics
     ! use Chemistry
-    ! use SpecialForcing
+    use SpecialForcing
     ! use LargeScaleForcing
     implicit none
     private
@@ -26,7 +26,7 @@ contains
 ! #######################################################################
 ! #######################################################################
     subroutine TLab_Sources_Flow(q, s, hq, tmp1)
-        ! use TLab_Time, only: rtime
+        use TLab_Time, only: rtime
         real(wp), intent(in) :: q(isize_field, *), s(isize_field, *)
         real(wp), intent(out) :: hq(isize_field, *)
         real(wp), intent(inout) :: tmp1(isize_field)
@@ -70,23 +70,13 @@ contains
 
 !             end if
 
-!             ! -----------------------------------------------------------------------
-!             ! special forcing
-!             ! -----------------------------------------------------------------------
-!             if (forcingProps%active(iq)) then
-!                 call SpecialForcing_Source(forcingProps, imax, jmax, kmax, iq, rtime, q(:, iq), hq(:, iq), tmp1)
+            ! -----------------------------------------------------------------------
+            if (forcingProps%active(iq)) then
+                call SpecialForcing_Source(forcingProps, imax, jmax, kmax, iq, rtime, q(:, iq), hq(:, iq), tmp1)
 
-! !$omp parallel default( shared ) &
-! !$omp private( ij, srt,end,siz )
-!                 call TLab_OMP_PARTITION(isize_field, srt, end, siz)
+                hq(:, iq) = hq(:, iq) + tmp1(:)
 
-!                 do ij = srt, end
-!                     ! hq(ij, iq) = hq(ij, iq) + tmp1(ij)*forcingProps%vector(iq)
-!                     hq(ij, iq) = hq(ij, iq) + tmp1(ij)
-!                 end do
-! !$omp end parallel
-
-!             end if
+            end if
 
         end do
 

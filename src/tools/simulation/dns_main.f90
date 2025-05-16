@@ -19,12 +19,12 @@ program DNS
     use NavierStokes, only: NavierStokes_Initialize_Parameters, DNS_EQNS_ANELASTIC, DNS_EQNS_BOUSSINESQ
     use NavierStokes, only: visc
     use Gravity, only: Gravity_Initialize
+    use SpecialForcing, only: SpecialForcing_Initialize
     ! use Rotation, only: Rotation_Initialize
     ! use Rotation, only: Rotation_Initialize
     ! use Radiation, only: Radiation_Initialize
     ! use Microphysics, only: Microphysics_Initialize
     ! use Chemistry, only: Chemistry_Initialize
-    ! use SpecialForcing, only: SpecialForcing_Initialize
     ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
     use OPR_Partial, only: OPR_Partial_Initialize
     use Tlab_Background, only: TLab_Initialize_Background!, pbg, rbg
@@ -68,12 +68,12 @@ program DNS
     ! call Thermodynamics_Initialize_Parameters(ifile)
 
     call Gravity_Initialize(ifile)
+    call SpecialForcing_Initialize(ifile)
     ! call Rotation_Initialize(ifile)
     ! call Radiation_Initialize(ifile)
     ! call Microphysics_Initialize(ifile)
     ! call LargeScaleForcing_Initialize(ifile)
     ! call Chemistry_Initialize(ifile)
-    ! call SpecialForcing_Initialize(ifile)
 
     call TLab_Consistency_Check()
 
