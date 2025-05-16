@@ -104,7 +104,7 @@ subroutine TLab_Read_ASCII(fname, title, name, value, default)
 ! -----------------------------------------------------------------------
     character*512 line
     character*128 str, tag1, tag2, tag3
-    integer(wi) equal, code, n
+    integer(wi) equal, comment, code, n
 
 ! #######################################################################
 ! make case-insensitive: title, name and default tags.
@@ -139,7 +139,7 @@ subroutine TLab_Read_ASCII(fname, title, name, value, default)
 30          continue
             read (45, '(A512)', end=50) line; line = trim(adjustl(line))
             if (line(1:1) == '[') goto 20 ! Scape sequence
-            if (line(1:1) == '#') goto 30 ! Scape sequence
+            comment = index(line, '#'); if (comment > 0) line = trim(adjustl(line(1:comment - 1))) ! drop comments
             equal = index(line, '='); str = trim(adjustl(line(1:equal - 1)))
             do n = 1, len(str)
                 code = iachar(str(n:n)); if (code >= 65 .and. code <= 90) str(n:n) = achar(code + 32)
@@ -169,46 +169,46 @@ subroutine TLab_Read_ASCII(fname, title, name, value, default)
     return
 end subroutine TLab_Read_ASCII
 
-! #######################################################################
-! Write ASCII data; complete fields
-! #######################################################################
-subroutine TLab_Write_ASCII_FIELD(fname, imax, jmax, kmax, u)
-    use TLab_Constants, only: wp, wi
+! ! #######################################################################
+! ! Write ASCII data; complete fields
+! ! #######################################################################
+! subroutine TLab_Write_ASCII_FIELD(fname, imax, jmax, kmax, u)
+!     use TLab_Constants, only: wp, wi
 
-#ifdef USE_MPI
-    use TLabMPI_VARS, only: ims_pro, ims_offset_i, ims_offset_k
-#endif
+! #ifdef USE_MPI
+!     use TLabMPI_VARS, only: ims_pro, ims_offset_i, ims_offset_k
+! #endif
 
-    implicit none
+!     implicit none
 
-    character*(*), intent(IN) :: fname
-    integer(wi), intent(IN) :: imax, jmax, kmax
-    real(wp), dimension(imax, jmax, kmax), intent(IN) :: u
+!     character*(*), intent(IN) :: fname
+!     integer(wi), intent(IN) :: imax, jmax, kmax
+!     real(wp), dimension(imax, jmax, kmax), intent(IN) :: u
 
-! -----------------------------------------------------------------------
-    integer(wi) idsp, kdsp, i, j, k
-    character*32 name_loc
+! ! -----------------------------------------------------------------------
+!     integer(wi) idsp, kdsp, i, j, k
+!     character*32 name_loc
 
-! #######################################################################
-#ifdef USE_MPI
-    write (name_loc, *) ims_pro; name_loc = trim(adjustl(fname))//'-'//trim(adjustl(name_loc))
-    idsp = ims_offset_i; kdsp = ims_offset_k
-#else
-    name_loc = trim(adjustl(fname))
-    idsp = 0; kdsp = 0
-#endif
+! ! #######################################################################
+! #ifdef USE_MPI
+!     write (name_loc, *) ims_pro; name_loc = trim(adjustl(fname))//'-'//trim(adjustl(name_loc))
+!     idsp = ims_offset_i; kdsp = ims_offset_k
+! #else
+!     name_loc = trim(adjustl(fname))
+!     idsp = 0; kdsp = 0
+! #endif
 
-    open (unit=31, file=name_loc, status='unknown')
+!     open (unit=31, file=name_loc, status='unknown')
 
-    do k = 1, kmax
-        do j = 1, jmax
-            do i = 1, imax
-                write (31, *) i + idsp, j, k + kdsp, u(i, j, k)
-            end do
-        end do
-    end do
+!     do k = 1, kmax
+!         do j = 1, jmax
+!             do i = 1, imax
+!                 write (31, *) i + idsp, j, k + kdsp, u(i, j, k)
+!             end do
+!         end do
+!     end do
 
-    close (31)
+!     close (31)
 
-    return
-end subroutine TLab_Write_ASCII_FIELD
+! return
+! end subroutine TLab_Write_ASCII_FIELD
