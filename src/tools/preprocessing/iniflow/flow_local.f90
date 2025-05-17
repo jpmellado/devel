@@ -122,20 +122,20 @@ contains
         block = 'BoundaryConditions'      ! Boundary conditions for the perturbation
 
         ibc_pert = 0
-        call ScanFile_Char(bakfile, inifile, block, 'VelocityJmin', 'freeslip', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'VelocityKmin', 'freeslip', sRes)
         if (trim(adjustl(sRes)) == 'none') then
         else if (trim(adjustl(sRes)) == 'noslip') then
         else if (trim(adjustl(sRes)) == 'freeslip') then; ibc_pert = ibc_pert + 1
         else
-            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'VelocityJmin.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'VelocityKmin.')
             call TLab_Stop(DNS_ERROR_IBC)
         end if
-        call ScanFile_Char(bakfile, inifile, block, 'VelocityJmax', 'freeslip', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'VelocityKmax', 'freeslip', sRes)
         if (trim(adjustl(sRes)) == 'none') then
         else if (trim(adjustl(sRes)) == 'noslip') then
         else if (trim(adjustl(sRes)) == 'freeslip') then; ibc_pert = ibc_pert + 2
         else
-            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'VelocityJmax.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'VelocityKmax.')
             call TLab_Stop(DNS_ERROR_IBC)
         end if
 

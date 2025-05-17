@@ -9,45 +9,14 @@ PRJS=\
      Case08 \
      Case11 \
      Case21 \
+     Case25 \
+     Case26 \
+     Case27 \
      Case31 \
      Case32
-    #  Case14 \
-    #  Case15 \
-    #  Case16 \
-    #  Case17 \
-    #  Case18 \
-    #  Case19 \
-    #  Case20 \
-    #  Case21 \
-    #  Case24 \
-    #  Case25 \
-    #  Case26 \
-    #  Case27 \
-    #  Case28 \
-    #  Case29 \
-    #  Case30 \
-    #  Case41 \
-    #  Case43 \
-    #  Case44 \
-    #  Case46 \
-    #  Case51 \
-    #  Case52 \
-    #  Case53 \
-    #  Case70 \
-    #  Case81 \
-    #  Case82 \
-    #  Case84 \
-    #  Case85 \
-    #  Case86 \
-    #  Case87 \
-    #  Case91 \
-    #  Case92 \
-    #  Case93
+#     Case28 \
 
-    #  Case42 
-    #  Case34 
-
-FILES=avg* grid* flow* scal* dns.out tlab.log dns.obs tlab.err tlab.war tlab.ini.bak tower* part* traj* residence* eps*
+FILES=avg* grid* flow* scal* tlab.log tlab.err tlab.war tlab.ini.bak dns.out part* traj* main.* field.*
 
 ##########################################################################
 #   Directives

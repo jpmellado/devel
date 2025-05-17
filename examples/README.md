@@ -42,12 +42,13 @@ This is a summary of the workflow. The details of each tool and the correspondin
 
 ### Wall-bounded flows: channel flows and Rayleigh-Benard convection
 
-* Case21. Rayleigh-Benard convection with Dirichlet boundary conditions. 
+* Case21. Rayleigh-Benard convection with Dirichlet boundary conditions.
 
-* Case41. Half Channel flow.  
-* Case42. Same as 11, implicit solver.  
-* Case43. Channel flow.  
-* Case44. Stably stratified channel flow.  
+* Case25. Channel flow.  
+* Case26. Stably stratified channel flow.
+* Case27. Half Channel flow.  
+* Case28. Same as 27, implicit solver. TBD.
+
 * Case91. Channel flow with constant streamwise pressure gradient (Re_tau=180, rotation term for turbulent transition!).  
 
 ### Boundary layers
