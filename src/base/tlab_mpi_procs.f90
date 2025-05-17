@@ -39,25 +39,27 @@ contains
 
         if (ims_npro > 1) then
             nsize_total = jmax
-            call ScanFile_Int(bakfile, inifile, 'Grid', 'Jmax(*)', '-1', jmax)
+            write (lstr, *) nsize_total
+            call ScanFile_Int(bakfile, inifile, 'Grid', 'Jmax(*)', trim(adjustl(lstr)), jmax)
             if (jmax > 0 .and. mod(nsize_total, jmax) == 0) then
                 ims_npro_j = nsize_total/jmax
             else
                 call TLab_Write_ASCII(efile, __FILE__//'. Input jmax incorrect')
                 call TLab_Stop(DNS_ERROR_DIMGRID)
             end if
-    
+
             nsize_total = imax
-            call ScanFile_Int(bakfile, inifile, 'Grid', 'Imax(*)', '-1', imax)
+            write (lstr, *) nsize_total
+            call ScanFile_Int(bakfile, inifile, 'Grid', 'Imax(*)', trim(adjustl(lstr)), imax)
             if (imax > 0 .and. mod(nsize_total, imax) == 0) then
                 ims_npro_i = nsize_total/imax
             else
                 call TLab_Write_ASCII(efile, __FILE__//'. Input imax incorrect')
                 call TLab_Stop(DNS_ERROR_DIMGRID)
             end if
-    
+
             ims_npro_k = 1
-    
+
             ! consistency check
             if (ims_npro_i*ims_npro_j == ims_npro) then
                 write (lstr, *) ims_npro_i; write (sRes, *) ims_npro_j
@@ -67,9 +69,9 @@ contains
                 call TLab_Write_ASCII(efile, __FILE__//'. Inconsistency in total number of PEs')
                 call TLab_Stop(DNS_ERROR_DIMGRID)
             end if
-    
+
         end if
-    
+
         ! #######################################################################
         call TLab_Write_ASCII(lfile, 'Creating MPI communicators.')
 

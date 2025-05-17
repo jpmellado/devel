@@ -18,6 +18,9 @@ PRJS=\
 
 FILES=avg* grid* flow* scal* tlab.log tlab.err tlab.war tlab.ini.bak dns.out part* traj* main.* field.*
 
+PROCS=4
+MPIRUN="mpirun -np  $(PROCS)"
+
 ##########################################################################
 #   Directives
 ##########################################################################
@@ -27,6 +30,16 @@ check:
 	@echo -e "Running selected cases in examples directory."
 	@echo -e "Reference incompressible values obtained with FFTW/ESTIMATE mode."
 	@(for prj in $(PRJS); do (echo -n "[`date +%T`] Checking $$prj... "; cd $$prj; ../check_run.sh ../../$(BINS_PATH) ) done )
+
+check-mpi:
+	@echo -e "Running selected cases in examples directory in parallel mode."
+	@echo -e "Reference incompressible values obtained with FFTW/ESTIMATE mode."
+	@(for prj in $(PRJS); do (echo -n "[`date +%T`] Checking $$prj... "; cd $$prj; ../check_run.sh ../../$(BINS_PATH) $(MPIRUN)) done )
+
+check-mixed:
+	@echo -e "Running selected cases in examples directory in parallel mode with serial preprocessing."
+	@echo -e "Reference incompressible values obtained with FFTW/ESTIMATE mode."
+	@(for prj in $(PRJS); do (echo -n "[`date +%T`] Checking $$prj... "; cd $$prj; ../check_run.sh ../../$(BINS_PATH) $(MPIRUN) ../../$(BINS_PATH_PP)) done )
 
 ##########################################################################
 clean: 

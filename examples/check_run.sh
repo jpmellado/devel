@@ -1,11 +1,19 @@
 #/bin/bash
 
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 directory "
+    echo "Usage: $0 bin-directory [mpirun-command bin-directory-preproc]"
     exit 1
 fi
 
 BINPATH=$1
+MPIRUN=$2
+if [ $# -eq 3 ]; then
+    BINPATH_PP=$3
+    MPIRUN_PP=""
+else
+    BINPATH_PP=$BINPATH
+    MPIRUN_PP=$MPIRUN
+fi
 
 if [ -e "dns.out" ]; then
     echo -e "\033[1;31mFailed \033[0m[dns.out exists]."
@@ -15,22 +23,22 @@ else
     if [ -e "tlab.ini" ]; then
 
         #PreProcessing
-        $BINPATH/inigrid.x
+        $MPIRUN_PP $BINPATH_PP/inigrid.x
         if [ $? = 0 ]; then
-            $BINPATH/inirand.x
+            $MPIRUN_PP $BINPATH_PP/inirand.x
             if [ $? = 0 ]; then
-                $BINPATH/iniscal.x
+                $MPIRUN_PP $BINPATH_PP/iniscal.x
                 if [ $? = 0 ]; then
-                    $BINPATH/iniflow.x
+                    $MPIRUN_PP $BINPATH_PP/iniflow.x
                     # if [ $? = 0 ]; then
-                    #     $BINPATH/inipart.x
+                    #     $MPIRUN $BINPATH/inipart.x
 
                     #Simulation
                     if [ $? = 0 ]; then
                         LIST=$(ls *.ics*)
                         for FILE in $LIST; do mv $FILE ${FILE/ics/0}; done
 
-                        $BINPATH/dns.x
+                        $MPIRUN $BINPATH/dns.x
                         if [[ $? = 0 && ! -e "tlab.err" ]]; then
                             diff dns.out dns.out.ref >/dev/null 2>&1
                             if [ $? = 0 ]; then
