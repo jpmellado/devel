@@ -40,8 +40,8 @@ program DNS
     use TimeMarching
     ! use DNS_TOWER
     ! use PLANES
-    ! use BOUNDARY_BUFFER
     use BOUNDARY_BCS
+    use Buffer, only: Buffer_Initialize
     ! use DNS_STATISTICS, only: DNS_STATISTICS_INITIALIZE, DNS_STATISTICS_TEMPORAL, mean_flow, mean_scal
     ! use ParticleTrajectories
     implicit none
@@ -148,7 +148,7 @@ program DNS
     ! ###################################################################
     ! Initialize data for boundary conditions
     ! ###################################################################
-    ! call BOUNDARY_BUFFER_INITIALIZE(q, s, txc)
+    call Buffer_Initialize(ifile)!q, s, txc)
 
     call BOUNDARY_BCS_INITIALIZE()
 

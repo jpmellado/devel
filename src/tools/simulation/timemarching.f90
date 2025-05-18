@@ -28,6 +28,8 @@ module TimeMarching
     use NavierStokes, only: visc, schmidt, prandtl
     use DNS_Arrays
     use BOUNDARY_BCS
+    use Buffer
+
     implicit none
     private
 
@@ -614,10 +616,7 @@ contains
         ! Accumulate RHS terms
         call TLab_Sources_Flow(q, s, hq, txc(:, 1))
 
-        ! if (BuffType == DNS_BUFFER_RELAX .or. BuffType == DNS_BUFFER_BOTH) then
-        !     call BOUNDARY_BUFFER_RELAX_FLOW()
-        !     call BOUNDARY_BUFFER_RELAX_SCAL()
-        ! end if
+        if (bufferType == BUFFER_TYPE_NUDGE) call Buffer_Nudge()
 
         call NSE_Incompressible()
 

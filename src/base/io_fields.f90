@@ -597,7 +597,7 @@ contains
         type(io_subarray_dt), intent(in) :: locSubarrayPlan
         character(len=*), intent(in) :: fname
         integer(wi), intent(in) :: sizes(5) ! total size, lower bound, upper bound, stride, # variables
-        character*32, intent(in) :: varname(sizes(5))
+        character(len=*), intent(in) :: varname(sizes(5))
         real(wp), intent(in) :: data(sizes(1), sizes(5))
 
         ! -----------------------------------------------------------------------
@@ -676,7 +676,7 @@ contains
         type(io_subarray_dt), intent(in) :: locSubarrayPlan
         character(len=*), intent(in) :: fname
         integer(wi), intent(in) :: sizes(5) ! total size, lower bound, upper bound, stride, # variables
-        character*32, intent(in) :: varname(sizes(5))
+        character(len=*), intent(in) :: varname(sizes(5))
         real(wp), intent(out) :: data(sizes(1), sizes(5))
 
         ! -----------------------------------------------------------------------
