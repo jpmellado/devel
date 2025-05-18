@@ -54,7 +54,7 @@ This is a summary of the workflow. The details of each tool and the correspondin
 ### Boundary layers
 
 * Case31. Heated plate.  
-* Case32. Convective boundary layer with quadratic chemistry in three passive scalars.  
+* Case32. Convective boundary layer.
 
 * Case70. 1D perturbed laminar Ekman layer, implicit solver.  
 
