@@ -9,7 +9,7 @@ program VISUALS
     use TLab_WorkFlow
     use TLab_Memory, only: TLab_Initialize_Memory
 #ifdef USE_MPI
-    use mpi_f08
+    use mpi_f08, only: MPI_COMM_WORLD, MPI_REAL4
     use TLabMPI_VARS, only: ims_pro, ims_pro_i, ims_pro_j, ims_comm_x, ims_comm_y
     use TLabMPI_PROCS, only: TLabMPI_Initialize
     use TLabMPI_Transpose, only: TLabMPI_Trp_Initialize
@@ -18,8 +18,8 @@ program VISUALS
     use TLab_Grid
     use FDM, only: g, FDM_Initialize
     ! use FDM, only: fdm_Int0
-    ! use Thermodynamics, only: Thermodynamics_Initialize_Parameters
     use NavierStokes
+    ! use Thermodynamics, only: Thermodynamics_Initialize_Parameters
     use TLab_Background, only: TLab_Initialize_Background
     use Gravity, only: Gravity_Initialize, gravityProps, Gravity_Source, bbackground
     ! use Rotation, only: Rotation_Initialize
@@ -59,10 +59,6 @@ program VISUALS
     character(len=32) time_str                      ! Time stamp
     integer, parameter :: MaskSize = 6
 
-    character(len=32) bakfile, block
-    character(len=128) eStr
-    character(len=512) sRes
-
     character*32 flow_file, scal_file, plot_file
     character*64 str
 
@@ -93,7 +89,6 @@ program VISUALS
     call TLabMPI_Initialize(ifile)
     call TLabMPI_Trp_Initialize(ifile)
 #endif
-    ! call Particle_Initialize_Parameters(ifile)
 
     call TLab_Grid_Read(gfile, x, y, z)
     call FDM_Initialize(ifile)
@@ -125,7 +120,9 @@ program VISUALS
 
     call TLab_Initialize_Background(ifile)
 
-    call NSE_Burgers_Initialize(ifile)
+    ! call NSE_Burgers_Initialize(ifile)
+
+    ! allocate (gate(isize_field))
 
     ! ###################################################################
     ! Postprocess given list of files
@@ -133,8 +130,8 @@ program VISUALS
     do it = 1, itime_size
         itime = itime_vec(it)
 
-        write (sRes, *) itime; sRes = 'Processing iteration It'//trim(adjustl(sRes))//'.'
-        call TLab_Write_ASCII(lfile, sRes)
+        write (str, *) itime; str = 'Processing iteration It'//trim(adjustl(str))//'.'
+        call TLab_Write_ASCII(lfile, str)
 
         if (scal_on .and. iread_scal) then ! Scalar variables
             write (scal_file, *) itime; scal_file = trim(adjustl(tag_scal))//trim(adjustl(scal_file))
@@ -152,8 +149,8 @@ program VISUALS
 
         ! call FI_DIAGNOSTIC(imax, jmax, kmax, q, s)
 
-        write (sRes, fmt_r) rtime; sRes = 'Physical time '//trim(adjustl(sRes))
-        call TLab_Write_ASCII(lfile, sRes)
+        write (str, fmt_r) rtime; str = 'Physical time '//trim(adjustl(str))
+        call TLab_Write_ASCII(lfile, str)
 
         ! ! -------------------------------------------------------------------
         ! ! Calculate intermittency
@@ -611,6 +608,11 @@ contains
     ! ###################################################################
     ! ###################################################################
     subroutine Visuals_Initialize()
+
+        character(len=32) bakfile, block
+        character(len=128) eStr
+        character(len=512) sRes
+
         ! -----------------------------------------------------------------------
 #ifdef USE_MPI
         integer(wi) nz
