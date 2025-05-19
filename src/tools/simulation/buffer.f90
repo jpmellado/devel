@@ -115,19 +115,22 @@ contains
 
         !########################################################################
         ! Initialize data
-        do iq = 1, inb_flow
-            write (name, *) iq; name = trim(adjustl(tag_flow))//'bcs.kmin.'//trim(adjustl(name))
-            if (bufferFlowKmin(iq)%size > 0) call IniBlock_K(trim(adjustl(name)), bufferFlowKmin(iq), p_q(:, :, :, iq))
-            write (name, *) iq; name = trim(adjustl(tag_flow))//'bcs.kmax.'//trim(adjustl(name))
-            if (bufferFlowKmax(iq)%size > 0) call IniBlock_K(trim(adjustl(name)), bufferFlowKmax(iq), p_q(:, :, :, iq))
-        end do
+        if (bufferType /= BUFFER_TYPE_NONE) then
+            do iq = 1, inb_flow
+                write (name, *) iq; name = trim(adjustl(tag_flow))//'bcs.kmin.'//trim(adjustl(name))
+                if (bufferFlowKmin(iq)%size > 0) call IniBlock_K(trim(adjustl(name)), bufferFlowKmin(iq), p_q(:, :, :, iq))
+                write (name, *) iq; name = trim(adjustl(tag_flow))//'bcs.kmax.'//trim(adjustl(name))
+                if (bufferFlowKmax(iq)%size > 0) call IniBlock_K(trim(adjustl(name)), bufferFlowKmax(iq), p_q(:, :, :, iq))
+            end do
 
-        do is = 1, inb_scal
-            write (name, *) is; name = trim(adjustl(tag_scal))//'bcs.kmin.'//trim(adjustl(name))
-            if (bufferScalKmin(is)%size > 0) call IniBlock_K(trim(adjustl(name)), bufferScalKmin(is), p_s(:, :, :, is))
-            write (name, *) is; name = trim(adjustl(tag_scal))//'bcs.kmax.'//trim(adjustl(name))
-            if (bufferScalKmax(is)%size > 0) call IniBlock_K(trim(adjustl(name)), bufferScalKmax(is), p_s(:, :, :, is))
-        end do
+            do is = 1, inb_scal
+                write (name, *) is; name = trim(adjustl(tag_scal))//'bcs.kmin.'//trim(adjustl(name))
+                if (bufferScalKmin(is)%size > 0) call IniBlock_K(trim(adjustl(name)), bufferScalKmin(is), p_s(:, :, :, is))
+                write (name, *) is; name = trim(adjustl(tag_scal))//'bcs.kmax.'//trim(adjustl(name))
+                if (bufferScalKmax(is)%size > 0) call IniBlock_K(trim(adjustl(name)), bufferScalKmax(is), p_s(:, :, :, is))
+            end do
+
+        end if
 
         return
     end subroutine Buffer_Initialize
