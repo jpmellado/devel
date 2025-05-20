@@ -29,7 +29,7 @@ target_link_libraries(visuals.x physics mappings operators fdm ${LEVEL1_LIBS} ${
 
 FILE(GLOB sourcefiles "postprocessing/averages*.f90")
 add_executable(averages.x ${sourcefiles})
-target_link_libraries(averages.x physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
+target_link_libraries(averages.x statistics physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
 
 # FILE(GLOB sourcefiles "statistics/spectra*.f90")
 # add_executable(spectra.x ${sourcefiles})

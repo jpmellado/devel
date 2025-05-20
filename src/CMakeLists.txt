@@ -91,7 +91,7 @@ add_subdirectory(fdm)
 add_subdirectory(operators)
 add_subdirectory(mappings)
 add_subdirectory(physics)
-# add_subdirectory(statistics)
+add_subdirectory(statistics)
 # add_subdirectory(particles)
 
 # produce executables

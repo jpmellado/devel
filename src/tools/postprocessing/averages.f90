@@ -202,8 +202,8 @@ program AVERAGES
             if (scal_on) then
                 do is = 1, inb_scal_array          ! All, prognostic and diagnostic fields in array s
                     txc(1:isize_field, 6) = txc(1:isize_field, 9) ! Pass the pressure in tmp6
-                    ! call AVG_SCAL_XZ(is, q, s, s(1, is), &
-                    !                  txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), mean)
+                    call AVG_SCAL_XZ(is, q, s, s(1, is), &
+                                     txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), mean)
                 end do
 
             end if
@@ -224,7 +224,7 @@ program AVERAGES
             ! do is = 1, igate_size
             !     write (varname(is), *) is; varname(is) = 'Partition'//trim(adjustl(varname(is)))
             ! end do
-            ! call INTER_N_XZ(fname, itime, rtime, imax, jmax, kmax, igate_size, varname, gate, y, mean)
+            ! call INTER_N_XZ(fname, itime, rtime, imax, jmax, kmax, igate_size, varname, gate, z%nodes, mean)
 
             ! if (opt_cond > 1) then ! write only if the gate information has not been read
             !     write (fname, *) itime; fname = 'gate.'//trim(adjustl(fname))
@@ -233,12 +233,12 @@ program AVERAGES
 
             !     do is = 1, igate_size
             !         gate_level = int(is, KIND=1)
-            !         call BOUNDARY_LOWER_INT1(imax, jmax, kmax, gate_level, y, gate, wrk3d, wrk2d, wrk2d(1, 2))
+            !         call BOUNDARY_LOWER_INT1(imax, jmax, kmax, gate_level, z%nodes, gate, wrk3d, wrk2d, wrk2d(1, 2))
             !         do k = 1, kmax ! rearranging
             !             ij = (k - 1)*imax + 1
             !             surface(1:imax, is, k) = wrk2d(ij:ij + imax - 1, 1)
             !         end do
-            !         call BOUNDARY_UPPER_INT1(imax, jmax, kmax, gate_level, y, gate, wrk3d, wrk2d, wrk2d(1, 2))
+            !         call BOUNDARY_UPPER_INT1(imax, jmax, kmax, gate_level, z%nodes, gate, wrk3d, wrk2d, wrk2d(1, 2))
             !         do k = 1, kmax ! rearranging
             !             ij = (k - 1)*imax + 1
             !             surface(1:imax, is + igate_size, k) = wrk2d(ij:ij + imax - 1, 1)
