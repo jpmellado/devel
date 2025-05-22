@@ -2,7 +2,7 @@
 
 WDIR=`pwd` 
 CMAKE=cmake
-BUILDS="BIG LITTLE PARALLEL DEBUG"
+BUILDS="BIG LITTLE PARALLEL DEBUG PROFILE"
 kernel=`uname`
 host=`hostname` 
 

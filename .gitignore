@@ -20,6 +20,7 @@ build_LITTLE/*
 build_SERIAL/* 
 build_PARALLEL/*
 build_DEBUG/*
+build_PROFILE/*
 test/*
 .vscode/*
 *.mod
