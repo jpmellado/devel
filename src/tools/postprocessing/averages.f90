@@ -210,8 +210,8 @@ program AVERAGES
 
             if (flow_on) then
                 txc(1:isize_field, 3) = txc(1:isize_field, 9) ! Pass the pressure in tmp3
-                ! call AVG_FLOW_XZ(q, s, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), &
-                !                  txc(1, 7), txc(1, 8), txc(1, 9), mean)
+                call AVG_FLOW_XZ(q, s, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), &
+                                 txc(1, 7), txc(1, 8), txc(1, 9), mean)
             end if
 
             ! ###################################################################

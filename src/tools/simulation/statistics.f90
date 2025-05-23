@@ -158,8 +158,8 @@ contains
 
             end if
 
-            ! call AVG_FLOW_XZ(q, s, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), hq(1, 1), hq(1, 2), hq(1, 3), &
-            !                  mean)
+            call AVG_FLOW_XZ(q, s, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), hq(1, 1), hq(1, 2), hq(1, 3), &
+                             mean)
         end if
 
         return

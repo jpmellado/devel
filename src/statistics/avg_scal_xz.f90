@@ -316,13 +316,13 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
 
     end if
 
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), rU(1), rU_z(1))
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), rV(1), rV_z(1))
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), rW(1), rW_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), rU(1), rU_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), rV(1), rV_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), rW(1), rW_z(1))
 
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), fU(1), fU_z(1))
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), fV(1), fV_z(1))
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), fW(1), fW_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), fU(1), fU_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), fV(1), fV_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), fW(1), fW_z(1))
 
     dsdx = w*u
     if (nse_eqns == DNS_EQNS_COMPRESSIBLE) dsdx = dsdx*rho
@@ -350,8 +350,8 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
         fS(:) = fS(:)/rR(:)
     end if
 
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), rS(1), rS_z(1))
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), fS(1), fS_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), rS(1), rS_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), fS(1), fS_z(1))
 
     ! -----------------------------------------------------------------------
     ! Moments
@@ -386,7 +386,7 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
 
     end if
 
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), fS2(1), Rss_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), fS2(1), Rss_z(1))
 
     ! -----------------------------------------------------------------------
     ! Turbulent fluxes
@@ -407,9 +407,9 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     Rsv(:) = Rsv(:)/rR(:)
     Rsw(:) = Rsw(:)/rR(:)
 
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), Rsu(1), Rsu_z(1))
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), Rsv(1), Rsv_z(1))
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), Rsw(1), Rsw_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), Rsu(1), Rsu_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), Rsv(1), Rsv_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), Rsw(1), Rsw_z(1))
 
     ! -----------------------------------------------------------------------
     ! Turbulent transport terms
@@ -442,7 +442,7 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     call AVG_IK_V(imax, jmax, kmax, dsdy, PIsv(1), wrk1d)
     call AVG_IK_V(imax, jmax, kmax, dsdz, PIsw(1), wrk1d)
 
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), rP(1), aux(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), rP(1), aux(1))
     Gsw(:) = (rS(:) - fS(:))*aux(:)
 
     ! #######################################################################
@@ -608,7 +608,7 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     end do
     call AVG_IK_V(imax, jmax, kmax, p_wrk3d, Tswz2(1), wrk1d)
 
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), Tau_zz(1), Tau_zz_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), Tau_zz(1), Tau_zz_z(1))
 
     ! Dissipation terms; mean terms substracted below
     p_wrk3d = dsdx*((tmp1*2.0_wp - tmp2 - tmp3)*c23*visc + tmp1*diff)
@@ -636,7 +636,7 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     end do
     call AVG_IK_V(imax, jmax, kmax, p_wrk3d, Tsuz2(1), wrk1d)
 
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), Tau_zx(1), Tau_zx_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), Tau_zx(1), Tau_zx_z(1))
 
     ! Dissipation terms; mean terms substracted below
     p_wrk3d = dsdz*((tmp1 + tmp2)*visc + tmp1*diff)
@@ -662,7 +662,7 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     end do
     call AVG_IK_V(imax, jmax, kmax, p_wrk3d, Tsvz2(1), wrk1d)
 
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), Tau_yz(1), Tau_yz_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), Tau_yz(1), Tau_yz_z(1))
 
     ! Dissipation terms; mean terms substracted below
     p_wrk3d = dsdz*((tmp3 + tmp2)*visc + tmp2*diff)
@@ -739,7 +739,7 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     Tswz2(:) = Tswz2(:) - aux(:)*diff
 
     Fz(:) = Fz(:)*diff
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), Fz(1), Fz_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), Fz(1), Fz_z(1))
 
     ! Contribution to dissipation
     Ess(:) = (Ess(:) - Fz(:)*rS_z(:) - Fz(:)*rS_z(:))/rR(:)
@@ -752,11 +752,10 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     ! #######################################################################
     select case (nse_eqns)
     case (DNS_EQNS_ANELASTIC)
-        ! call Thermo_Anelastic_BUOYANCY(imax, jmax, kmax, s, txc(1, 1))
+        ! call Thermo_Anelastic_BUOYANCY(imax, jmax, kmax, s, p_wrk3d)
 
     case (DNS_EQNS_BOUSSINESQ)
         call Gravity_Source(gravityProps, imax, jmax, kmax, s, p_wrk3d)
-        p_wrk3d = p_wrk3d
 
     case (DNS_EQNS_COMPRESSIBLE)
         p_wrk3d = rho
@@ -775,13 +774,13 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     ! #######################################################################
     ! Transport terms
     aux(:) = Tssz1(:) + Tssz2(:)
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), aux(1), Tssz_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), aux(1), Tssz_z(1))
     aux(:) = Tsuz1(:) + Tsuz2(:)
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), aux(1), Tsuz_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), aux(1), Tsuz_z(1))
     aux(:) = Tsvz1(:) + Tsvz2(:)
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), aux(1), Tsvz_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), aux(1), Tsvz_z(1))
     aux(:) = Tswz1(:) + Tswz2(:) + Tswz3(:)
-    call OPR_Partial_Z(OPR_P1, 1, jmax, 1, g(3), aux(1), Tswz_z(1))
+    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), aux(1), Tswz_z(1))
 
     ! Convective terms
     Css(:) = -fW(:)*Rss_z(:)
