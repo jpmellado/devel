@@ -61,10 +61,10 @@ program VELLIPTIC
     e(1:imax, 1:jmax, 1:kmax) => txc(1:imax*jmax*kmax, 7)
     f(1:imax, 1:jmax, 1:kmax) => txc(1:imax*jmax*kmax, 8)
 
+    call OPR_Partial_Initialize()
     call OPR_Fourier_Initialize()
-    call OPR_Check()
-
     call OPR_Elliptic_Initialize(ifile)
+    call OPR_Check()
 
     bcs = 0
 
