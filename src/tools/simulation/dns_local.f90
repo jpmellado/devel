@@ -50,7 +50,6 @@ contains
         ! use BOUNDARY_BUFFER
         use BOUNDARY_BCS
         ! use PARTICLE_VARS
-        ! use DNS_STATISTICS, only: stats_averages, stats_pdfs, stats_intermittency
         ! use PLANES
         ! use IBM_VARS, only: imode_ibm, ibm_geo
         ! use AVG_PHASE
@@ -231,33 +230,6 @@ contains
         !             call TLab_Write_ASCII(bakfile, 'Stride=0,0,0')
         !             call TLab_Write_ASCII(wfile, 'DNS_Initialize_Parameters. Cannot read stride for towers; set to 0,0,0.')
         !         end if
-
-        ! ! ###################################################################
-        ! ! Statistics Control
-        ! ! ###################################################################
-        ! call TLab_Write_ASCII(bakfile, '#')
-        ! call TLab_Write_ASCII(bakfile, '#[Statsitics]')
-        ! call TLab_Write_ASCII(bakfile, '#Averages=<yes/no>')
-        ! call TLab_Write_ASCII(bakfile, '#Pdfs=<yes/no>')
-        ! call TLab_Write_ASCII(bakfile, '#Intermittency=<yes/no>')
-
-        ! call ScanFile_Char(bakfile, inifile, 'Statistics', 'Averages', 'yes', sRes)
-        ! if (trim(adjustl(sRes)) == 'yes') then; stats_averages = .true.
-        ! else; stats_averages = .false.; end if
-
-        ! call ScanFile_Char(bakfile, inifile, 'Statistics', 'Pdfs', 'yes', sRes)
-        ! if (trim(adjustl(sRes)) == 'yes') then; stats_pdfs = .true.
-        ! else; stats_pdfs = .false.; end if
-
-        ! call ScanFile_Char(bakfile, inifile, 'Statistics', 'Intermittency', 'yes', sRes)
-        ! if (trim(adjustl(sRes)) == 'yes') then; stats_intermittency = .true.
-        ! else; stats_intermittency = .false.; end if
-
-        ! ! ###################################################################
-        ! ! Phase Averaging
-        ! ! ###################################################################
-        ! call ScanFile_Int(bakfile, inifile, 'Iteration', 'PhaseAvg', '0', PhAvg%stride)
-        ! if (PhAvg%stride > 0) PhAvg%active = .true.
 
         ! ###################################################################
         ! Final initialization and consistency check

@@ -20,7 +20,7 @@ target_link_libraries(iniflow.x physics mappings operators fdm ${LEVEL1_LIBS} ${
 # Simulation
 FILE(GLOB sourcefiles "simulation/*.f90")
 add_executable(dns.x ${sourcefiles})
-target_link_libraries(dns.x physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
+target_link_libraries(dns.x statistics physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
 
 # Postprocessing
 FILE(GLOB sourcefiles "postprocessing/visuals.f90")

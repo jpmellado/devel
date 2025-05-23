@@ -42,7 +42,7 @@ program DNS
     ! use PLANES
     use BOUNDARY_BCS
     use Buffer, only: Buffer_Initialize
-    ! use DNS_STATISTICS, only: DNS_STATISTICS_INITIALIZE, DNS_STATISTICS_TEMPORAL, mean_flow, mean_scal
+    use Statistics, only: Statistics_Initialize, Statistics_Compute
     ! use ParticleTrajectories
     implicit none
 
@@ -93,7 +93,7 @@ program DNS
     ! call Particle_Initialize_Memory(__FILE__)
     ! call TLab_Allocate_Real(__FILE__, l_hq, [isize_part, inb_part], 'part-rhs')
 
-    ! call DNS_STATISTICS_INITIALIZE()
+    call Statistics_Initialize(ifile)
 
     ! call PLANES_INITIALIZE()
 
@@ -203,9 +203,9 @@ program DNS
             end if
         end if
 
-        ! if (imode_traj /= TRAJ_TYPE_NONE) then
-        !     call ParticleTrajectories_Accumulate()
-        ! end if
+        if (mod(itime - nitera_first, nitera_stats) == 0) then      ! Calculate statistics
+            call Statistics_Compute()
+        end if
 
         if (mod(itime - nitera_first, nitera_save) == 0 .or. &      ! Check-pointing: Save restart files
             itime == nitera_last .or. int(logs_data(1)) /= 0 .or. & ! Secure that one restart file is saved
