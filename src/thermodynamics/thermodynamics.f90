@@ -1,11 +1,24 @@
 #include "tlab_error.h"
 
+!# Mixture:
+!# NSP               # of species in the mixture (NSP>=inb_scal)
+!# inb_scal          # of prognostic scalars (transported during the simulation and saved)
+!# inb_scal_array    # of scalars in array s (prognositc+diagnostic, normally = inb_scal)
+!#
+!# General multispecies formulation retains NSP-1 species in scalar array s, Y_i=s_i, the last one is obtained by sum Y_i=1
+!# There might be additional scalars at the end of array s, e.g., conserved scalars or diagnostic variables
+!# Multispecies admits the case Y_i=f_i(s_j), s_j could be conserved scalar, e.g. using total water or mixture fraction
+!#
+!# Saturation pressure assumes that reference rho_0 in non-dimensionalization is such that reference pressure is 1 bar.
+
 module Thermodynamics
     use TLab_Constants, only: wi, wp
     use TLab_Constants, only: efile, lfile, fmt_r
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
     use Thermo_Base
-    use Thermo_AirWater, only: PREF_1000
+    use Thermo_AirWater
+    use Thermo_Anelastic
+    use Thermo_Compressible
     implicit none
     private
 
@@ -39,15 +52,15 @@ contains
         call TLab_Write_ASCII(bakfile, '#')
         call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
         call TLab_Write_ASCII(bakfile, '#Type=<compressible/anelastic>')
-        call TLab_Write_ASCII(bakfile, '#Gama=<value>')
+        call TLab_Write_ASCII(bakfile, '#Gamma=<value>')
         call TLab_Write_ASCII(bakfile, '#Mixture=<value>')
         call TLab_Write_ASCII(bakfile, '#Nondimensional=<yes,no>')
-        call TLab_Write_ASCII(bakfile, '#SmoothFactor=<value>')
+        ! call TLab_Write_ASCII(bakfile, '#SmoothFactor=<value>')
 
         call ScanFile_Char(bakfile, inifile, block, 'Type', 'None', sRes)
         if (trim(adjustl(sRes)) == 'none') then; imode_thermo = THERMO_TYPE_NONE
-        else if (trim(adjustl(sRes)) == 'compressible') then; imode_thermo = THERMO_TYPE_COMPRESSIBLE
         else if (trim(adjustl(sRes)) == 'anelastic') then; imode_thermo = THERMO_TYPE_ANELASTIC
+        else if (trim(adjustl(sRes)) == 'compressible') then; imode_thermo = THERMO_TYPE_COMPRESSIBLE
         else
             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Error in entry Type.')
             call TLab_Stop(DNS_ERROR_OPTION)
@@ -71,9 +84,9 @@ contains
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
-        call ScanFile_Real(bakfile, inifile, block, 'HeatCapacityRatio', '1.4', gama0)
+        call ScanFile_Real(bakfile, inifile, block, 'HeatCapacityRatio', '1.4', gamma0)
 
-        call ScanFile_Real(bakfile, inifile, block, 'SmoothFactor', '0.1', dsmooth)
+        ! call ScanFile_Real(bakfile, inifile, block, 'SmoothFactor', '0.1', dsmooth)
 
         !########################################################################
         ! Initialize
@@ -86,8 +99,8 @@ contains
             CPREF = CPREF*TREF + THERMO_CP(icp, 2, ISPREF)
         end do
 
-        if (imixture /= MIXT_TYPE_NONE) then    ! Reference heat capacity ratio; otherwise, gama0 is read in tlab.ini
-            gama0 = CPREF/(CPREF - RREF)
+        if (imixture /= MIXT_TYPE_NONE) then    ! Reference heat capacity ratio; otherwise, gamma0 is read in tlab.ini
+            gamma0 = CPREF/(CPREF - RREF)
         end if
 
         ! -------------------------------------------------------------------
@@ -108,11 +121,6 @@ contains
             end do
             THERMO_TLIM = THERMO_TLIM/TREF              ! Temperature limits for polynomial fits to cp
 
-            THERMO_PSAT(:) = THERMO_PSAT(:)/PREF        ! Saturation vapor pressure
-            do ipsat = 1, NPSAT
-                THERMO_PSAT(ipsat) = THERMO_PSAT(ipsat)*(TREF**(ipsat - 1))
-            end do
-
             PREF_1000 = PREF_1000/PREF                  ! 1000 hPa, reference to calculate potential temperatures
 
             THERMO_PSAT(:) = THERMO_PSAT(:)/PREF        ! Saturation vapor pressure
@@ -125,10 +133,10 @@ contains
         ! -------------------------------------------------------------------
         select case (imode_thermo)
         case (THERMO_TYPE_COMPRESSIBLE)
-            call Thermo_Initialize_Compressible()
+            call Thermo_Compressible_Initialize()
 
         case (THERMO_TYPE_ANELASTIC)
-            call Thermo_Initialize_Anelastic()
+            call Thermo_Anelastic_Initialize(inifile)
 
         end select
 
@@ -161,7 +169,7 @@ contains
             write (str, fmt_r) CPREF
             call TLab_Write_ASCII(lfile, 'Setting CpRef = '//trim(adjustl(str)))
 
-            write (str, fmt_r) gama0
+            write (str, fmt_r) gamma0
             call TLab_Write_ASCII(lfile, 'Setting Gamma0 = '//trim(adjustl(str)))
 
         end if

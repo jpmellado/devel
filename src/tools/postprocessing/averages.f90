@@ -18,7 +18,7 @@ program AVERAGES
     use TLab_Grid
     use FDM, only: g, FDM_Initialize
     use NavierStokes
-    ! use Thermodynamics, only: Thermodynamics_Initialize_Parameters
+    ! use Thermodynamics, only: Thermo_Initialize
     ! use Thermodynamics, only: imixture, MIXT_TYPE_NONE, MIXT_TYPE_AIRWATER, MIXT_TYPE_AIRWATER_LINEAR
     use TLab_Background, only: TLab_Initialize_Background
     use Gravity, only: Gravity_Initialize, gravityProps, Gravity_Source, bbackground
@@ -92,7 +92,7 @@ program AVERAGES
     call FDM_Initialize(ifile)
 
     call NavierStokes_Initialize_Parameters(ifile)
-    ! call Thermodynamics_Initialize_Parameters(ifile)
+    ! call Thermo_Initialize(ifile)
 
     call Gravity_Initialize(ifile)
     ! call Rotation_Initialize(ifile)
@@ -158,7 +158,7 @@ program AVERAGES
             rtime = params(1)
         end if
 
-        ! call FI_DIAGNOSTIC(imax, jmax, kmax, q, s)
+        ! call TLab_Diagnostic(imax, jmax, kmax, q, s)
 
         ! ! -------------------------------------------------------------------
         ! ! Calculate intermittency

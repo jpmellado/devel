@@ -31,7 +31,7 @@ module Gravity
 
     public :: Gravity_Initialize
     public :: Gravity_Source
-    ! public :: Gravity_Hydrostatic_Enthalpy
+    public :: Gravity_Hydrostatic_Enthalpy
 
 contains
     !########################################################################
@@ -173,114 +173,123 @@ contains
 
     !########################################################################
     ! Compute hydrostatic equilibrium from profiles s=(h,q_t) where h is the enthalpy
-    ! Evaluate the integral \int_yref^y dx/H(x), where H(x) is the scale height in the system
+    ! Evaluate the integral \int_zref^z dx/H(x), where H(x) is the scale height in the system
     !########################################################################
-!     subroutine Gravity_Hydrostatic_Enthalpy(fdmi, y, s, ep, T, p, yref, pref, wrk1d)
-!         use TLab_Constants, only: BCS_MIN
-!         use FDM_Integral, only: FDM_Int1_Solve, fdm_integral_dt
-!         use Thermodynamics
-!         use Thermo_Anelastic
-!         use THERMO_AIRWATER
-!         use THERMO_THERMAL
-!         use OPR_ODES
+    subroutine Gravity_Hydrostatic_Enthalpy(fdmi, z, s, ep, T, p, zref, pref, wrk1d)
+        use TLab_Constants, only: BCS_MIN
+        use FDM_Integral, only: FDM_Int1_Solve, fdm_integral_dt
+        use Thermodynamics, only: imode_thermo, THERMO_TYPE_ANELASTIC, THERMO_TYPE_COMPRESSIBLE
+        use Thermo_Base, only: imixture, MIXT_TYPE_AIRWATER
+        use Thermo_Anelastic
+        use Microphysics
+        ! use THERMO_AIRWATER
+        ! use THERMO_THERMAL
+        use OPR_ODES
 
-!         type(fdm_integral_dt), intent(in) :: fdmi(2)
-!         real(wp), intent(in) :: y(:)
-!         real(wp), intent(inout) :: s(:, :)      ! We calculate equilibrium composition
-!         real(wp), intent(out) :: ep(:), T(:), p(:)
-!         real(wp), intent(in) :: yref, pref
-!         real(wp), dimension(size(y), 3), intent(inout) :: wrk1d
+        type(fdm_integral_dt), intent(in) :: fdmi(2)
+        real(wp), intent(in) :: z(:)
+        real(wp), intent(inout) :: s(:, :)      ! We calculate equilibrium composition
+        real(wp), intent(out) :: ep(:), T(:), p(:)
+        real(wp), intent(in) :: zref, pref
+        real(wp), dimension(size(z), 3), intent(inout) :: wrk1d
 
-!         ! -------------------------------------------------------------------
-!         integer(wi) iter, niter, j, jcenter, nx
-!         real(wp) dummy
+        ! -------------------------------------------------------------------
+        integer(wi) iter, niter, k, kcenter, nz
+        real(wp) dummy
 
-!         ! ###################################################################
-!         nx = size(y)
+        ! ###################################################################
+        nz = size(z)
 
-!         ! Get the center
-!         do j = 1, nx
-!             if (y(j) <= yref .and. &
-!                 y(j + 1) > yref) then
-!                 jcenter = j
-!                 exit
-!             end if
-!         end do
+        ! Get the center
+        do k = 1, nz
+            if (z(k) <= zref .and. &
+                z(k + 1) > zref) then
+                kcenter = k
+                exit
+            end if
+        end do
 
-!         ! specific potential energy
-!         if (imode_thermo == THERMO_TYPE_ANELASTIC) then
-!             ep(:) = (y - yref)*GRATIO*scaleheightinv
-!             epbackground(:) = ep(:)
-!         else
-!             ep(:) = -(y - yref)*gravityProps%vector(2)
-!         end if
+        ! specific potential energy
+        if (imode_thermo == THERMO_TYPE_ANELASTIC) then
+            ep(:) = (z(:) - zref)*GRATIO*scaleheightinv
+            epbackground(:) = ep(:)
+        else
+            ep(:) = -(z(:) - zref)*gravityProps%vector(3)
+        end if
 
-!         ! hydrstatic pressure
-! #define p_aux(i)        wrk1d(i,1)
-! #define r_aux(i)        wrk1d(i,2)
-! #define wrk_aux(i)      wrk1d(i,3)
+        ! hydrstatic pressure
+#define p_aux(i)        wrk1d(i,1)
+#define r_aux(i)        wrk1d(i,2)
+#define wrk_aux(i)      wrk1d(i,3)
 
-!         ! Setting the pressure entry to 1 to get 1/RT
-!         p_aux(:) = 1.0_wp
+        ! Setting the pressure entry to 1 to get 1/RT
+        p_aux(:) = 1.0_wp
 
-!         niter = 10
+        niter = 10
 
-!         p(:) = pref                                                                     ! initialize iteration
-!         s(:, inb_scal + 1:inb_scal_array) = 0.0_wp                                      ! initialize diagnostic
-!         do iter = 1, niter           ! iterate
-!             if (imode_thermo == THERMO_TYPE_ANELASTIC) then
-!                 pbackground(:) = p_aux(:)
-!                 call Thermo_Anelastic_DENSITY(1, nx, 1, s, r_aux(:), wrk_aux(:))    ! Get r_aux=1/RT
-!                 r_aux(:) = -scaleheightinv*r_aux(:)
-!             else
-!                 call THERMO_AIRWATER_PH_RE(nx, s(:, 2), p, s(:, 1), T)
-!                 call THERMO_THERMAL_DENSITY(nx, s(:, 2), p_aux(:), T, r_aux(:))     ! Get r_aux=1/RT
-!                 r_aux(:) = gravityProps%vector(2)*r_aux(:)
-!             end if
+        p(:) = pref                                                                     ! initialize iteration
+        s(:, inb_scal + 1:inb_scal_array) = 0.0_wp                                      ! initialize diagnostic
+        do iter = 1, niter           ! iterate
+            if (imode_thermo == THERMO_TYPE_ANELASTIC) then
+                pbackground(:) = p_aux(:)
+                call Thermo_Anelastic_Rho(1, 1, nz, s, r_aux(:), wrk_aux(:))    ! Get r_aux=1/RT
+                r_aux(:) = -scaleheightinv*r_aux(:)
+            else
+                ! call THERMO_AIRWATER_PH_RE(nx, s(:, 2), p, s(:, 1), T)
+                ! call THERMO_THERMAL_DENSITY(nx, s(:, 2), p_aux(:), T, r_aux(:))     ! Get r_aux=1/RT
+                ! r_aux(:) = gravityProps%vector(2)*r_aux(:)
+            end if
 
-!             p(1) = 0.0_wp
-!             call FDM_Int1_Solve(1, fdmi(BCS_MIN), fdmi(BCS_MIN)%rhs, r_aux(:), p, wrk_aux(:))
+            p(1) = 0.0_wp
+            call FDM_Int1_Solve(1, fdmi(BCS_MIN), fdmi(BCS_MIN)%rhs, r_aux(:), p, wrk_aux(:))
 
-!             ! Calculate pressure and normalize s.t. p=pref at y=yref
-!             p(:) = exp(p(:))
-!             if (abs(yref - y(jcenter)) == 0.0_wp) then
-!                 dummy = p(jcenter)
-!             else
-!                 dummy = p(jcenter) + (p(jcenter + 1) - p(jcenter)) &
-!                         /(y(jcenter + 1) - y(jcenter))*(yref - y(jcenter))
-!             end if
-!             dummy = pref/dummy
-!             p(:) = dummy*p(:)
+            ! Calculate pressure and normalize s.t. p=pref at y=zref
+            p(:) = exp(p(:))
+            if (abs(zref - z(kcenter)) == 0.0_wp) then
+                dummy = p(kcenter)
+            else
+                dummy = p(kcenter) + (p(kcenter + 1) - p(kcenter)) &
+                        /(z(kcenter + 1) - z(kcenter))*(zref - z(kcenter))
+            end if
+            dummy = pref/dummy
+            p(:) = dummy*p(:)
 
-!             if (inb_flow_array > inb_flow .or. inb_scal_array > inb_scal) then      ! calculate diagnostic s.a. liquid content q_l
-!                 select case (imode_thermo)
-!                 case (THERMO_TYPE_ANELASTIC)
-!                     pbackground(:) = p(:)
-!                     if (imixture == MIXT_TYPE_AIRWATER) then
-!                         call Thermo_Anelastic_PH(1, nx, 1, s(:, 2), s(:, 1))
-!                         call Thermo_Anelastic_TEMPERATURE(1, nx, 1, s, T)
-!                     end if
+            select case (imode_thermo)
+            case (THERMO_TYPE_ANELASTIC)
+                if (imixture == MIXT_TYPE_AIRWATER .and. evaporationProps%type == TYPE_EVA_EQUILIBRIUM) then
+                    pbackground(:) = p(:)
+                    call Thermo_Anelastic_EquilibriumPH(1, 1, nz, s(:, 2), s(:, 1))
+                    call Thermo_Anelastic_T(1, 1, nz, s, T)
+                end if
 
-!                 case (THERMO_TYPE_LINEAR)
-!                     if (imixture == MIXT_TYPE_AIRWATER_LINEAR) then
-!                         call THERMO_AIRWATER_LINEAR(nx, s, s(:, inb_scal_array))
+            case (THERMO_TYPE_COMPRESSIBLE)
 
-!                     end if
+            end select
 
-!                 case (THERMO_TYPE_COMPRESSIBLE)
-!                     if (imixture == MIXT_TYPE_AIRWATER) then
-!                         call THERMO_AIRWATER_PH_RE(nx, s(:, 2), p, s(:, 1), T)
-!                     end if
-!                 end select
+            ! if (inb_flow_array > inb_flow .or. inb_scal_array > inb_scal) then      ! calculate diagnostic s.a. liquid content q_l
+            !     select case (imode_thermo)
+            !     case (THERMO_TYPE_ANELASTIC)
+            !         pbackground(:) = p(:)
+            !         if (imixture == MIXT_TYPE_AIRWATER) then
+            !             call Thermo_Anelastic_EquilibriumPH(1, 1, nz, s(:, 2), s(:, 1))
+            !             call Thermo_Anelastic_T(1, 1, nz, s, T)
+            !         end if
 
-!             end if
+            !     case (THERMO_TYPE_COMPRESSIBLE)
+            !         ! if (imixture == MIXT_TYPE_AIRWATER) then
+            !         !     call THERMO_AIRWATER_PH_RE(nx, s(:, 2), p, s(:, 1), T)
+            !         ! end if
 
-!         end do
+            !     end select
 
-! #undef p_aux
-! #undef r_aux
+            ! end if
 
-!         return
-!     end subroutine Gravity_Hydrostatic_Enthalpy
+        end do
+
+#undef p_aux
+#undef r_aux
+
+        return
+    end subroutine Gravity_Hydrostatic_Enthalpy
 
 end module Gravity

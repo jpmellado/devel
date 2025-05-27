@@ -532,7 +532,7 @@ contains
 !     !# assuming p/rho^\gamma0 constant(Homentropic conditions)
 !     ! ###################################################################
 !     subroutine PRESSURE_FLUCTUATION(u, v, w, rho, p, pprime, txc1, txc2, txc3, txc4)
-!         use Thermodynamics, only: gama0
+!         use Thermodynamics, only: gamma0
 
 !         real(wp), dimension(imax, jmax, kmax), intent(in) :: u, v, w
 !         real(wp), dimension(imax, jmax, kmax), intent(inout) :: rho, p, pprime
@@ -583,7 +583,7 @@ contains
 !         end if
 
 !         ! An amplification factor norm_ini_p is allowed as in previous versions
-!         rho = (norm_ini_p*pprime/p/gama0 + 1.0_wp)*rho  ! isentropic relation p'/p = \gamma \rho'/rho
+!         rho = (norm_ini_p*pprime/p/gamma0 + 1.0_wp)*rho  ! isentropic relation p'/p = \gamma \rho'/rho
 !         p = norm_ini_p*pprime + p
 
 !         return

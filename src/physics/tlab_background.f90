@@ -1,21 +1,19 @@
 #include "tlab_error.h"
 
+! information to set up bcs, ics, and reference background profiles
+
 module Tlab_Background
     use TLab_Constants, only: wp, wi, efile, lfile, wfile, MAX_VARS
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
     use Profiles, only: profiles_dt, Profiles_Calculate
-    ! use THERMO_THERMAL
     implicit none
     private
 
-! ###################################################################
-! information to set up bcs, ics, and reference background profiles
-! ###################################################################
+    public :: TLab_Initialize_Background
+
     type(profiles_dt), public :: qbg(3)                     ! Velocity
     type(profiles_dt), public :: sbg(MAX_VARS)              ! Scalars
     type(profiles_dt), public :: pbg, rbg, tbg, hbg         ! Pressure, density, temperature, enthalpy
-
-    public :: TLab_Initialize_Background
 
     ! background, reference profiles
     real(wp), allocatable :: sbackground(:, :)              ! Scalars
@@ -28,10 +26,10 @@ contains
         use TLab_Arrays, only: wrk1d
         use TLab_Memory, only: inb_scal, inb_scal_array
         use TLab_Grid, only: z
-        ! use FDM, only: fdm_Int0
+        use FDM, only: fdm_Int0
         ! use NavierStokes, only: froude, schmidt
-        ! use Thermodynamics
-        ! use Thermo_Anelastic
+        use Thermodynamics
+        use Thermo_Anelastic
         use Profiles, only: Profiles_ReadBlock
         use Profiles, only: PROFILE_NONE, PROFILE_EKMAN_U, PROFILE_EKMAN_U_P, PROFILE_EKMAN_V
         use Gravity
@@ -68,13 +66,6 @@ contains
         call Profiles_ReadBlock(bakfile, inifile, 'Flow', 'VelocityX', qbg(1))
         call Profiles_ReadBlock(bakfile, inifile, 'Flow', 'VelocityY', qbg(2))
         call Profiles_ReadBlock(bakfile, inifile, 'Flow', 'VelocityZ', qbg(3))
-
-        ! backwards compatilibity; originally, all velocity data was contained in block 'Velocity' except for the mean value
-        call ScanFile_Char(bakfile, inifile, 'Flow', 'ProfileVelocity', 'void', sRes)
-        if (trim(adjustl(sRes)) /= 'void') then
-            call Profiles_ReadBlock(bakfile, inifile, 'Flow', 'Velocity', qbg(1))
-            call TLab_Write_ASCII(wfile, 'Update tag Flow.Velocity to Flow.VelocityX.')
-        end if
 
         ! Consistency check
         if (any([PROFILE_EKMAN_U, PROFILE_EKMAN_U_P] == qbg(1)%type)) then
@@ -155,26 +146,26 @@ contains
             end do
         end do
 
-        ! if (imode_thermo == THERMO_TYPE_ANELASTIC) then     ! thermodynamic profiles
-        !     allocate (epbackground(z%size))
-        !     allocate (tbackground(z%size))
-        !     allocate (pbackground(z%size))
-        !     allocate (rbackground(z%size))
-        !     allocate (ribackground(z%size))
+        if (imode_thermo == THERMO_TYPE_ANELASTIC) then     ! thermodynamic profiles
+            allocate (epbackground(z%size))
+            allocate (tbackground(z%size))
+            allocate (pbackground(z%size))
+            allocate (rbackground(z%size))
+            allocate (ribackground(z%size))
 
-        !     call Gravity_Hydrostatic_Enthalpy(fdm_Int0, y%nodes(:), sbackground, epbackground, tbackground, pbackground, pbg%zmean, pbg%mean, p_wrk1d)
+            call Gravity_Hydrostatic_Enthalpy(fdm_Int0, z%nodes(:), sbackground, epbackground, tbackground, pbackground, pbg%zmean, pbg%mean, wrk1d)
 
-        !     call Thermo_Anelastic_DENSITY(1, z%size, 1, sbackground, rbackground, p_wrk1d)
-        !     ribackground = 1.0_wp/rbackground
+            call Thermo_Anelastic_Rho(1, 1, z%size, sbackground, rbackground, wrk1d)
+            ribackground = 1.0_wp/rbackground
 
-        ! end if
+        end if
 
         if (any(gravityProps%active(1:3))) then
             allocate (bbackground(z%size))                   ! buoyancy profiles
             bbackground(:) = 0.0_wp
 
             if (gravityProps%active(3)) then
-                call Gravity_Source(gravityProps, 1, z%size, 1, sbackground(:, 1), wrk1d)
+                call Gravity_Source(gravityProps, 1, 1, z%size, sbackground(:, 1), wrk1d)
                 bbackground(1:z%size) = wrk1d(1:z%size, 1)
             end if
 

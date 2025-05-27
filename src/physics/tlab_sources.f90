@@ -8,11 +8,11 @@ module TLab_Sources
     use FDM, only: g
     ! use FDM, only: fdm_Int0
     use NavierStokes, only: nse_eqns, DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC
-    ! use Thermo_Anelastic
+    use Thermo_Anelastic
     use Gravity, only: gravityProps, Gravity_Source
     ! use Rotation, only: coriolis, Rotation_Coriolis
     ! use Radiation
-    ! use Microphysics
+    use Microphysics
     ! use Chemistry
     use SpecialForcing
     ! use LargeScaleForcing
@@ -20,7 +20,7 @@ module TLab_Sources
     private
 
     public :: TLab_Sources_Flow
-    ! public :: TLab_Sources_Scal
+    public :: TLab_Sources_Scal
 
 contains
 ! #######################################################################
@@ -83,21 +83,18 @@ contains
         return
     end subroutine TLab_Sources_Flow
 
-!     ! #######################################################################
-!     ! #######################################################################
-!     subroutine TLab_Sources_Scal(s, hs, tmp1, tmp2, tmp3, tmp4)
-!         real(wp), intent(in) :: s(isize_field, *)
-!         real(wp), intent(out) :: hs(isize_field, *)
-!         real(wp), intent(inout) :: tmp1(isize_field), tmp2(isize_field), tmp3(isize_field), tmp4(isize_field)
+    ! #######################################################################
+    ! #######################################################################
+    subroutine TLab_Sources_Scal(s, hs, tmp1, tmp2, tmp3, tmp4)
+        real(wp), intent(in) :: s(isize_field, *)
+        real(wp), intent(out) :: hs(isize_field, *)
+        real(wp), intent(inout) :: tmp1(isize_field), tmp2(isize_field), tmp3(isize_field), tmp4(isize_field)
 
-!         ! -----------------------------------------------------------------------
+        ! -----------------------------------------------------------------------
+        integer is
 
-!         ! #######################################################################
-! #ifdef USE_BLAS
-!         ILEN = isize_field
-! #endif
-
-!         do is = 1, inb_scal ! Start loop over the N scalars
+        ! #######################################################################
+        do is = 1, inb_scal ! Start loop over the N scalars
 
 !             ! -----------------------------------------------------------------------
 !             ! Radiation
@@ -120,26 +117,19 @@ contains
 
 !             end if
 
-!             ! -----------------------------------------------------------------------
-!             ! Microphysics
-!             ! -----------------------------------------------------------------------
-!             if (sedimentationProps%active(is)) then
-!                 call Microphysics_Sedimentation(sedimentationProps, imax, jmax, kmax, is, g(2), s, tmp1, tmp2)
+            ! -----------------------------------------------------------------------
+            ! Microphysics
+            ! -----------------------------------------------------------------------
+            if (sedimentationProps%active(is)) then
+                call Microphysics_Sedimentation(sedimentationProps, imax, jmax, kmax, is, g(3), s, tmp1, tmp2)
 
-!                 if (nse_eqns == DNS_EQNS_ANELASTIC) then
-!                     call Thermo_Anelastic_WEIGHT_ADD(imax, jmax, kmax, ribackground, tmp1, hs(:, is))
-!                 else
-! !$omp parallel default( shared ) &forcingProps%vector
-! !$omp private( ij, srt,end,siz )
-!                     call TLab_OMP_PARTITION(isize_field, srt, end, siz)
+                if (nse_eqns == DNS_EQNS_ANELASTIC) then
+                    call Thermo_Anelastic_WEIGHT_ADD(imax, jmax, kmax, ribackground, tmp1, hs(:, is))
+                else
+                    hs(:, is) = hs(:, is) + tmp1(:)
+                end if
 
-!                     do ij = srt, end
-!                         hs(ij, is) = hs(ij, is) + tmp1(ij)
-!                     end do
-! !$omp end parallel
-!                 end if
-
-!             end if
+            end if
 
 !             ! -----------------------------------------------------------------------
 !             ! Chemistry
@@ -175,9 +165,9 @@ contains
 
 !             end if
 
-!         end do
+        end do
 
-!         return
-!     end subroutine TLab_Sources_Scal
+        return
+    end subroutine TLab_Sources_Scal
 
 end module TLab_Sources

@@ -3,7 +3,7 @@
 ! Everything has been read from input file.
 ! Check for cross dependencies and undeveloped options.
 subroutine TLab_Consistency_Check()
-    use TLab_Constants, only: wi, efile, lfile, MAX_VARS
+    use TLab_Constants, only: wi, wp, efile, lfile, MAX_VARS
     use TLab_Memory, only: inb_flow, inb_scal
     use TLab_Memory, only: imax, jmax, kmax
 #ifdef USE_MPI
@@ -98,6 +98,16 @@ subroutine TLab_Consistency_Check()
 
     ! end select
 
+    ! sources
+    ! ! if (sedimentationProps%type /= TYPE_SED_NONE) then
+    !     if (settling > 0.0_wp) then
+    !         sedimentationProps%parameters = sedimentationProps%parameters*settling ! adding the settling number in the parameter definitions
+    !     ! else
+    !     !     call TLab_Write_ASCII(efile, __FILE__//'. Settling number must be nonzero if sedimentation is retained.')
+    !     !     call TLab_Stop(DNS_ERROR_OPTION)
+    !     ! end if
+    ! end if
+
     ! ###################################################################
     ! preparing headers of restart files
     io_header_q(1)%size = 0
@@ -106,7 +116,7 @@ subroutine TLab_Consistency_Check()
     io_header_q(1)%size = io_header_q(1)%size + 1; io_header_q(1)%params(io_header_q(1)%size) = froude
     io_header_q(1)%size = io_header_q(1)%size + 1; io_header_q(1)%params(io_header_q(1)%size) = rossby
     ! if (any([DNS_EQNS_TOTAL, DNS_EQNS_COMPRESSIBLE] == nse_eqns)) then
-    !     io_header_q(1)%size = io_header_q(1)%size + 1; io_header_q(1)%params(io_header_q(1)%size) = gama0
+    !     io_header_q(1)%size = io_header_q(1)%size + 1; io_header_q(1)%params(io_header_q(1)%size) = gamma0
     !     io_header_q(1)%size = io_header_q(1)%size + 1; io_header_q(1)%params(io_header_q(1)%size) = prandtl
     !     io_header_q(1)%size = io_header_q(1)%size + 1; io_header_q(1)%params(io_header_q(1)%size) = mach
     ! end if

@@ -1,3 +1,9 @@
+! Compressible: s(:,1:2) are q_t and q_l. If equilibrium, the latter is diagnostic.
+! Anelastic: s(:,1:3) are h, q_t, and q_l. If equilibrium, the latter is diagnostic.
+
+! In principle, airwater compressible routine would be here. 
+! In thermodynamics, we would set procedure pointers to use the general compressible routines, or these ones.
+
 module Thermo_AirWater
     use TLab_Constants, only: wi, wp
     use Thermo_Base, only: imixture
@@ -11,6 +17,8 @@ module Thermo_AirWater
     public :: Thermo_AirWater_Initialize
     real(wp), public :: Rv, Rd, Rdv, Cd, Cl, Cdv, Cvl, Cdl, Lv0, Ld, Lv, Ldv, Lvl, Ldl, rd_ov_rv
 
+    integer, public :: inb_scal_ql, inb_scal_T
+
     ! Reference to calculate potential temperatures
     real(wp), public :: PREF_1000 = 1e5_wp          ! 1000 hPa
 
@@ -18,13 +26,6 @@ contains
     ! ###################################################################
     ! ###################################################################
     subroutine Thermo_AirWater_Initialize()
-
-        ! -------------------------------------------------------------------
-        ! diagnostic variables
-        if (imixture == MIXT_TYPE_AIRWATER) then    ! assumes phase equilibrium
-            inb_scal_array = inb_scal_array + 1     ! liquid water specific humidity, q_l
-            inb_scal_array = inb_scal_array + 1     ! temperature, T
-        end if
 
         ! -------------------------------------------------------------------
         ! Definitions for clarity in the airwater thermodynamics code

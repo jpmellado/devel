@@ -1,6 +1,10 @@
 #include "tlab_error.h"
 
-module NavierStokes
+! Evolution (prognostic) equations:
+! q(:,1:inb_flow) for flow variables.
+! s(:,1:inb_scal) for scal variables.
+
+module NavierStokes     ! Shall we call it EvolutionEquations?
     use TLab_Constants, only: wp, wi, lfile, efile, wfile, MAX_VARS
     implicit none
     private
@@ -203,7 +207,7 @@ contains
         end select
 
         inb_scal_array = inb_scal ! Default is that q/s arrays contain only the prognostic variables;
-        !                           can be changed in Thermodynamics_Initialize_Parameters(ifile)
+        !                           can be changed in Thermo_Initialize(ifile)
 
         ! scratch arrays
         inb_wrk1d = 18

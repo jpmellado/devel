@@ -3,33 +3,33 @@ set(LEVEL1_LIBS utils base)
 # Preprocessing
 FILE(GLOB sourcefiles "preprocessing/inigrid/*.f90")
 add_executable(inigrid.x ${sourcefiles})
-target_link_libraries(inigrid.x operators fdm ${LEVEL1_LIBS} ${LIBS})
+target_link_libraries(inigrid.x operators fdm thermodynamics ${LEVEL1_LIBS} ${LIBS})
 
 FILE(GLOB sourcefiles "preprocessing/inirand/*.f90")
 add_executable(inirand.x ${sourcefiles})
-target_link_libraries(inirand.x physics operators fdm ${LEVEL1_LIBS} ${LIBS})
+target_link_libraries(inirand.x physics operators fdm thermodynamics ${LEVEL1_LIBS} ${LIBS})
 
 FILE(GLOB sourcefiles "preprocessing/iniscal/*.f90")
 add_executable(iniscal.x ${sourcefiles})
-target_link_libraries(iniscal.x physics operators fdm ${LEVEL1_LIBS} ${LIBS})
+target_link_libraries(iniscal.x physics operators fdm thermodynamics ${LEVEL1_LIBS} ${LIBS})
 
 FILE(GLOB sourcefiles "preprocessing/iniflow/*.f90")
 add_executable(iniflow.x ${sourcefiles})
-target_link_libraries(iniflow.x physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
+target_link_libraries(iniflow.x physics mappings operators fdm thermodynamics ${LEVEL1_LIBS} ${LIBS})
 
 # Simulation
 FILE(GLOB sourcefiles "simulation/*.f90")
 add_executable(dns.x ${sourcefiles})
-target_link_libraries(dns.x statistics physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
+target_link_libraries(dns.x statistics physics mappings operators fdm thermodynamics ${LEVEL1_LIBS} ${LIBS})
 
 # Postprocessing
 FILE(GLOB sourcefiles "postprocessing/visuals.f90")
 add_executable(visuals.x ${sourcefiles})
-target_link_libraries(visuals.x physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
+target_link_libraries(visuals.x physics mappings operators fdm thermodynamics ${LEVEL1_LIBS} ${LIBS})
 
 FILE(GLOB sourcefiles "postprocessing/averages*.f90")
 add_executable(averages.x ${sourcefiles})
-target_link_libraries(averages.x statistics physics mappings operators fdm ${LEVEL1_LIBS} ${LIBS})
+target_link_libraries(averages.x statistics physics mappings operators fdm thermodynamics ${LEVEL1_LIBS} ${LIBS})
 
 # FILE(GLOB sourcefiles "statistics/spectra*.f90")
 # add_executable(spectra.x ${sourcefiles})

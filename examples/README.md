@@ -68,5 +68,13 @@ This is a summary of the workflow. The details of each tool and the correspondin
 
 ### Anelastic flows
 
+* Case51. Air anelastic formulation of CBL.  
+* Case52. Airvapor anelastic formulation of CBL.  
+
+* Case61. Airwater equilibrium anelastic formulation of stratocumulus-topped boundary layer.
+* Case62. Same as Case61, but adding subsidence and sedimentation.  
+* Case63. Same as Case62, but with dimensions.  
+* Case64. Same as Case63, but with different radiation model.  
+
 
 <!-- make checkrl/checkdb runs the check.sh bash-script inside each directory -->

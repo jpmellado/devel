@@ -265,7 +265,6 @@ contains
     ! ###################################################################
     subroutine TMarch_RungeKutta()
         use TLab_Arrays
-        ! use PARTICLE_ARRAYS
         use DNS_LOCAL
         use DNS_Control
         use DNS_Arrays
@@ -321,11 +320,6 @@ contains
             call DNS_BOUNDS_LIMIT()
             if (int(logs_data(1)) /= 0) return ! Error detected
 
-            ! if (part%type == PART_TYPE_BIL_CLOUD_4) then
-            !     call PARTICLE_TIME_RESIDENCE(dtime, l_g%np, l_q)
-            !     call PARTICLE_TIME_LIQUID_CLIPPING(s, l_q, l_txc)
-            ! end if
-
             ! -------------------------------------------------------------------
             ! Update RHS hq and hs in the explicit low-storage algorithm
             ! -------------------------------------------------------------------
@@ -353,12 +347,6 @@ contains
 #endif
                     end do
                 end if
-
-                ! if (part%type /= PART_TYPE_NONE) then
-                !     do is = 1, inb_part
-                !         l_hq(1:l_g%np, is) = alpha*l_hq(1:l_g%np, is)
-                !     end do
-                ! end if
 
             end if
 
@@ -421,7 +409,7 @@ contains
     !########################################################################
     subroutine TMarch_Courant()
         use DNS_Control, only: logs_data, logs_dtime
-        ! use Thermodynamics, only: gama0, itransport, EQNS_TRANS_POWERLAW
+        ! use Thermodynamics, only: gamma0, itransport, EQNS_TRANS_POWERLAW
         use TLab_Pointers_3D, only: u, v, w, p_wrk3d !, p, rho, vis
 
         ! -------------------------------------------------------------------
@@ -483,7 +471,7 @@ contains
             ! Compressible: Calculate global maximum of (u+c)/dx + (v+c)/dy + (w+c)/dz
             ! -------------------------------------------------------------------
             ! case (DNS_EQNS_COMPRESSIBLE, DNS_EQNS_TOTAL)
-            !     p_wrk3d = sqrt(gama0*p(:, :, :)/rho(:, :, :)) ! sound speed; positiveness of p and rho checked in routine DNS_CONTROL
+            !     p_wrk3d = sqrt(gamma0*p(:, :, :)/rho(:, :, :)) ! sound speed; positiveness of p and rho checked in routine DNS_CONTROL
             !     if (z%size > 1) then
             !         do k = 1, kmax
             !             j_glo = j + jdsp
@@ -630,7 +618,7 @@ contains
             s(:, is) = s(:, is) + dte*hs(:, is)
         end do
 
-        ! call FI_DIAGNOSTIC(imax, jmax, kmax, q, s) ! Should not need this here, only in anelastic and compressible
+        ! call TLab_Diagnostic(imax, jmax, kmax, q, s) ! Should not need this here, only in anelastic and compressible
 
         return
     end subroutine TMarch_Substep_Boussinesq_Explicit

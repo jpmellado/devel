@@ -19,14 +19,14 @@ program VISUALS
     use FDM, only: g, FDM_Initialize
     ! use FDM, only: fdm_Int0
     use NavierStokes
-    ! use Thermodynamics, only: Thermodynamics_Initialize_Parameters
+    use Thermodynamics, only: Thermo_Initialize
     use TLab_Background, only: TLab_Initialize_Background
     use Gravity, only: Gravity_Initialize, gravityProps, Gravity_Source, bbackground
     ! use Rotation, only: Rotation_Initialize
     ! use Thermo_Anelastic
     ! use THERMO_AIRWATER
     ! use Radiation
-    ! use Microphysics
+    use Microphysics
     ! use Chemistry
     ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
     use OPR_Partial
@@ -94,15 +94,13 @@ program VISUALS
     call FDM_Initialize(ifile)
 
     call NavierStokes_Initialize_Parameters(ifile)
-    ! call Thermodynamics_Initialize_Parameters(ifile)
+    call Thermo_Initialize(ifile)
 
     call Gravity_Initialize(ifile)
     ! call Rotation_Initialize(ifile)
     ! call Radiation_Initialize(ifile)
-    ! call Microphysics_Initialize(ifile)
+    call Microphysics_Initialize(ifile)
     ! call LargeScaleForcing_Initialize(ifile)
-    ! call Chemistry_Initialize(ifile)
-    ! call Particle_Initialize_Parameters(ifile)
 
     call TLab_Consistency_Check()
 
@@ -147,7 +145,7 @@ program VISUALS
             rtime = params(1)
         end if
 
-        ! call FI_DIAGNOSTIC(imax, jmax, kmax, q, s)
+        call TLab_Diagnostic(imax, jmax, kmax, q, s)
 
         write (str, fmt_r) rtime; str = 'Physical time '//trim(adjustl(str))
         call TLab_Write_ASCII(lfile, str)

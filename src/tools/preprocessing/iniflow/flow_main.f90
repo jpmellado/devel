@@ -16,7 +16,7 @@ program IniFlow
     use TLab_Grid
     use FDM, only: FDM_Initialize
     use NavierStokes, only: NavierStokes_Initialize_Parameters
-    ! use Thermodynamics, only: imixture, Thermodynamics_Initialize_Parameters
+    use Thermodynamics, only: Thermo_Initialize
     ! use NavierStokes, only: nse_eqns, DNS_EQNS_COMPRESSIBLE, DNS_EQNS_TOTAL
     ! use Rotation, only: Rotation_Initialize
     use OPR_Partial, only: OPR_Partial_Initialize
@@ -43,7 +43,7 @@ program IniFlow
     call FDM_Initialize(ifile)
 
     call NavierStokes_Initialize_Parameters(ifile)
-    ! call Thermodynamics_Initialize_Parameters(ifile)
+    call Thermo_Initialize(ifile)
     ! call Rotation_Initialize(ifile)
 
     call TLab_Consistency_Check()

@@ -23,7 +23,8 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     use TLab_Memory, only: imax, jmax, kmax, inb_flow_array, inb_scal_array
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
     use TLab_Arrays, only: wrk1d
-    use TLab_Pointers_3D, only: u, v, w, rho, vis, p_wrk3d
+    use TLab_Pointers_3D, only: u, v, w, p_wrk3d
+    use Thermo_Compressible, only: rho, vis
     use TLab_Grid, only: z
     use FDM, only: g
     use OPR_Partial

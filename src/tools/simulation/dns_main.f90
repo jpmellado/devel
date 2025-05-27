@@ -15,15 +15,15 @@ program DNS
     use IO_Fields
     use TLab_Grid
     use FDM, only: FDM_Initialize
-    ! use Thermodynamics, only: Thermodynamics_Initialize_Parameters
     use NavierStokes, only: NavierStokes_Initialize_Parameters, DNS_EQNS_ANELASTIC, DNS_EQNS_BOUSSINESQ
+    use Thermodynamics, only: Thermo_Initialize
     use NavierStokes, only: visc
     use Gravity, only: Gravity_Initialize
     use SpecialForcing, only: SpecialForcing_Initialize
     ! use Rotation, only: Rotation_Initialize
     ! use Rotation, only: Rotation_Initialize
     ! use Radiation, only: Radiation_Initialize
-    ! use Microphysics, only: Microphysics_Initialize
+    use Microphysics, only: Microphysics_Initialize
     ! use Chemistry, only: Chemistry_Initialize
     ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
     use OPR_Partial, only: OPR_Partial_Initialize
@@ -65,15 +65,14 @@ program DNS
     call FDM_Initialize(ifile)
 
     call NavierStokes_Initialize_Parameters(ifile)
-    ! call Thermodynamics_Initialize_Parameters(ifile)
+    call Thermo_Initialize(ifile)
 
     call Gravity_Initialize(ifile)
     call SpecialForcing_Initialize(ifile)
     ! call Rotation_Initialize(ifile)
     ! call Radiation_Initialize(ifile)
-    ! call Microphysics_Initialize(ifile)
+    call Microphysics_Initialize(ifile)
     ! call LargeScaleForcing_Initialize(ifile)
-    ! call Chemistry_Initialize(ifile)
 
     call TLab_Consistency_Check()
 
@@ -88,16 +87,12 @@ program DNS
     call OPR_Check()
 
     call TLab_Initialize_Background(ifile)
-
-    ! call ParticleTrajectories_Initialize(ifile)
-    ! call Particle_Initialize_Memory(__FILE__)
-    ! call TLab_Allocate_Real(__FILE__, l_hq, [isize_part, inb_part], 'part-rhs')
+    call NSE_Burgers_Initialize(ifile)
 
     call Statistics_Initialize(ifile)
 
     ! call PLANES_INITIALIZE()
 
-    call NSE_Burgers_Initialize(ifile)
 
     ! call OPR_Filter_Initialize_Parameters(ifile)
     ! do ig = 1, 3
@@ -121,7 +116,7 @@ program DNS
     call IO_Read_Fields(fname, imax, jmax, kmax, itime, inb_flow, 0, q, params(1:2))
     rtime = params(1); visc = params(2)
 
-    ! call FI_DIAGNOSTIC(imax, jmax, kmax, q, s)  ! Initialize diagnostic thermodynamic quantities
+    ! call TLab_Diagnostic(imax, jmax, kmax, q, s)  ! Initialize diagnostic thermodynamic quantities
 
     ! if (part%type /= PART_TYPE_NONE) then
     !     write (fname, *) nitera_first; fname = trim(adjustl(tag_part))//trim(adjustl(fname))

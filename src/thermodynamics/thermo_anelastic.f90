@@ -1,22 +1,20 @@
-!########################################################################
-!#
 !# Calculate thermodynamic properties of airwater in the anelastic approximation,
 !# when a background state is given in the form of appropriate profiles
 !#
 !# s1 is specific static energy
 !# s2 is total water specific humidity
 !# s3 is liquid water specific humidity, if any
-!#
-!########################################################################
 
 module Thermo_Anelastic
     use TLab_Constants, only: wp, wi
+    use TLab_Memory, only: inb_scal_array
     use Thermo_Base, only: imixture
     use Thermo_Base, only: MIXT_TYPE_AIR, MIXT_TYPE_AIRVAPOR, MIXT_TYPE_AIRWATER
     use Thermo_Base, only: THERMO_PSAT, NPSAT, Thermo_Psat_Polynomial
-    use Thermo_Base, only: gama0
+    use Thermo_Base, only: gamma0
     use Thermo_Base, only: nondimensional
     use Thermo_AirWater, only: Rv, Rd, Rdv, Cd, Cdv, Lv0, Ld, Ldv, Cvl, Cdl, Cl, rd_ov_rv, PREF_1000
+    use Thermo_AirWater, only: inb_scal_ql, inb_scal_T
     implicit none
     private
 
@@ -45,7 +43,7 @@ module Thermo_Anelastic
     public :: Thermo_Anelastic_STATIC_CONSTANTCP
     ! public :: Thermo_Anelastic_EquilibriumPH_RE
 
-    real(wp), public :: GRATIO = 1.0_wp     ! (gama0-1)/gama0 = R0/Cp0
+    real(wp), public :: GRATIO = 1.0_wp     ! (gamma0-1)/gamma0 = R0/Cp0
     real(wp), public :: scaleheightinv      ! Normalized gravity, or inverse of pressure scale height.
     !                                       Equivalent to 1/(Fr*RRATIO) in compressible formulation
 
@@ -60,6 +58,9 @@ module Thermo_Anelastic
     real(wp), pointer, public :: p_qt(:) => null()
     real(wp), pointer, public :: p_ql(:) => null()
     real(wp), pointer, public :: p_T(:) => null()
+
+    ! Equilibrium calculations
+    real(wp), public :: NEWTONRAPHSON_ERROR, dsmooth
 
 contains
     !########################################################################
@@ -87,7 +88,13 @@ contains
         ! Parameters in the evolution equations
         ! Anelastic formulations use p nondimensionalized by reference thermodynamic pressure p_0
         if (nondimensional) then
-            GRATIO = (gama0 - 1.0_wp)/gama0         ! R_0/C_{p,0}
+            GRATIO = (gamma0 - 1.0_wp)/gamma0       ! R_0/C_{p,0}
+        end if
+
+        inb_scal_array = inb_scal_array + 1         ! Space for T as diagnostic
+        if (imixture == MIXT_TYPE_AIRWATER) then
+            inb_scal_ql = 3
+            inb_scal_T = 4
         end if
 
         return
@@ -99,11 +106,14 @@ contains
         use TLab_Memory, only: isize_field
         use TLab_Arrays, only: s
 
+        integer(wi) idummy(2)
+
+        idummy = shape(s)
         ! Pointers
-        p_hl(1:isize_field) => s(1:isize_field, 1)
-        p_qt(1:isize_field) => s(1:isize_field, 2)
-        p_ql(1:isize_field) => s(1:isize_field, 3)
-        p_T(1:isize_field) => s(1:isize_field, 4)
+        if (idummy(2) >= 1) p_hl(1:isize_field) => s(1:isize_field, 1)
+        if (idummy(2) >= 2) p_qt(1:isize_field) => s(1:isize_field, 2)
+        if (idummy(2) >= 3) p_ql(1:isize_field) => s(1:isize_field, 3)
+        if (idummy(2) >= 4) p_T(1:isize_field) => s(1:isize_field, 4)
 
         ! Shall we add here the creation of the background profiles?
 
@@ -127,7 +137,7 @@ contains
     !#
     !########################################################################
     subroutine Thermo_Anelastic_EquilibriumPH(nx, ny, nz, s, h)
-        use Thermo_Base, only: dsmooth, NEWTONRAPHSON_ERROR
+        ! use Thermo_Base, only: dsmooth, NEWTONRAPHSON_ERROR
 
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(inout) :: s(nx*ny*nz, *)

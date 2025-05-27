@@ -34,12 +34,12 @@ module Thermo_Base
     integer(wi), public :: NPSAT
     real(wp), public :: THERMO_PSAT(MAX_NPSAT)
 
-    ! Equilibrium calculations
-    real(wp), public :: NEWTONRAPHSON_ERROR, dsmooth
+    ! ! Equilibrium calculations
+    ! real(wp), public :: NEWTONRAPHSON_ERROR, dsmooth
 
-    real(wp), public :: gama0                           ! Specific heat ratio, Cp0/Cv0 = Cp0/(Cp0-R0)
-    !                                                     For imixture=NONE, I only need gama0 and can be set in tlab.ini
-    !                                                     Otherwise, I need the thermodynamic data that is given in thermo_initialize, and gama0 is derived.
+    real(wp), public :: gamma0                           ! Specific heat ratio, Cp0/Cv0 = Cp0/(Cp0-R0)
+    !                                                     For imixture=NONE, I only need gamma0 and can be set in tlab.ini
+    !                                                     Otherwise, I need the thermodynamic data that is given in thermo_initialize, and gamma0 is derived.
 
     ! Nondimensional formulation
     logical, public :: nondimensional = .true.          ! consider nondimensional formulation

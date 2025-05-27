@@ -17,7 +17,8 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     use TLab_Memory, only: imax, jmax, kmax, inb_flow_array, inb_scal_array
     use TLab_Time, only: itime, rtime
     use TLab_Arrays, only: wrk1d
-    use TLab_Pointers_3D, only: p_wrk3d, u, v, w, rho, vis
+    use TLab_Pointers_3D, only: p_wrk3d, u, v, w
+    use Thermo_Compressible, only: rho, vis
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
     use TLab_Grid, only: z
     use FDM, only: g
