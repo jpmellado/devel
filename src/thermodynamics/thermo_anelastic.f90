@@ -39,7 +39,7 @@ module Thermo_Anelastic
     public :: Thermo_Anelastic_LAPSE_FR
     public :: Thermo_Anelastic_Pvapor
     public :: Thermo_Anelastic_DEWPOINT
-    public :: Thermo_Anelastic_RELATIVEHUMIDITY
+    public :: Thermo_Anelastic_RH
     public :: Thermo_Anelastic_STATIC_CONSTANTCP
     ! public :: Thermo_Anelastic_EquilibriumPH_RE
 
@@ -767,7 +767,7 @@ contains
 
     !########################################################################
     !########################################################################
-    subroutine Thermo_Anelastic_RELATIVEHUMIDITY(nx, ny, nz, s, rh, T)
+    subroutine Thermo_Anelastic_RH(nx, ny, nz, s, rh, T)
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz, *)
         real(wp), intent(out) :: rh(nx*ny*nz)
@@ -787,7 +787,7 @@ contains
 #undef psat
 
         return
-    end subroutine Thermo_Anelastic_RELATIVEHUMIDITY
+    end subroutine Thermo_Anelastic_RH
 
     !########################################################################
     !########################################################################

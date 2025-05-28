@@ -726,7 +726,7 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 !         call Thermo_Psat_Polynomial(imax*jmax*kmax, T_LOC(1, 1, 1), dvdz)
 !         call AVG_IK_V(imax, jmax, kmax, dvdz, psat(1), wrk1d)
 
-!         call Thermo_Anelastic_RELATIVEHUMIDITY(imax, jmax, kmax, s, dvdz, p_wrk3d)
+!         call Thermo_Anelastic_RH(imax, jmax, kmax, s, dvdz, p_wrk3d)
 !         call AVG_IK_V(imax, jmax, kmax, dvdz, relhum(1), wrk1d)
 
 !         call Thermo_Anelastic_THETA(imax, jmax, kmax, s, dvdz, p_wrk3d)

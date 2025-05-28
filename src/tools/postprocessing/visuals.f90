@@ -10,7 +10,7 @@ program VISUALS
     use TLab_Memory, only: TLab_Initialize_Memory
 #ifdef USE_MPI
     use mpi_f08, only: MPI_COMM_WORLD, MPI_REAL4
-    use TLabMPI_VARS, only: ims_pro, ims_pro_i, ims_pro_j, ims_comm_x, ims_comm_y
+    use TLabMPI_VARS, only: ims_pro_i, ims_pro_j, ims_comm_x, ims_comm_y
     use TLabMPI_PROCS, only: TLabMPI_Initialize
     use TLabMPI_Transpose, only: TLabMPI_Trp_Initialize
 #endif
@@ -18,21 +18,19 @@ program VISUALS
     use TLab_Grid
     use FDM, only: g, FDM_Initialize
     ! use FDM, only: fdm_Int0
-    use NavierStokes
+    use NavierStokes!, only: NavierStokes_Initialize_Parameters
     use Thermodynamics, only: Thermo_Initialize
     use TLab_Background, only: TLab_Initialize_Background
     use Gravity, only: Gravity_Initialize, gravityProps, Gravity_Source, bbackground
     ! use Rotation, only: Rotation_Initialize
-    ! use Thermo_Anelastic
-    ! use THERMO_AIRWATER
+    use Thermo_Anelastic
     ! use Radiation
     use Microphysics
-    ! use Chemistry
     ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
     use OPR_Partial
     use OPR_Fourier
     use OPR_Elliptic
-    use NSE_Burgers, only: NSE_Burgers_Initialize
+    ! use NSE_Burgers, only: NSE_Burgers_Initialize
     use FI_VECTORCALCULUS
     use FI_STRAIN_EQN
     use FI_GRADIENT_EQN
@@ -219,7 +217,7 @@ program VISUALS
                     txc(1:isize_field, 1) = q(1:isize_field, 5)
 
                 case (DNS_EQNS_ANELASTIC)
-                    ! call Thermo_Anelastic_DENSITY(imax, jmax, kmax, s, txc(1, 1), wrk3d)
+                    call Thermo_Anelastic_Rho(imax, jmax, kmax, s, txc(:, 1), wrk3d)
 
                 case (DNS_EQNS_BOUSSINESQ)      ! Using buoyancy to calculate density
                     wrk1d(1:kmax, 1) = bbackground(1:kmax)
@@ -237,7 +235,7 @@ program VISUALS
                     txc(1:isize_field, 1) = q(1:isize_field, 7)
 
                 case (DNS_EQNS_ANELASTIC)
-                    ! call Thermo_Anelastic_TEMPERATURE(imax, jmax, kmax, s, txc(1, 1))
+                    call Thermo_Anelastic_T(imax, jmax, kmax, s, txc(1, 1))
 
                 end select
                 call Write_Visuals(plot_file, txc(:, 1:1))
@@ -259,29 +257,29 @@ program VISUALS
                 call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), txc(1, 1), txc(1, 2))
                 call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), txc(1, 1), txc(1, 3))
                 call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), txc(1, 1), txc(1, 4))
-                txc(1:isize_field, 2) = -Tensor_Dot(q(:, 1:3), txc(:, 1:3))
-                ! txc(1:isize_field, 2) = -(txc(1:isize_field, 2)*q(1:isize_field, 1) &
-                !                           + txc(1:isize_field, 3)*q(1:isize_field, 2) &
-                !                           + txc(1:isize_field, 4)*q(1:isize_field, 3))
+                txc(1:isize_field, 2) = -Tensor_Dot(q(:, 1:3), txc(:, 2:4))
                 call Write_Visuals(plot_file, txc(:, 2:2))
 
-                call TLab_Write_ASCII(lfile, 'Computing pressure-strain correlation...')
-                txc(1:isize_field, 2) = txc(1:isize_field, 1); call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(1, 2))
+                txc(1:isize_field, 2) = txc(1:isize_field, 1)
+                call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(1, 2))
 
                 plot_file = 'PressureStrainX'//time_str(1:MaskSize)
-                txc(1:isize_field, 3) = q(1:isize_field, 1); call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(:, 3))
+                txc(1:isize_field, 3) = q(1:isize_field, 1)
+                call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(:, 3))
                 call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), txc(1, 3), txc(1, 4))
                 txc(1:isize_field, 3) = txc(1:isize_field, 2)*txc(1:isize_field, 4)
                 call Write_Visuals(plot_file, txc(:, 3:3))
 
                 plot_file = 'PressureStrainY'//time_str(1:MaskSize)
-                txc(1:isize_field, 3) = q(1:isize_field, 2); call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(:, 3))
+                txc(1:isize_field, 3) = q(1:isize_field, 2)
+                call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(:, 3))
                 call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), txc(1, 3), txc(1, 4))
                 txc(1:isize_field, 3) = txc(1:isize_field, 2)*txc(1:isize_field, 4)
                 call Write_Visuals(plot_file, txc(:, 3:3))
 
                 plot_file = 'PressureStrainZ'//time_str(1:MaskSize)
-                txc(1:isize_field, 3) = q(1:isize_field, 3); call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(:, 3))
+                txc(1:isize_field, 3) = q(1:isize_field, 3)
+                call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(:, 3))
                 call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), txc(1, 3), txc(1, 4))
                 txc(1:isize_field, 3) = txc(1:isize_field, 2)*txc(1:isize_field, 4)
                 call Write_Visuals(plot_file, txc(:, 3:3))
@@ -370,24 +368,26 @@ program VISUALS
                 txc(1:isize_field, 1) = log10(txc(1:isize_field, 1) + small_wp)
                 call Write_Visuals(plot_file, txc(:, 1:1))
 
-                ! plot_file = 'LogPotentialEnstrophy'//time_str(1:MaskSize)
-                ! if (buoyancy%type == EQNS_BOD_EXPLICIT) then
-                !     call Thermo_Anelastic_BUOYANCY(imax, jmax, kmax, s, txc(1, 4))
-                ! else
-                !     wrk1d(1:jmax, 1) = 0.0_wp
-                !     call Gravity_Source(buoyancy, imax, jmax, kmax, s, txc(1, 4), wrk1d)
-                ! end if
-                ! dummy = 1.0_wp/froude
-                ! txc(1:isize_field, 4) = txc(1:isize_field, 4)*dummy
-                ! call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), txc(1, 4), txc(1, 1))
-                ! call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), txc(1, 4), txc(1, 2))
-                ! call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), txc(1, 4), txc(1, 3))
-                ! call FI_CURL(imax, jmax, kmax, q(1, 1), q(1, 2), q(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), txc(1, 7))
-                ! txc(1:isize_field, 1) = txc(1:isize_field, 1)*txc(1:isize_field, 4) &
-                !                         + txc(1:isize_field, 2)*txc(1:isize_field, 5) &
-                !                         + txc(1:isize_field, 3)*txc(1:isize_field, 6)
-                ! txc(1:isize_field, 1) = log10(txc(1:isize_field, 1)*txc(1:isize_field, 1) + small_wp)
-                ! call Write_Visuals(plot_file, txc(:,1:1))
+                plot_file = 'LogPotentialEnstrophy'//time_str(1:MaskSize)
+                select case (nse_eqns)
+                case (DNS_EQNS_BOUSSINESQ)
+                    wrk1d(1:kmax, 1) = bbackground(1:kmax)
+                    bbackground(1:kmax) = 0.0_wp
+                    call Gravity_Source(gravityProps, imax, jmax, kmax, s, txc(:, 4))
+                    bbackground(1:kmax) = wrk1d(1:kmax, 1)
+
+                case (DNS_EQNS_ANELASTIC)
+                    call Thermo_Anelastic_Buoyancy(imax, jmax, kmax, s, txc(:, 4))
+
+                end select
+                txc(1:isize_field, 4) = txc(1:isize_field, 4)/froude
+                call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), txc(1, 4), txc(1, 1))
+                call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), txc(1, 4), txc(1, 2))
+                call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), txc(1, 4), txc(1, 3))
+                call FI_CURL(imax, jmax, kmax, q(1, 1), q(1, 2), q(1, 3), txc(1, 4), txc(1, 5), txc(1, 6), txc(1, 7))
+                txc(:, 1) = Tensor_Dot(txc(:, 1:3), txc(:, 4:6))
+                txc(1:isize_field, 1) = log10(txc(1:isize_field, 1)*txc(1:isize_field, 1) + small_wp)
+                call Write_Visuals(plot_file, txc(:, 1:1))
 
             case ('EnstrophyEquation')
                 plot_file = 'Enstrophy'//time_str(1:MaskSize)
@@ -466,8 +466,8 @@ program VISUALS
                 call Write_Visuals(plot_file, txc(:, 1:1))
 
             case ('HorizontalDivergence')
-                call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), q(1, 1), txc(1, 2))
-                call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), q(1, 3), txc(1, 1))
+                call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), q(1, 1), txc(1, 1))
+                call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), q(1, 2), txc(1, 2))
                 txc(1:isize_field, 1) = txc(1:isize_field, 1) + txc(1:isize_field, 2)
                 call Write_Visuals(plot_file, txc(:, 1:1))
 
@@ -479,8 +479,7 @@ program VISUALS
                 txc(1:isize_field, 1) = q(1:isize_field, 1); call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(:, 1))
                 txc(1:isize_field, 2) = q(1:isize_field, 2); call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(:, 2))
                 txc(1:isize_field, 3) = q(1:isize_field, 3); call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(:, 3))
-                txc(1:isize_field, 4) = 0.5_wp*Tensor_Dot(txc(:, 1:3), txc(:, 1:3))
-                ! (txc(1:isize_field, 1)**2 + txc(1:isize_field, 2)**2 + txc(1:isize_field, 3)**2)
+                txc(:, 4) = 0.5_wp*Tensor_Dot(txc(:, 1:3), txc(:, 1:3))
                 call Write_Visuals(plot_file, txc(:, 4:4))
 
                 plot_file = 'ReynoldsTensor'//time_str(1:MaskSize)
@@ -504,14 +503,14 @@ program VISUALS
                 ! ###################################################################
             case ('Buoyancy')
                 select case (nse_eqns)
-                case (DNS_EQNS_ANELASTIC)
-                    ! call Thermo_Anelastic_BUOYANCY(imax, jmax, kmax, s, txc(1, 1))
-
                 case (DNS_EQNS_BOUSSINESQ)
                     wrk1d(1:kmax, 1) = bbackground(1:kmax)
                     bbackground(1:kmax) = 0.0_wp
                     call Gravity_Source(gravityProps, imax, jmax, kmax, s, txc(1, 1))
                     bbackground(1:kmax) = wrk1d(1:kmax, 1)
+
+                case (DNS_EQNS_ANELASTIC)
+                    call Thermo_Anelastic_Buoyancy(imax, jmax, kmax, s, txc(:, 1))
 
                 end select
                 txc(1:isize_field, 1) = txc(1:isize_field, 1)/froude
@@ -525,54 +524,45 @@ program VISUALS
                 call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(1, 1))
                 call Write_Visuals(plot_file, txc(:, 1:1))
 
-                plot_file = 'Cwb'//time_str(1:MaskSize)     ! Covariance between b and v
+                plot_file = 'Cwb'//time_str(1:MaskSize)     ! Covariance between b and w
                 txc(1:isize_field, 2) = q(1:isize_field, 3); call FI_FLUCTUATION_INPLACE(imax, jmax, kmax, txc(:, 2))
                 txc(1:isize_field, 2) = txc(1:isize_field, 1)*txc(1:isize_field, 2)
                 call Write_Visuals(plot_file, txc(:, 2:2))
 
-                ! ! ###################################################################
-                ! if (opt_vec(iv) == iscal_offset + 19) then
-                !     plot_file = 'LaplacianV'//time_str(1:MaskSize)
-                !     call OPR_Partial_Z(OPR_P2, imax, jmax, kmax, g(3), q(1, 2), txc(1, 4), txc(1, 5))
-                !     call OPR_Partial_Y(OPR_P2, imax, jmax, kmax, g(2), q(1, 2), txc(1, 3), txc(1, 5))
-                !     call OPR_Partial_X(OPR_P2, imax, jmax, kmax, g(1), q(1, 2), txc(1, 2), txc(1, 5))
-                !     txc(1:isize_field, 2) = txc(1:isize_field, 2) + txc(1:isize_field, 3) + txc(1:isize_field, 4)
-                !     call Write_Visuals(plot_file, txc(:,2:2))
+                plot_file = 'GradientRi'//time_str(1:MaskSize)
+                call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), txc(:, 1), txc(:, 2))
+                call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), q(:, 1), txc(:, 3))
+                call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), q(:, 2), txc(:, 4))
+                txc(1:isize_field, 2) = abs(txc(1:isize_field, 2))/(txc(1:isize_field, 3)**2.0 + txc(1:isize_field, 4)**2.0 +small_wp)
+                call Write_Visuals(plot_file, txc(:, 2:2))
 
-                !     plot_file = 'Buoyancy'//time_str(1:MaskSize)
-                !     if (gravityProps%type == EQNS_BOD_EXPLICIT) then
-                !         call Thermo_Anelastic_BUOYANCY(imax, jmax, kmax, s, txc(1, 1))
-                !     else
-                !         wrk1d(1:jmax, 1) = 0.0_wp
-                !         call Gravity_Source(gravityProps, imax, jmax, kmax, s, txc(1, 1), wrk1d)
-                !     end if
-                !     dummy = 1.0_wp/froude
-                !     txc(1:isize_field, 1) = txc(1:isize_field, 1)*dummy
-                !     call Write_Visuals(plot_file, txc(:,1:1))
+                ! ###################################################################
+                ! AirWater Anelastic
+                ! ###################################################################
+            case ('Anelastic')
+                plot_file = 'RelativeHumidity'//time_str(1:MaskSize)
+                call Thermo_Anelastic_RH(imax, jmax, kmax, s, txc(:, 1), wrk3d)
+                call Write_Visuals(plot_file, txc(:, 1:1))
 
-                !     plot_file = 'LaplacianB'//time_str(1:MaskSize)
-                !     call OPR_Partial_Z(OPR_P2, imax, jmax, kmax, g(3), txc(1, 1), txc(1, 4), txc(1, 5))
-                !     call OPR_Partial_Y(OPR_P2, imax, jmax, kmax, g(2), txc(1, 1), txc(1, 3), txc(1, 5))
-                !     call OPR_Partial_X(OPR_P2, imax, jmax, kmax, g(1), txc(1, 1), txc(1, 2), txc(1, 5))
-                !     txc(1:isize_field, 2) = txc(1:isize_field, 2) + txc(1:isize_field, 3) + txc(1:isize_field, 4)
-                !     call Write_Visuals(plot_file, txc(:,2:2))
+                ! plot_file = 'Dewpoint'//time_str(1:MaskSize)
+                ! call Thermo_Anelastic_Dewpoint(imax, jmax, kmax, s, txc(1, 1), wrk3d)
+                ! call Write_Visuals(plot_file, txc(:, 1:1))
 
-                !     plot_file = 'GradientRi'//time_str(1:MaskSize)
-                !     call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), txc(1, 1), txc(1, 2))
-                !     call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), q(1, 1), txc(1, 3))
-                !     txc(1:isize_field, 2) = abs(txc(1:isize_field, 2))/(txc(1:isize_field, 3)**2.0 + small_wp)
-                !     call Write_Visuals(plot_file, txc(:,2:2))
+                plot_file = 'Theta'//time_str(1:MaskSize)
+                call Thermo_Anelastic_Theta(imax, jmax, kmax, s, txc(:, 1), wrk3d)
+                call Write_Visuals(plot_file, txc(:, 1:1))
 
-                !     plot_file = 'Pressure'//time_str(1:MaskSize)
-                !     bbackground = 0.0_wp
-                !     call FI_PRESSURE_BOUSSINESQ(q, s, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), DCMP_TOTAL)
-                !     call Write_Visuals(plot_file, txc(:,1:1))
+                plot_file = 'ThetaV'//time_str(1:MaskSize)
+                call Thermo_Anelastic_ThetaV(imax, jmax, kmax, s, txc(:, 1), wrk3d)
+                call Write_Visuals(plot_file, txc(:, 1:1))
 
-                !     plot_file = 'PressureGradientY'//time_str(1:MaskSize)
-                !     call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), txc(1, 1), txc(1, 2))
-                !     call Write_Visuals(plot_file, txc(:,2:2))
+                plot_file = 'ThetaE'//time_str(1:MaskSize)
+                call Thermo_Anelastic_ThetaE(imax, jmax, kmax, s, txc(:, 1), wrk3d)
+                call Write_Visuals(plot_file, txc(:, 1:1))
 
-                ! end if
+                plot_file = 'ThetaL'//time_str(1:MaskSize)
+                call Thermo_Anelastic_ThetaL(imax, jmax, kmax, s, txc(:, 1), wrk3d)
+                call Write_Visuals(plot_file, txc(:, 1:1))
 
                 ! ###################################################################
                 ! Radiation
@@ -587,13 +577,6 @@ program VISUALS
 
                 end do
 
-                ! ###################################################################
-                ! Moisture
-                ! ###################################################################
-            case ('Moisture')
-                ! plot_file = 'RelativeHumidity'//time_str(1:MaskSize)
-                ! call Thermo_Anelastic_RELATIVEHUMIDITY(imax, jmax, kmax, s, txc(1, 1), wrk3d)
-                ! call Write_Visuals(plot_file, txc(:, 1:1))
             end select
 
         end do
@@ -664,7 +647,7 @@ contains
         iv = iv + 1; opt_name(iv) = 'Turbulent quantities'
         iv = iv + 1; opt_name(iv) = 'Buoyancy'
         iv = iv + 1; opt_name(iv) = 'Radiation'
-        iv = iv + 1; opt_name(iv) = 'Moisture'
+        iv = iv + 1; opt_name(iv) = 'Anelastic'
         if (iv > iopt_size_max) then ! Check
             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Increase number of options.')
             call TLab_Stop(DNS_ERROR_INVALOPT)
