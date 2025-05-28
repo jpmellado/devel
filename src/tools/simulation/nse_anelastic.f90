@@ -5,12 +5,12 @@
 !# Pressure term requires 3 1st order derivatives
 !#
 !# It is written such that u and w transposes are calculated first for the
-!# Ox and Oz momentum equations, stored in tmp5 and tmp6 and then used as needed.
+!# Ox and Oy momentum equations, stored in tmp5 and tmp6 and then used as needed.
 !# This saves 2 MPI transpositions.
 !# Includes the scalar to benefit from the same reduction
 !#
 !########################################################################
-subroutine NSE_Incompressible()
+subroutine NSE_Anelastic()
     use TLab_Constants, only: wp, wi, BCS_NN
     use TLab_Memory, only: imax, jmax, kmax, inb_flow, inb_scal
     use TLab_Arrays, only: s
@@ -19,6 +19,8 @@ subroutine NSE_Incompressible()
     use DNS_Arrays
     use DNS_LOCAL, only: remove_divergence
     use TimeMarching, only: dte
+    use Thermo_Anelastic, only: rbackground, ribackground, Thermo_Anelastic_Weight_InPlace
+    use Thermo_Anelastic, only: Thermo_Anelastic_Weight_OutPlace, Thermo_Anelastic_WEIGHT_SUBTRACT
     use BOUNDARY_BCS
     use OPR_Partial
     use NSE_Burgers
@@ -89,21 +91,25 @@ subroutine NSE_Incompressible()
         tmp3(:) = hq(:, 2) + v(:)*dummy
         tmp4(:) = hq(:, 3) + w(:)*dummy
 
-        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), tmp2, tmp1)
-        call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), tmp3, tmp2)
-        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), tmp4, tmp3)
+        call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, rbackground, tmp2)
+        call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, rbackground, tmp3)
+        call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, rbackground, tmp4)
 
     else
-        call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), hq(:, 1), tmp1)
-        call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), hq(:, 2), tmp2)
-        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), hq(:, 3), tmp3)
+        call Thermo_Anelastic_Weight_OutPlace(imax, jmax, kmax, rbackground, hq(:, 1), tmp2)
+        call Thermo_Anelastic_Weight_OutPlace(imax, jmax, kmax, rbackground, hq(:, 2), tmp3)
+        call Thermo_Anelastic_Weight_OutPlace(imax, jmax, kmax, rbackground, hq(:, 3), tmp4)
 
     end if
+
+    call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), tmp2, tmp1)
+    call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), tmp3, tmp2)
+    call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), tmp4, tmp3)
     tmp1(:) = tmp1(:) + tmp2(:) + tmp3(:) ! forcing term in tmp1
 
     ! Neumman BCs in d/dy(p) s.t. v=0 (no-penetration)
-    BcsFlowKmin%ref(:, :, 3) = p_hq(:, :, 1, 3)
-    BcsFlowKmax%ref(:, :, 3) = p_hq(:, :, kmax, 3)
+    BcsFlowKmin%ref(:, :, 3) = p_hq(:, :, 1, 3)*rbackground(1)
+    BcsFlowKmax%ref(:, :, 3) = p_hq(:, :, kmax, 3)*rbackground(kmax)
 
     ! Solution of Poisson equation: pressure in tmp1
     call OPR_Poisson(imax, jmax, kmax, BCS_NN, tmp1, tmp2, tmp3, BcsFlowKmin%ref(:, :, 3), BcsFlowKmax%ref(:, :, 3))
@@ -112,9 +118,9 @@ subroutine NSE_Incompressible()
     call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), tmp1, tmp2)
     call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), tmp1, tmp3)
     call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), tmp1, tmp4)
-    hq(:, 1) = hq(:, 1) - tmp2(:)
-    hq(:, 2) = hq(:, 2) - tmp3(:)
-    hq(:, 3) = hq(:, 3) - tmp4(:)
+    call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp2, hq(:, 1))
+    call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp3, hq(:, 2))
+    call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp4, hq(:, 3))
 
     ! #######################################################################
     ! Boundary conditions
@@ -156,4 +162,4 @@ subroutine NSE_Incompressible()
     end do
 
     return
-end subroutine NSE_Incompressible
+end subroutine NSE_Anelastic

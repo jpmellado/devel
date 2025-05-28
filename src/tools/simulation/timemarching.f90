@@ -110,7 +110,6 @@ contains
         call TLab_Write_ASCII(bakfile, '#TimeCFL=<value>')
         call TLab_Write_ASCII(bakfile, '#TimeDiffusiveCFL=<value>')
         call TLab_Write_ASCII(bakfile, '#TimeReactiveCFL=<value>')
-        call TLab_Write_ASCII(bakfile, '#RhsMode=<split/combined/nonblocking>')
 
         call ScanFile_Char(bakfile, inifile, 'Main', 'TimeOrder', 'dummy', sRes)
         if (trim(adjustl(sRes)) == 'rungekuttaexplicit3') then; rkm_mode = RKM_EXP3; lstr = '0.6'; 
@@ -129,14 +128,6 @@ contains
         write (lstr, *) 0.5_wp*cfla ! Default value for reactive CFL
         call ScanFile_Real(bakfile, inifile, 'Main', 'TimeReactiveCFL', trim(adjustl(lstr)), cflr)
         call ScanFile_Real(bakfile, inifile, 'Main', 'TimeStep', '0.05', dtime)
-
-        call ScanFile_Char(bakfile, inifile, 'Main', 'RhsMode', 'combined', sRes)
-        if (trim(adjustl(sRes)) == 'split') then; imode_rhs = EQNS_RHS_SPLIT
-        else if (trim(adjustl(sRes)) == 'combined') then; imode_rhs = EQNS_RHS_COMBINED
-        else
-            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong RhsMode option.')
-            call TLab_Stop(DNS_ERROR_OPTION)
-        end if
 
         ! ! -------------------------------------------------------------------
         ! ! Implicit RKM part
@@ -300,10 +291,7 @@ contains
 #ifdef USE_PROFILE
             call system_clock(t_srt, PROC_CYCLES, MAX_CYCLES)
 #endif
-            ! if (part%type /= PART_TYPE_NONE) then
-            !     call TMarch_SUBSTEP_PARTICLE()
-            ! end if
-
+            ! I could define procedure pointers to handle this...
             select case (nse_eqns)
             case (DNS_EQNS_BOUSSINESQ)
                 if (rkm_mode == RKM_EXP3 .or. rkm_mode == RKM_EXP4) then
@@ -313,6 +301,12 @@ contains
                 end if
 
             case (DNS_EQNS_ANELASTIC)
+                if (rkm_mode == RKM_EXP3 .or. rkm_mode == RKM_EXP4) then
+                    call TMarch_Substep_Anelastic_Explicit()
+                ! else if (rkm_mode == RKM_IMP3_DIFFUSION) then
+                !     call TMarch_Substep_Boussinesq_Implicit()
+                end if
+
             case (DNS_EQNS_COMPRESSIBLE)
 
             end select
@@ -467,33 +461,6 @@ contains
                 end do
             end if
 
-            ! -------------------------------------------------------------------
-            ! Compressible: Calculate global maximum of (u+c)/dx + (v+c)/dy + (w+c)/dz
-            ! -------------------------------------------------------------------
-            ! case (DNS_EQNS_COMPRESSIBLE, DNS_EQNS_TOTAL)
-            !     p_wrk3d = sqrt(gamma0*p(:, :, :)/rho(:, :, :)) ! sound speed; positiveness of p and rho checked in routine DNS_CONTROL
-            !     if (z%size > 1) then
-            !         do k = 1, kmax
-            !             j_glo = j + jdsp
-            !             do j = 1, jmax
-            !                 do i = 1, imax
-            !                     p_wrk3d(i, j, k) = (abs(u(i, j, k)) + p_wrk3d(i, j, k))*ds(1)%one_ov_ds1(i + idsp) &
-            !                                        + (abs(v(i, j, k)) + p_wrk3d(i, j, k))*ds(2)%one_ov_ds1(j_glo) &
-            !                                        + (abs(w(i, j, k)) + p_wrk3d(i, j, k))*ds(3)%one_ov_ds1(k)
-            !                 end do
-            !             end do
-            !         end do
-            !     else
-            !         do k = 1, kmax
-            !             do j = 1, jmax
-            !                 do i = 1, imax
-            !                     p_wrk3d(i, j, k) = (abs(u(i, j, k)) + p_wrk3d(i, j, k))*ds(1)%one_ov_ds1(i + idsp) &
-            !                                        + (abs(v(i, j, k)) + p_wrk3d(i, j, k))*ds(2)%one_ov_ds1(j_glo)
-            !                 end do
-            !             end do
-            !         end do
-            !     end if
-
         end select
 
         pmax(1) = maxval(p_wrk3d)
@@ -509,54 +476,6 @@ contains
         select case (nse_eqns)
         case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)
             pmax(2) = schmidtfactor*dx2i
-
-            ! -------------------------------------------------------------------
-            ! Compressible: Calculate global maximum of \mu/rho*(1/dx^2 + 1/dy^2 + 1/dz^2)
-            ! -------------------------------------------------------------------
-            ! case (DNS_EQNS_COMPRESSIBLE)
-            !     if (itransport == EQNS_TRANS_POWERLAW) then
-            !         if (z%size > 1) then
-            !             do k = 1, kmax
-            !                 j_glo = j + jdsp
-            !                 do j = 1, jmax
-            !                     do i = 1, imax
-            !                         p_wrk3d(i, j, k) = (ds(1)%one_ov_ds2(i + idsp) + ds(2)%one_ov_ds2(j) + ds(3)%one_ov_ds2(k))*vis(i, j, k)/rho(i, j, k)
-            !                     end do
-            !                 end do
-            !             end do
-            !         else
-            !             do k = 1, kmax
-            !                 do j = 1, jmax
-            !                     do i = 1, imax
-            !                         p_wrk3d(i, j, k) = (ds(1)%one_ov_ds2(i + idsp) + ds(2)%one_ov_ds2(j))*vis(i, j, k)/rho(i, j, k)
-            !                     end do
-            !                 end do
-            !             end do
-            !         end if
-
-            !     else ! constant dynamic viscosity
-            !         if (z%size > 1) then
-            !             do k = 1, kmax
-            !                 j_glo = j + jdsp
-            !                 do j = 1, jmax
-            !                     do i = 1, imax
-            !                         p_wrk3d(i, j, k) = (ds(1)%one_ov_ds2(i + idsp) + ds(2)%one_ov_ds2(j) + ds(3)%one_ov_ds2(k))/rho(i, j, k)
-            !                     end do
-            !                 end do
-            !             end do
-            !         else
-            !             do k = 1, kmax
-            !                 do j = 1, jmax
-            !                     do i = 1, imax
-            !                         p_wrk3d(i, j, k) = (ds(1)%one_ov_ds2(i + idsp) + ds(2)%one_ov_ds2(j))/rho(i, j, k)
-            !                     end do
-            !                 end do
-            !             end do
-            !         end if
-
-            !     end if
-
-            ! pmax(2) = schmidtfactor*maxval(p_wrk3d)
 
         end select
 
@@ -606,7 +525,7 @@ contains
 
         if (bufferType == BUFFER_TYPE_NUDGE) call Buffer_Nudge()
 
-        call NSE_Incompressible()
+        call NSE_Boussinesq()
 
         ! #######################################################################
         ! Perform the time stepping
@@ -618,10 +537,38 @@ contains
             s(:, is) = s(:, is) + dte*hs(:, is)
         end do
 
-        ! call TLab_Diagnostic(imax, jmax, kmax, q, s) ! Should not need this here, only in anelastic and compressible
-
         return
     end subroutine TMarch_Substep_Boussinesq_Explicit
+
+    !########################################################################
+    !########################################################################
+    subroutine TMarch_Substep_Anelastic_Explicit()
+        use TLab_Arrays, only: q, s, txc
+        use DNS_Arrays, only: hq, hs
+        use TLab_Sources
+
+        ! #######################################################################
+        ! Accumulate RHS terms
+        call TLab_Sources_Flow(q, s, hq, txc(:, 1))
+
+        if (bufferType == BUFFER_TYPE_NUDGE) call Buffer_Nudge()
+
+        call NSE_Anelastic()
+
+        ! #######################################################################
+        ! Perform the time stepping
+        do is = 1, inb_flow
+            q(:, is) = q(:, is) + dte*hq(:, is)
+        end do
+
+        do is = 1, inb_scal
+            s(:, is) = s(:, is) + dte*hs(:, is)
+        end do
+
+        call TLab_Diagnostic(imax, jmax, kmax, q, s) ! Should not need this here, only in anelastic and compressible
+
+        return
+    end subroutine TMarch_Substep_Anelastic_Explicit
 
     !########################################################################
     !########################################################################

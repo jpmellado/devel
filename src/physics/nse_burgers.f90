@@ -64,12 +64,12 @@ contains
     subroutine NSE_Burgers_Initialize(inifile)
         ! use TLab_Memory, only: jmax, kmax !isize_field, imax,
         use TLab_Memory, only: TLab_Allocate_Real
-        ! use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
         use TLab_Memory, only: inb_scal
 #ifdef USE_MPI
         use TLabMPI_VARS, only: ims_pro_i, ims_npro_i, ims_pro_j, ims_npro_j
 #endif
-        ! use THERMO_ANELASTIC, only: rbackground, ribackground
+        use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
+        use Thermo_Anelastic, only: rbackground, ribackground
 
         character(len=*), intent(in) :: inifile
 

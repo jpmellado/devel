@@ -116,7 +116,7 @@ program DNS
     call IO_Read_Fields(fname, imax, jmax, kmax, itime, inb_flow, 0, q, params(1:2))
     rtime = params(1); visc = params(2)
 
-    ! call TLab_Diagnostic(imax, jmax, kmax, q, s)  ! Initialize diagnostic thermodynamic quantities
+    call TLab_Diagnostic(imax, jmax, kmax, q, s)  ! Initialize diagnostic thermodynamic quantities
 
     ! if (part%type /= PART_TYPE_NONE) then
     !     write (fname, *) nitera_first; fname = trim(adjustl(tag_part))//trim(adjustl(fname))

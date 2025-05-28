@@ -8,12 +8,11 @@ module TLab_Sources
     use FDM, only: g
     ! use FDM, only: fdm_Int0
     use NavierStokes, only: nse_eqns, DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC
-    use Thermo_Anelastic
+    use Thermo_Anelastic, only: ribackground, Thermo_Anelastic_Buoyancy, Thermo_Anelastic_WEIGHT_ADD
     use Gravity, only: gravityProps, Gravity_Source
     ! use Rotation, only: coriolis, Rotation_Coriolis
     ! use Radiation
     use Microphysics
-    ! use Chemistry
     use SpecialForcing
     ! use LargeScaleForcing
     implicit none
@@ -40,15 +39,15 @@ contains
         do iq = 1, 3
             ! -----------------------------------------------------------------------
             if (gravityProps%active(iq)) then
-
-                if (nse_eqns == DNS_EQNS_ANELASTIC) then
-                    ! call Thermo_Anelastic_BUOYANCY(imax, jmax, kmax, s, tmp1)
-
-                else if (nse_eqns == DNS_EQNS_BOUSSINESQ) then
+                select case (nse_eqns)
+                case(DNS_EQNS_BOUSSINESQ)
                     call Gravity_Source(gravityProps, imax, jmax, kmax, s, tmp1)
 
-                end if
+                case(DNS_EQNS_ANELASTIC)
+                    call Thermo_Anelastic_Buoyancy(imax, jmax, kmax, s, tmp1)
 
+                end select
+                
                 hq(:, iq) = hq(:, iq) + gravityProps%vector(iq)*tmp1(:)
 
             end if
