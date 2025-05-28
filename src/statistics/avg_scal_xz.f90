@@ -26,7 +26,7 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     use OPR_Partial
     ! use Thermodynamics, only: thermo_param, itransport, EQNS_TRANS_POWERLAW, EQNS_TRANS_SUTHERLAND
     ! use Thermodynamics, only: imixture, MIXT_TYPE_AIRWATER, MIXT_TYPE_AIRWATER_LINEAR
-    ! use THERMO_ANELASTIC, only: Thermo_Anelastic_WEIGHT_INPLACE, Thermo_Anelastic_BUOYANCY, ribackground
+    ! use THERMO_ANELASTIC, only: Thermo_Anelastic_Weight, Thermo_Anelastic_BUOYANCY, ribackground
     ! use THERMO_AIRWATER
     use NavierStokes
     use Gravity, only: gravityProps, Gravity_Source
@@ -467,14 +467,14 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     ! if (infraredProps%active(is)) then       ! Radiation in tmp1 and dsdx
     !     call Radiation_Infrared_Z(infraredProps, imax, jmax, kmax, fdm_Int0, s, tmp1, tmp2, tmp3, dsdy, dsdx)
     !     if (nse_eqns == DNS_EQNS_ANELASTIC) then
-    !         call Thermo_Anelastic_WEIGHT_INPLACE(imax, jmax, kmax, ribackground, tmp1)
+    !         call Thermo_Anelastic_Weight(imax, jmax, kmax, ribackground, tmp1)
     !     end if
     ! end if
 
     ! if (sedimentationProps%active(is)) then      ! Transport in tmp3 and dsdz
     !     call Microphysics_Sedimentation(sedimentationProps, imax, jmax, kmax, is, g(2), s, tmp3, dsdy, dsdz)
     !     if (nse_eqns == DNS_EQNS_ANELASTIC) then
-    !         call Thermo_Anelastic_WEIGHT_INPLACE(imax, jmax, kmax, ribackground, tmp3)
+    !         call Thermo_Anelastic_Weight(imax, jmax, kmax, ribackground, tmp3)
     !     end if
     ! end if
 

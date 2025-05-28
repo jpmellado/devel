@@ -25,9 +25,9 @@ module Thermo_Anelastic
     public :: Thermo_Anelastic_T
     public :: Thermo_Anelastic_StaticL
     public :: Thermo_Anelastic_Buoyancy
+    public :: Thermo_Anelastic_Weight_InPlace
+    public :: Thermo_Anelastic_Weight_OutPlace
     public :: Thermo_Anelastic_WEIGHT_ADD
-    public :: Thermo_Anelastic_WEIGHT_INPLACE
-    public :: Thermo_Anelastic_WEIGHT_OUTPLACE
     public :: Thermo_Anelastic_WEIGHT_SUBTRACT
 
     public :: Thermo_Anelastic_Rho
@@ -387,7 +387,7 @@ contains
 
 !########################################################################
 !########################################################################
-    subroutine Thermo_Anelastic_WEIGHT_INPLACE(nx, ny, nz, weight, a)
+    subroutine Thermo_Anelastic_Weight_InPlace(nx, ny, nz, weight, a)
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: weight(nz)
         real(wp), intent(inout) :: a(nx*ny, nz)
@@ -400,11 +400,11 @@ contains
         end do
 
         return
-    end subroutine Thermo_Anelastic_WEIGHT_INPLACE
+    end subroutine Thermo_Anelastic_Weight_InPlace
 
 !########################################################################
 !########################################################################
-    subroutine Thermo_Anelastic_WEIGHT_OUTPLACE(nx, ny, nz, weight, a, b)
+    subroutine Thermo_Anelastic_Weight_OutPlace(nx, ny, nz, weight, a, b)
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: weight(nz)
         real(wp), intent(in) :: a(nx*ny, nz)
@@ -418,7 +418,7 @@ contains
         end do
 
         return
-    end subroutine Thermo_Anelastic_WEIGHT_OUTPLACE
+    end subroutine Thermo_Anelastic_Weight_OutPlace
 
 !########################################################################
 !########################################################################
@@ -716,7 +716,7 @@ contains
             call Thermo_Psat_Polynomial(nx*ny*nz, T, psat)
 
             p_ov_psat = 1.0_wp/psat
-            call Thermo_Anelastic_WEIGHT_INPLACE(nx, ny, nz, pbackground, p_ov_psat)
+            call Thermo_Anelastic_Weight_InPlace(nx, ny, nz, pbackground, p_ov_psat)
 
             qv_ov_qd = rd_ov_rv/(p_ov_psat - 1.0_wp)
 

@@ -200,12 +200,10 @@ contains
     subroutine DNS_BOUNDS_CONTROL()
         use TLab_Constants, only: efile, lfile, fmt_r
         use NavierStokes, only: nse_eqns, DNS_EQNS_COMPRESSIBLE, DNS_EQNS_ANELASTIC, DNS_EQNS_BOUSSINESQ
-        ! use TLab_WorkFlow, only: stagger_on
         use TLab_Memory, only: imax, jmax, kmax
         use TLab_Arrays
         use TLab_WorkFlow, only: TLab_Write_ASCII
-        ! use Thermo_Anelastic
-        ! use IBM_VARS, only: imode_ibm
+        use Thermo_Anelastic, only: rbackground, Thermo_Anelastic_Weight_OutPlace
 #ifdef USE_MPI
         use mpi_f08
         use TLabMPI_VARS, only: ims_offset_i, ims_offset_k
@@ -262,30 +260,14 @@ contains
             end if
 
         case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)
-            ! if (nse_eqns == DNS_EQNS_ANELASTIC) then
-            !     call Thermo_Anelastic_WEIGHT_OUTPLACE(imax, jmax, kmax, rbackground, q(1, 1), txc(1, 3))
-            !     call Thermo_Anelastic_WEIGHT_OUTPLACE(imax, jmax, kmax, rbackground, q(1, 2), txc(1, 4))
-            !     call Thermo_Anelastic_WEIGHT_OUTPLACE(imax, jmax, kmax, rbackground, q(1, 3), txc(1, 5))
-            !     if (stagger_on) then
-            !         call FI_INVARIANT_P_STAG(imax, jmax, kmax, txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 1), txc(1, 2), txc(1, 6))
-            !     else
-            !         call FI_INVARIANT_P(imax, jmax, kmax, txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 1), txc(1, 2))
-            !     end if
-            ! else
-            !     if (stagger_on) then
-            !         call FI_INVARIANT_P_STAG(imax, jmax, kmax, q(1, 1), q(1, 2), q(1, 3), txc(1, 1), txc(1, 2), txc(1, 6))
-            !     else
-            call FI_INVARIANT_P(imax, jmax, kmax, q(1, 1), q(1, 2), q(1, 3), txc(1, 1), txc(1, 2))
-            ! end if
-            ! end if
-
-            ! if (imode_ibm == 1) then
-            !     if (stagger_on) then
-            !         call IBM_BCS_FIELD_STAGGER(txc(1, 1)) ! IBM - zeros in solid on pressure mesh
-            !     else
-            !         call IBM_BCS_FIELD(txc(1, 1))         ! IBM - zeros in solid on velocity mesh
-            !     end if
-            ! end if
+            if (nse_eqns == DNS_EQNS_ANELASTIC) then
+                call Thermo_Anelastic_Weight_OutPlace(imax, jmax, kmax, rbackground, q(1, 1), txc(1, 3))
+                call Thermo_Anelastic_Weight_OutPlace(imax, jmax, kmax, rbackground, q(1, 2), txc(1, 4))
+                call Thermo_Anelastic_Weight_OutPlace(imax, jmax, kmax, rbackground, q(1, 3), txc(1, 5))
+                call FI_INVARIANT_P(imax, jmax, kmax, txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 1), txc(1, 2))
+            else
+                call FI_INVARIANT_P(imax, jmax, kmax, q(1, 1), q(1, 2), q(1, 3), txc(1, 1), txc(1, 2))
+            end if
 
 #define d_max_loc logs_data(11)
 #define d_min_loc logs_data(10)

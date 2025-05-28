@@ -161,6 +161,8 @@ contains
     ! ###################################################################
     ! ###################################################################
     subroutine Iniflow_U_Discrete(u, v, w)
+        use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
+        use Thermo_Anelastic, only: ribackground, Thermo_Anelastic_Weight_InPlace
         real(wp), dimension(imax, jmax, kmax), intent(out) :: u, v, w
 
         ! -------------------------------------------------------------------
@@ -215,6 +217,12 @@ contains
             w(:, :, k) = p_wrk2d(:, :, 3)*p_wrk1d(k, 1)
         end do
 
+        if (nse_eqns == DNS_EQNS_ANELASTIC) then
+            call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, ribackground, u)
+            call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, ribackground, v)
+            call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, ribackground, w)
+        end if
+
         if (norm_ini_u >= 0.0_wp) call FLOW_NORMALIZE(u, v, w)
 
 #undef xn
@@ -225,6 +233,8 @@ contains
 
     ! ###################################################################
     subroutine Iniflow_U_Broadband(u, v, w, ax, ay, az, tmp4, tmp5)
+        use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
+        use Thermo_Anelastic, only: rbackground, ribackground, Thermo_Anelastic_Weight_InPlace
         use FI_VECTORCALCULUS
 
         real(wp), dimension(imax, jmax, kmax), intent(OUT) :: u, v, w
@@ -316,7 +326,17 @@ contains
 
         ! ###################################################################
         if (RemoveDilatation) then              ! Remove dilatation (vort might not be a vorticity field because it was not solenoidal)
+            if (nse_eqns == DNS_EQNS_ANELASTIC) then
+                call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, rbackground, u)
+                call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, rbackground, v)
+                call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, rbackground, w)
+            end if
             call FI_SOLENOIDAL(imax, jmax, kmax, u, v, w, ax, ay, az)
+            if (nse_eqns == DNS_EQNS_ANELASTIC) then
+                call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, ribackground, u)
+                call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, ribackground, v)
+                call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, ribackground, w)
+            end if
         end if
 
         if (y%size == 1) v = 0.0_wp          ! Impose zero spanwise velocity in 2D case

@@ -145,7 +145,7 @@ contains
 !########################################################################
 !########################################################################
     subroutine Microphysics_Sedimentation(locProps, nx, ny, nz, is, g, s, source, tmp1, flux)
-        use Thermo_Anelastic
+        use Thermo_Anelastic, only: rbackground, Thermo_Anelastic_Weight_OutPlace, Thermo_Anelastic_StaticL
         use FDM, only: fdm_dt
         type(microphysics_dt), intent(in) :: locProps
         integer(wi), intent(in) :: nx, ny, nz, is
@@ -167,7 +167,7 @@ contains
         dummy = 1.0_wp + exponent
 
         if (nse_eqns == DNS_EQNS_ANELASTIC) then
-            call Thermo_Anelastic_WEIGHT_OUTPLACE(nx, ny, nz, rbackground, s(:, locProps%scalar(is)), source)
+            call Thermo_Anelastic_Weight_OutPlace(nx, ny, nz, rbackground, s(:, locProps%scalar(is)), source)
             s_active => source
         else
             s_active => s(:, locProps%scalar(is))
