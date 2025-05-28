@@ -55,9 +55,7 @@ contains
 
         ! ###################################################################
         bakfile = trim(adjustl(inifile))//'.bak'
-
-        ! ###################################################################
-        block = 'Main'
+        block = 'EvolutionEquations'
         eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
         call TLab_Write_ASCII(bakfile, '#')
@@ -67,7 +65,7 @@ contains
         call TLab_Write_ASCII(bakfile, '#TermViscous=<divergence/explicit>')
         call TLab_Write_ASCII(bakfile, '#TermDiffusion=<divergence/explicit>')
 
-        call ScanFile_Char(bakfile, inifile, 'Main', 'Equations', 'internal', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'Equations', 'internal', sRes)
         if (trim(adjustl(sRes)) == 'boussinesq') then; nse_eqns = DNS_EQNS_BOUSSINESQ
         else if (trim(adjustl(sRes)) == 'anelastic') then; nse_eqns = DNS_EQNS_ANELASTIC
         else if (trim(adjustl(sRes)) == 'compressible') then; nse_eqns = DNS_EQNS_COMPRESSIBLE
@@ -76,7 +74,7 @@ contains
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
-        call ScanFile_Char(bakfile, inifile, 'Main', 'TermAdvection', 'void', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'TermAdvection', 'convective', sRes)
         if (trim(adjustl(sRes)) == 'none') then; nse_advection = EQNS_NONE
         else if (trim(adjustl(sRes)) == 'divergence') then; nse_advection = EQNS_DIVERGENCE
         else if (trim(adjustl(sRes)) == 'skewsymmetric') then; nse_advection = EQNS_SKEWSYMMETRIC
@@ -86,44 +84,25 @@ contains
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
-        call ScanFile_Char(bakfile, inifile, 'Main', 'TermViscous', 'void', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'TermViscous', 'explicit', sRes)
         if (trim(adjustl(sRes)) == 'none') then; nse_viscous = EQNS_NONE
-            ! else if (trim(adjustl(sRes)) == 'divergence') then; nse_viscous = EQNS_DIVERGENCE
+        else if (trim(adjustl(sRes)) == 'divergence') then; nse_viscous = EQNS_DIVERGENCE
         else if (trim(adjustl(sRes)) == 'explicit') then; nse_viscous = EQNS_EXPLICIT
         else
             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TermViscous option.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
-        call ScanFile_Char(bakfile, inifile, 'Main', 'TermDiffusion', 'void', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'TermDiffusion', 'explicit', sRes)
         if (trim(adjustl(sRes)) == 'none') then; nse_diffusion = EQNS_NONE
-            ! else if (trim(adjustl(sRes)) == 'divergence') then; nse_diffusion = EQNS_DIVERGENCE
+        else if (trim(adjustl(sRes)) == 'divergence') then; nse_diffusion = EQNS_DIVERGENCE
         else if (trim(adjustl(sRes)) == 'explicit') then; nse_diffusion = EQNS_EXPLICIT
         else
             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TermDiffusion option.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
-        ! ! consistency check
-        ! select case (nse_eqns)
-        ! case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)
-        !     if (nse_viscous /= EQNS_EXPLICIT) then
-        !         call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'TermViscous undeveloped.')
-        !         call TLab_Stop(DNS_ERROR_OPTION)
-        !     end if
-        !     if (nse_diffusion /= EQNS_EXPLICIT) then
-        !         call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'TermDiffusion undeveloped.')
-        !         call TLab_Stop(DNS_ERROR_OPTION)
-        !     end if
-
-        ! end select
-
-        ! ###################################################################
-        block = 'Parameters'
-        eStr = __FILE__//'. '//trim(adjustl(block))//'. '
-
-        call TLab_Write_ASCII(bakfile, '#')
-        call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
+        ! -------------------------------------------------------------------
         call TLab_Write_ASCII(bakfile, '#Reynolds=<value>')
         call TLab_Write_ASCII(bakfile, '#Schmidt=<value>')
         call TLab_Write_ASCII(bakfile, '#Froude=<value>')
@@ -135,9 +114,9 @@ contains
         call TLab_Write_ASCII(bakfile, '#Prandtl=<value>')
 
         ! Molecular transport
-        call ScanFile_Real(bakfile, inifile, 'Parameters', 'Reynolds', '-1.0', reynolds)
+        call ScanFile_Real(bakfile, inifile, block,  'Reynolds', '-1.0', reynolds)
         if (reynolds <= 0.0) then
-            call ScanFile_Real(bakfile, inifile, 'Parameters', 'Viscosity', '-1.0', dummy)
+            call ScanFile_Real(bakfile, inifile, block,  'Viscosity', '-1.0', dummy)
             if (dummy <= 0.0) then
                 call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Molecular transport coefficients need to be positive.')
                 call TLab_Stop(DNS_ERROR_OPTION)
