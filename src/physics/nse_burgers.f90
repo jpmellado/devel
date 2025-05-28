@@ -39,30 +39,31 @@ module NSE_Burgers
     end interface
     procedure(NSE_Burgers_dt), pointer :: NSE_Burgers_X, NSE_Burgers_Y
 
-    ! type(filter_dt) :: Dealiasing(3)
-    integer :: Dealiasing(3) ! tobefixed
-    ! real(wp), allocatable, target :: wrkdea(:, :)       ! Work arrays for dealiasing (scratch space)
-
-    type :: rho_anelastic                               ! 1/rho in diffusion term in anelastic formulation
-        sequence
-        logical :: active = .false.
-        real(wp), allocatable :: values(:)
-    end type rho_anelastic
-    ! type(rho_anelastic) :: rhoinv(3)                    ! one for each direction
-
     type :: fdm_diffusion_dt
         sequence
         real(wp), allocatable :: lu(:, :, :)
+        ! type(rho_anelastic_dt) :: rho_anelastic
     end type fdm_diffusion_dt
     type(fdm_diffusion_dt) :: fdmDiffusion(3)
 
+    type :: rho_anelastic_dt                        ! 1/rho in diffusion term in anelastic formulation
+        sequence
+        logical :: active = .false.
+        real(wp), allocatable :: values(:)
+    end type rho_anelastic_dt
+    type(rho_anelastic_dt) :: rho_anelastic(3)      ! one for each direction
+
     real(wp), dimension(:), pointer :: p_vel
+
+    ! type(filter_dt) :: Dealiasing(3)
+    integer :: Dealiasing(3) ! tobefixed
+    ! real(wp), allocatable, target :: wrkdea(:, :)       ! Work arrays for dealiasing (scratch space)
 
 contains
     !########################################################################
     !########################################################################
     subroutine NSE_Burgers_Initialize(inifile)
-        ! use TLab_Memory, only: jmax, kmax !isize_field, imax,
+        use TLab_Memory, only: imax, jmax, kmax
         use TLab_Memory, only: TLab_Allocate_Real
         use TLab_Memory, only: inb_scal
 #ifdef USE_MPI
@@ -76,8 +77,8 @@ contains
         ! -----------------------------------------------------------------------
         character(len=32) bakfile
 
-        integer(wi) ig, is, ip, idummy
-        ! integer(wi) nlines, offset
+        integer(wi) ig, is, ip, j, idummy
+        integer(wi) nlines, offset
         real(wp) dummy
 
         ! ###################################################################
@@ -139,6 +140,61 @@ contains
         ! end if
 
         ! ###################################################################
+        ! Initialize anelastic density correction
+        if (nse_eqns == DNS_EQNS_ANELASTIC) then
+            call TLab_Write_ASCII(lfile, 'Initialize anelastic density correction in burgers operator.')
+
+            ! -----------------------------------------------------------------------
+            ! Density correction term in the burgers operator along X
+            rho_anelastic(1)%active = .true.
+#ifdef USE_MPI
+            if (ims_npro_i > 1) then
+                nlines = tmpi_plan_dx%nlines
+                offset = nlines*ims_pro_i
+            else
+#endif
+                nlines = jmax*kmax
+                offset = 0
+#ifdef USE_MPI
+            end if
+#endif
+            allocate (rho_anelastic(1)%values(nlines))
+            do j = 1, nlines
+                ip = mod(offset + j - 1, y%size) + 1
+                rho_anelastic(1)%values(j) = ribackground(ip)
+            end do
+
+            ! -----------------------------------------------------------------------
+            ! Density correction term in the burgers operator along Y
+            rho_anelastic(2)%active = .true.
+#ifdef USE_MPI
+            if (ims_npro_j > 1) then
+                nlines = tmpi_plan_dy%nlines
+                offset = nlines*ims_pro_j
+            else
+#endif
+                nlines = imax*kmax
+                offset = 0
+#ifdef USE_MPI
+            end if
+#endif
+            allocate (rho_anelastic(2)%values(nlines))
+            do j = 1, nlines
+                ip = mod(offset + j - 1, z%size) + 1
+                rho_anelastic(2)%values(j) = ribackground(ip)
+            end do
+
+            ! -----------------------------------------------------------------------
+            ! Density correction term in the burgers operator along Z; see FDM_CreatePlan
+            ! we implement it directly in the tridiagonal system
+            do is = 0, inb_scal ! case 0 for the velocity
+                fdmDiffusion(3)%lu(:, 2, is) = fdmDiffusion(3)%lu(:, 2, is)*ribackground(:)  ! matrix U; 1/diagonal
+                fdmDiffusion(3)%lu(:z%size - 1, 3, is) = fdmDiffusion(3)%lu(:z%size - 1, 3, is)*rbackground(2:) ! matrix U; 1. superdiagonal
+            end do
+
+        end if
+
+        ! ###################################################################
         ! Setting procedure pointers
 #ifdef USE_MPI
         if (ims_npro_i > 1) then
@@ -192,7 +248,7 @@ contains
             p_vel => tmp1
         end if
 
-        call NSE_Burgers_1D(ny*nz, g(1), fdmDiffusion(1)%lu(:, :, is), Dealiasing(1), tmp1, p_vel, wrk3d, result)
+        call NSE_Burgers_1D(ny*nz, g(1), fdmDiffusion(1)%lu(:, :, is), rho_anelastic(1), Dealiasing(1), tmp1, p_vel, wrk3d, result)
 
         ! Put arrays back in the order in which they came in
 #ifdef USE_ESSL
@@ -240,7 +296,7 @@ contains
             p_vel => tmp1
         end if
 
-        call NSE_Burgers_1D(nlines, g(1), fdmDiffusion(1)%lu(:, :, is), Dealiasing(1), tmp1, p_vel, result, wrk3d)
+        call NSE_Burgers_1D(nlines, g(1), fdmDiffusion(1)%lu(:, :, is), rho_anelastic(1), Dealiasing(1), tmp1, p_vel, result, wrk3d)
 
         ! Put arrays back in the order in which they came in
 #ifdef USE_ESSL
@@ -287,7 +343,7 @@ contains
             p_vel => tmp1
         end if
 
-        call NSE_Burgers_1D(nlines, g(2), fdmDiffusion(2)%lu(:, :, is), Dealiasing(2), tmp1, p_vel, wrk3d, result)
+        call NSE_Burgers_1D(nlines, g(2), fdmDiffusion(2)%lu(:, :, is), rho_anelastic(2), Dealiasing(2), tmp1, p_vel, wrk3d, result)
 
         ! Put arrays back in the order in which they came in
 #ifdef USE_ESSL
@@ -334,7 +390,7 @@ contains
             p_vel => tmp1
         end if
 
-        call NSE_Burgers_1D(nlines, g(2), fdmDiffusion(2)%lu(:, :, is), Dealiasing(2), tmp1, p_vel, result, wrk3d)
+        call NSE_Burgers_1D(nlines, g(2), fdmDiffusion(2)%lu(:, :, is), rho_anelastic(2), Dealiasing(2), tmp1, p_vel, result, wrk3d)
 
         ! Put arrays back in the order in which they came in
         call TLabMPI_Trp_ExecJ_Backward(result, wrk3d, tmpi_plan_dy)
@@ -365,7 +421,7 @@ contains
             return
         end if
 
-        call NSE_Burgers_1D(nx*ny, g(3), fdmDiffusion(3)%lu(:, :, is), Dealiasing(3), s, u, result, wrk3d)
+        call NSE_Burgers_1D(nx*ny, g(3), fdmDiffusion(3)%lu(:, :, is), rho_anelastic(3), Dealiasing(3), s, u, result, wrk3d)
 
         ! if (subsidenceProps%type == TYPE_SUB_CONSTANT_LOCAL) then
         !     do k = 1, nz
@@ -382,11 +438,12 @@ contains
     !#
     !# Second derivative uses LE decomposition including diffusivity coefficient
     !########################################################################
-    subroutine NSE_Burgers_1D(nlines, g, lu2d, dealiasing, s, u, result, dsdx)
+    subroutine NSE_Burgers_1D(nlines, g, lu2d, rhoi, dealiasing, s, u, result, dsdx)
         use FDM_Derivative, only: FDM_Der1_Solve, FDM_Der2_Solve
         integer(wi), intent(in) :: nlines       ! # of lines to be solved
         type(fdm_dt), intent(in) :: g
         real(wp), intent(in) :: lu2d(:, :)      ! LU decomposition including the diffusion parameter for corresponding field is
+        type(rho_anelastic_dt), intent(in) :: rhoi
         ! type(filter_dt), intent(in) :: dealiasing
         integer :: dealiasing
         real(wp), intent(in) :: s(nlines, g%size), u(nlines, g%size)  ! argument field and velocity field
@@ -394,16 +451,13 @@ contains
         real(wp), intent(inout) :: dsdx(nlines, g%size)                  ! dsdx
 
         ! -------------------------------------------------------------------
+        integer(wi) ij
         ! real(wp), pointer :: uf(:, :) !, dsf(:, :)
 
         ! ###################################################################
         ! dsdx: 1st derivative; result: 2nd derivative including diffusivity
-        ! if (ibm_burgers) then
-        !     call OPR_Partial2_IBM(is, nlines, BCS_NONE, g, lu2d, s, result, dsdx)
-        ! else
         call FDM_Der1_Solve(nlines, BCS_NONE, g%der1, g%der1%lu, s, dsdx, wrk2d)
         call FDM_Der2_Solve(nlines, g%der2, lu2d, s, result, dsdx, wrk2d)
-        ! end if
 
         ! ###################################################################
         ! Operation; diffusivity included in 2.-order derivativelu2_p
@@ -419,8 +473,16 @@ contains
         !     nullify (uf, dsf)
 
         ! else
-        result(:, :) = result(:, :) - u(:, :)*dsdx(:, :)
+        ! result(:, :) = result(:, :) - u(:, :)*dsdx(:, :)
         ! end if
+        if (rhoi%active) then
+            do ij = 1, g%size
+                result(:, ij) = result(:, ij)*rhoi%values(:) - u(:, ij)*dsdx(:, ij)
+            end do
+
+        else
+            result(:, :) = result(:, :) - u(:, :)*dsdx(:, :)
+        end if
 
         return
     end subroutine NSE_Burgers_1D

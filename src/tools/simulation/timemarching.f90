@@ -41,10 +41,10 @@ module TimeMarching
     real(wp), public :: dte                     ! time step of each substep
 
     ! -------------------------------------------------------------------
-    integer :: imode_rhs                        ! Type of implementation of the RHS of evolution equations
-    integer, parameter :: EQNS_RHS_SPLIT = 18
-    integer, parameter :: EQNS_RHS_COMBINED = 19
-    integer, parameter :: EQNS_RHS_NONBLOCKING = 20
+    ! integer :: imode_rhs                        ! Type of implementation of the RHS of evolution equations
+    ! integer, parameter :: EQNS_RHS_SPLIT = 18
+    ! integer, parameter :: EQNS_RHS_COMBINED = 19
+    ! integer, parameter :: EQNS_RHS_NONBLOCKING = 20
 
     ! type :: tmarch_dt
     !     sequence

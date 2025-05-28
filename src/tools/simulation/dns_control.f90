@@ -421,8 +421,8 @@ contains
     !# logs_data11 Maximum dilatation
     !########################################################################
     subroutine DNS_LOGS_INITIALIZE()
-        ! use Thermodynamics, only: imixture, MIXT_TYPE_AIRWATER
-        ! use NavierStokes, only: damkohler
+        use Thermo_Base, only: imixture, MIXT_TYPE_AIRWATER
+        use Microphysics
 
         integer ip
         character(len=256) line1
@@ -451,9 +451,9 @@ contains
 
         end select
 
-        ! if (imixture == MIXT_TYPE_AIRWATER .and. damkohler(3) <= 0.0_wp) then
-        !     line1 = line1(1:ip)//' '//' NewtonRs'; ip = ip + 1 + 10
-        ! end if
+        if (imixture == MIXT_TYPE_AIRWATER .and. evaporationProps%type == TYPE_EVA_EQUILIBRIUM) then
+            line1 = line1(1:ip)//' '//' NewtonRs'; ip = ip + 1 + 10
+        end if
 
         line1 = line1(1:ip - 1)//'#'
         call TLab_Write_ASCII(ofile, repeat('#', len_trim(line1)))
@@ -465,8 +465,9 @@ contains
     !########################################################################
 
     subroutine DNS_LOGS()
-        ! use Thermodynamics, only: imixture, MIXT_TYPE_AIRWATER, NEWTONRAPHSON_ERROR
-        ! use NavierStokes, only: damkohler
+        use Thermo_Base, only: imixture, MIXT_TYPE_AIRWATER
+        use Thermo_Anelastic, only: NEWTONRAPHSON_ERROR
+        use Microphysics
 #ifdef USE_MPI
         use mpi_f08
         use TLabMPI_VARS, only: ims_err
@@ -492,15 +493,15 @@ contains
 
         end select
 
-!         if (imixture == MIXT_TYPE_AIRWATER .and. damkohler(3) <= 0.0_wp) then
-! #ifdef USE_MPI
-!             call MPI_ALLREDUCE(NEWTONRAPHSON_ERROR, dummy, 1, MPI_REAL8, MPI_MAX, MPI_COMM_WORLD, ims_err)
-!             NEWTONRAPHSON_ERROR = dummy
-! #endif
-!             write (line2, 400) NEWTONRAPHSON_ERROR
-! 400         format(1(1x, E10.3))
-!             line1 = trim(line1)//trim(line2)
-!         end if
+        if (imixture == MIXT_TYPE_AIRWATER .and. evaporationProps%type == TYPE_EVA_EQUILIBRIUM) then
+#ifdef USE_MPI
+            call MPI_ALLREDUCE(NEWTONRAPHSON_ERROR, dummy, 1, MPI_REAL8, MPI_MAX, MPI_COMM_WORLD, ims_err)
+            NEWTONRAPHSON_ERROR = dummy
+#endif
+            write (line2, 400) NEWTONRAPHSON_ERROR
+400         format(1(1x, E10.3))
+            line1 = trim(line1)//trim(line2)
+        end if
 
         call TLab_Write_ASCII(ofile, trim(adjustl(line1)))
 
