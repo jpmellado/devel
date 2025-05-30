@@ -39,7 +39,7 @@ contains
         Cdv = THERMO_CP(1, 1, 1) - THERMO_CP(1, 1, 2)
         Cvl = THERMO_CP(1, 1, 3) - THERMO_CP(1, 1, 1)
         Cdl = THERMO_CP(1, 1, 3) - THERMO_CP(1, 1, 2)
-        Lv0 = -THERMO_CP(6, 1, 3)
+        Lv0 = -THERMO_CP(6, 1, 3)                       ! = L(T_0) + (Cl-Cv)T_0
         Ld = THERMO_CP(6, 1, 2)
         Lv = THERMO_CP(6, 1, 1)
         Ldv = THERMO_CP(6, 1, 1) - THERMO_CP(6, 1, 2)

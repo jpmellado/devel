@@ -486,6 +486,37 @@ contains
 
     !########################################################################
     !########################################################################
+    subroutine Thermo_Anelastic_MSE(nx, ny, nz, s, result)
+        integer(wi), intent(in) :: nx, ny, nz
+        real(wp), intent(in) :: s(nx*ny, nz, *)
+        real(wp), intent(out) :: result(nx*ny, nz)
+
+        integer(wi) k
+
+! ###################################################################
+        select case (imixture)
+        case (MIXT_TYPE_AIR)
+            do k = 1, nz
+                result(:, k) = s(:, k, 1)
+            end do
+
+        case (MIXT_TYPE_AIRVAPOR)
+            do k = 1, nz
+                result(:, k) = s(:, k, 1) + s(:, k, 2)*Lv0
+            end do
+
+        case (MIXT_TYPE_AIRWATER)
+            do k = 1, nz
+                result(:, k) = s(:, k, 1) + s(:, k, 2)*Lv0
+            end do
+
+        end select
+
+        return
+    end subroutine Thermo_Anelastic_MSE
+
+    !########################################################################
+    !########################################################################
     subroutine Thermo_Anelastic_Rho(nx, ny, nz, s, rho, T)
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz, *)
