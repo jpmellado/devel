@@ -571,7 +571,7 @@ program VISUALS
                 do is = 1, inb_scal
                     ! if (infraredProps%active(is)) then
                     !     write (str, *) is; plot_file = 'Radiation'//trim(adjustl(str))//time_str(1:MaskSize)
-                    !     call Radiation_Infrared_Y(infraredProps, imax, jmax, kmax, fdm_Int0, s, txc(:, 1), txc(:, 2), txc(:, 3), txc(:, 4))
+                    !     call Radiation_Infrared_Z(infraredProps, imax, jmax, kmax, fdm_Int0, s, txc(:, 1), txc(:, 2), txc(:, 3), txc(:, 4))
                     !     call Write_Visuals(plot_file, txc(:, 1:1))
                     ! end if
 

@@ -99,7 +99,7 @@ contains
 !             ! Radiation
 !             ! -----------------------------------------------------------------------
 !             if (infraredProps%active(is)) then
-!                 call Radiation_Infrared_Y(infraredProps, imax, jmax, kmax, fdm_Int0, s, tmp1, tmp2, tmp3, tmp4)
+!                 call Radiation_Infrared_Z(infraredProps, imax, jmax, kmax, fdm_Int0, s, tmp1, tmp2, tmp3, tmp4)
 
 !                 if (nse_eqns == DNS_EQNS_ANELASTIC) then
 !                     call Thermo_Anelastic_WEIGHT_ADD(imax, jmax, kmax, ribackground, tmp1, hs(:, is))
