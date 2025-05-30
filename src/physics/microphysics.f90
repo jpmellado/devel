@@ -2,7 +2,7 @@
 
 module Microphysics
     use TLab_Constants, only: wp, wi, pi_wp, efile, MAX_VARS, MAX_PARS
-    use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
+    use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC, settling
     use TLab_Memory, only: inb_scal_array
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
     use Thermo_Base, only: imixture, MIXT_TYPE_AIRWATER
@@ -127,17 +127,17 @@ contains
         ! Initialize
         sedimentationProps%scalar = inb_scal_array      ! By default, sedimentation is caused by last scalar
         if (imixture == MIXT_TYPE_AIRWATER) then
-            sedimentationProps%scalar = inb_scal_ql   ! sedimentation is caused by liquid
+            sedimentationProps%scalar = inb_scal_ql     ! sedimentation is caused by liquid
         end if
 
-        ! if (sedimentationProps%type /= TYPE_SED_NONE) then
-        !     if (settling > 0.0_wp) then
-        !         sedimentationProps%parameters = sedimentationProps%parameters*settling ! adding the settling number in the parameter definitions
-        !     else
-        !         call TLab_Write_ASCII(efile, __FILE__//'. Settling number must be nonzero if sedimentation is retained.')
-        !         call TLab_Stop(DNS_ERROR_OPTION)
-        !     end if
-        ! end if
+        if (sedimentationProps%type /= TYPE_SED_NONE) then
+            if (settling > 0.0_wp) then
+                sedimentationProps%parameters = sedimentationProps%parameters*settling ! adding the settling number in the parameter definitions
+            else
+                call TLab_Write_ASCII(efile, __FILE__//'. Settling number must be nonzero if sedimentation is retained.')
+                call TLab_Stop(DNS_ERROR_OPTION)
+            end if
+        end if
 
         return
     end subroutine Microphysics_Initialize

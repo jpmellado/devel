@@ -18,15 +18,13 @@ program AVERAGES
     use TLab_Grid
     use FDM, only: g, FDM_Initialize
     use NavierStokes
-    ! use Thermodynamics, only: Thermo_Initialize
-    ! use Thermodynamics, only: imixture, MIXT_TYPE_NONE, MIXT_TYPE_AIRWATER, MIXT_TYPE_AIRWATER_LINEAR
+    use Thermodynamics, only: Thermo_Initialize
     use TLab_Background, only: TLab_Initialize_Background
     use Gravity, only: Gravity_Initialize, gravityProps, Gravity_Source, bbackground
+    use SpecialForcing, only: SpecialForcing_Initialize
     ! use Rotation, only: Rotation_Initialize
-    ! use Thermo_Anelastic
-    ! use Radiation
-    ! use Microphysics
-    ! use Chemistry
+    use Microphysics, only: Microphysics_Initialize
+    use Radiation, only: Radiation_Initialize
     ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
     use OPR_Partial
     use OPR_Fourier
@@ -92,12 +90,13 @@ program AVERAGES
     call FDM_Initialize(ifile)
 
     call NavierStokes_Initialize_Parameters(ifile)
-    ! call Thermo_Initialize(ifile)
+    call Thermo_Initialize(ifile)
 
     call Gravity_Initialize(ifile)
+    call SpecialForcing_Initialize(ifile)
     ! call Rotation_Initialize(ifile)
-    ! call Radiation_Initialize(ifile)
-    ! call Microphysics_Initialize(ifile)
+    call Microphysics_Initialize(ifile)
+    call Radiation_Initialize(ifile)
     ! call LargeScaleForcing_Initialize(ifile)
 
     call TLab_Consistency_Check()
@@ -131,8 +130,8 @@ program AVERAGES
 
     if (opt_main == 1) then
         allocate (mean(kmax*MAX_AVG_TEMPORAL))
-    ! else if (opt_main == 2) then
-    !     allocate (mean(igate_size*(kmax_aux + 1)))
+        ! else if (opt_main == 2) then
+        !     allocate (mean(igate_size*(kmax_aux + 1)))
     else
         allocate (mean(opt_order*nfield*(kmax_aux + 1)))
     end if
@@ -158,7 +157,7 @@ program AVERAGES
             rtime = params(1)
         end if
 
-        ! call TLab_Diagnostic(imax, jmax, kmax, q, s)
+        call TLab_Diagnostic(imax, jmax, kmax, q, s)  ! Initialize diagnostic thermodynamic quantities
 
         ! ! -------------------------------------------------------------------
         ! ! Calculate intermittency

@@ -18,21 +18,18 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     use TLab_Time, only: itime, rtime
     use TLab_Arrays, only: wrk1d
     use TLab_Pointers_3D, only: p_wrk3d, u, v, w
-    use Thermo_Compressible, only: rho, vis
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
     use TLab_Grid, only: z
     use FDM, only: g
-    ! use FDM, only: fdm_Int0
+    use FDM, only: fdm_Int0
     use OPR_Partial
-    ! use Thermodynamics, only: thermo_param, itransport, EQNS_TRANS_POWERLAW, EQNS_TRANS_SUTHERLAND
-    ! use Thermodynamics, only: imixture, MIXT_TYPE_AIRWATER, MIXT_TYPE_AIRWATER_LINEAR
-    ! use THERMO_ANELASTIC, only: Thermo_Anelastic_Weight, Thermo_Anelastic_BUOYANCY, ribackground
-    ! use THERMO_AIRWATER
     use NavierStokes
+    use Thermo_Anelastic, only: ribackground, Thermo_Anelastic_Weight_InPlace
+    use Thermo_Compressible, only: rho, vis
     use Gravity, only: gravityProps, Gravity_Source
     ! use Rotation, only: coriolis
-    ! use Radiation
-    ! use Microphysics
+    use Microphysics
+    use Radiation
     use FI_GRADIENT_EQN
     use Averages, only: AVG_IK_V
 
@@ -55,9 +52,9 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     ! -----------------------------------------------------------------------
     integer, parameter :: MAX_VARS_GROUPS = 10
     integer k, is_loc
-    real(wp) diff, c23!, coefT, coefR, coefQ
+    real(wp) diff, c23
 
-    integer ig(MAX_VARS_GROUPS), sg(MAX_VARS_GROUPS), ng, nv, iv
+    integer ig(MAX_VARS_GROUPS), sg(MAX_VARS_GROUPS), ng, nv, iv, offset_sources
 
     character*32 name, groupname(MAX_VARS_GROUPS)
     character*250 line1, varname(MAX_VARS_GROUPS)
@@ -96,26 +93,20 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
 
     groupname(ng) = 'Mean'
     varname(ng) = 'rS fS rS_z fS_z rQ fQ'
-    ! if (infraredProps%active(is)) then
-    !     if (imixture == MIXT_TYPE_AIRWATER_LINEAR) then
-    !         varname(ng) = trim(adjustl(varname(ng)))//' rQrad rQradC'
-    !     else
-    !         varname(ng) = trim(adjustl(varname(ng)))//' rQrad rFrad'
-    !     end if
-    !     sg(ng) = sg(ng) + 2
-    ! end if
-    ! if (imixture == MIXT_TYPE_AIRWATER_LINEAR .or. imixture == MIXT_TYPE_AIRWATER) then
-    !     varname(ng) = trim(adjustl(varname(ng)))//' rQeva'
-    !     sg(ng) = sg(ng) + 1
-    ! end if
-    ! if (sedimentationProps%active(is)) then
-    !     if (imixture == MIXT_TYPE_AIRWATER_LINEAR) then
-    !         varname(ng) = trim(adjustl(varname(ng)))//' rQtra rQtraC'
-    !     else
-    !         varname(ng) = trim(adjustl(varname(ng)))//' rQtra rFtra'
-    !     end if
-    !     sg(ng) = sg(ng) + 2
-    ! end if
+
+    offset_sources = sg(ng)
+    if (infraredProps%active(is)) then
+        varname(ng) = trim(adjustl(varname(ng)))//' rQrad rFrad rFradUp'
+        sg(ng) = sg(ng) + 3
+    end if
+    if (sedimentationProps%active(is)) then
+        varname(ng) = trim(adjustl(varname(ng)))//' rQsed rFsed'
+        sg(ng) = sg(ng) + 2
+    end if
+    if (evaporationProps%active(is)) then
+        varname(ng) = trim(adjustl(varname(ng)))//' rQeva'
+        sg(ng) = sg(ng) + 1
+    end if
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
@@ -464,123 +455,54 @@ subroutine AVG_SCAL_XZ(is, q, s, s_local, dsdx, dsdy, dsdz, tmp1, tmp2, tmp3, me
     ! #######################################################################
     ! Source terms
     ! #######################################################################
-    ! if (infraredProps%active(is)) then       ! Radiation in tmp1 and dsdx
-    !     call Radiation_Infrared_Z(infraredProps, imax, jmax, kmax, fdm_Int0, s, tmp1, tmp2, tmp3, dsdy, dsdx)
-    !     if (nse_eqns == DNS_EQNS_ANELASTIC) then
-    !         call Thermo_Anelastic_Weight(imax, jmax, kmax, ribackground, tmp1)
-    !     end if
-    ! end if
+    iv = ig(1) + offset_sources - 1
+    tmp1 = 0.0_wp                               ! Accumulating sources in tmp1
+    if (infraredProps%active(is)) then          ! Radiation source in tmp1
+        call Radiation_Infrared_Z(infraredProps, imax, jmax, kmax, fdm_Int0, s, tmp1, tmp2, tmp3, dsdx, dsdy, dsdz)
+        if (nse_eqns == DNS_EQNS_ANELASTIC) then
+            call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, ribackground, tmp1)
+        end if
+        iv = iv + 1; call AVG_IK_V(imax, jmax, kmax, tmp1, mean2d(:, iv), wrk1d) ! source
+        dsdy = dsdz - dsdy
+        iv = iv + 1; call AVG_IK_V(imax, jmax, kmax, dsdy, mean2d(:, iv), wrk1d) ! net flux upwards
+        iv = iv + 1; call AVG_IK_V(imax, jmax, kmax, dsdz, mean2d(:, iv), wrk1d) ! flux up only
+    end if
 
-    ! if (sedimentationProps%active(is)) then      ! Transport in tmp3 and dsdz
-    !     call Microphysics_Sedimentation(sedimentationProps, imax, jmax, kmax, is, g(2), s, tmp3, dsdy, dsdz)
-    !     if (nse_eqns == DNS_EQNS_ANELASTIC) then
-    !         call Thermo_Anelastic_Weight(imax, jmax, kmax, ribackground, tmp3)
-    !     end if
-    ! end if
+    if (sedimentationProps%active(is)) then     ! Sedimentation in tmp2 and dsdz
+        call Microphysics_Sedimentation(sedimentationProps, imax, jmax, kmax, is, g(3), s, tmp2, tmp3, dsdx)
+        if (nse_eqns == DNS_EQNS_ANELASTIC) then
+            call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, ribackground, tmp2)
+        end if
+        iv = iv + 1; call AVG_IK_V(imax, jmax, kmax, tmp2, mean2d(:, iv), wrk1d) ! source
+        iv = iv + 1; call AVG_IK_V(imax, jmax, kmax, dsdx, mean2d(:, iv), wrk1d) ! net flux upwards
+        tmp1 = tmp1 + tmp2
+    end if
 
-    ! if (is > inb_scal) then     ! Diagnostic variables; I overwrite tmp1 and dsdx and recalculate them.
-    !     if (imixture == MIXT_TYPE_AIRWATER_LINEAR) then
-    !         coefQ = 1.0_wp                        ! Coefficient in the evaporation term
-    !         coefR = 0.0_wp                        ! Coefficient in the radiation term
-    !         coefT = 0.0_wp                        ! Coefficient in the transport term
-    !         if (is == inb_scal_array + 1) then ! Default values are for liquid; defining them for buoyancy
-    !             coefQ = buoyancy%parameters(inb_scal_array)/froude
-    !             coefR = buoyancy%parameters(inb_scal)/froude
-    !             if (sedimentationProps%active(is)) then
-    !                 do is_loc = 1, inb_scal
-    !                     coefT = coefT + sedimentationProps%parameters(is_loc)/settling*buoyancy%parameters(is_loc)/froude
-    !                 end do
-    !             end if
-    !         end if
+    if (evaporationProps%active(is)) then       ! Evaporation in tmp3
+        ! To be done
+        tmp1 = tmp1 + tmp3
+    end if
 
-    !         call THERMO_AIRWATER_LINEAR_SOURCE(imax*jmax*kmax, s, dsdx, dsdy, dsdz) ! calculate xi in dsdx
-    !         call FI_GRADIENT(imax, jmax, kmax, dsdx, tmp2, tmp1)
+    ! Total sources
+    call AVG_IK_V(imax, jmax, kmax, tmp1, rQ(1), wrk1d)
+    if (nse_eqns == DNS_EQNS_COMPRESSIBLE) tmp1 = tmp1*rho
+    call AVG_IK_V(imax, jmax, kmax, tmp1, fQ(1), wrk1d)
+    fQ(:) = fQ(:)/rR(:)
 
-    !         dummy = -diff*coefQ
-    !         tmp2 = dsdz*tmp2*dummy         ! evaporation source
-
-    !         if (sedimentationProps%active(is) .or. infraredProps%active(is)) then ! preparing correction terms into dsdz
-    !             call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), dsdx, tmp1)
-    !             dsdz = dsdz*tmp1
-    !         end if
-
-    !         if (infraredProps%active(is)) then ! radiation source; needs dsdy
-    !             ! only valid for IR_Bulk1D_Liquid, where tmp2, tmp3, dsdy are not used
-    !             call Radiation_Infrared_Z(infraredProps, imax, jmax, kmax, fdm_Int0, s, tmp1, tmp2, tmp3, dsdy, dsdx)
-    !             dummy = thermo_param(2)*coefQ
-    !             tmp1 = tmp1*(coefR + dsdy*dummy)
-    !             dsdx = dsdx*dsdz*dummy
-    !         else
-    !             tmp1 = 0.0_wp; dsdx = 0.0_wp
-    !         end if
-
-    !         if (sedimentationProps%active(is)) then ! transport source; needs dsdy
-    !             dummy = coefQ
-    !             tmp3 = tmp3*(coefT + dsdy*dummy)
-    !             ! Correction term needs dsdz; the following call assumes incompressible mode
-    !             call Microphysics_Sedimentation(sedimentationProps, imax, jmax, kmax, is, g(2), s, dsdy, dsdy, dsdy)
-    !             dsdz = dsdy*dsdz*dummy
-    !         else
-    !             tmp3 = 0.0_wp; dsdz = 0.0_wp
-    !         end if
-
-    !     else
-    !         if (buoyancy%type /= EQNS_EXPLICIT) then
-    !             call FI_GRADIENT(imax, jmax, kmax, s, dsdx, dsdy)
-    !             call Gravity_Buoyancy_Source(buoyancy, imax, jmax, kmax, s, dsdx, tmp1) ! dsdx contains gradient
-    !             tmp1 = tmp1*diff/froude
-    !         end if
-
-    !     end if
-
-    ! end if
-
-    ! ! -----------------------------------------------------------------------
-    ! ! Calculating averages
-    ! k = ig(1) + im
-    ! if (infraredProps%active(is)) then
-    !     k = k + 1; call AVG_IK_V(imax, jmax, kmax, tmp1, mean2d(1, k), wrk1d)
-    !     k = k + 1; call AVG_IK_V(imax, jmax, kmax, dsdx, mean2d(1, k), wrk1d) ! correction term or flux
-    ! end if
-    ! if (imixture == MIXT_TYPE_AIRWATER_LINEAR .or. imixture == MIXT_TYPE_AIRWATER) then           ! evaporation
-    !     k = k + 1; call AVG_IK_V(imax, jmax, kmax, tmp2, mean2d(1, k), wrk1d)
-    ! end if
-    ! if (sedimentationProps%active(is)) then
-    !     k = k + 1; call AVG_IK_V(imax, jmax, kmax, tmp3, mean2d(1, k), wrk1d)
-    !     k = k + 1; call AVG_IK_V(imax, jmax, kmax, dsdz, mean2d(1, k), wrk1d) ! correction term or flux
-    ! end if
-
-    ! p_wrk3d = 0.0_wp ! total
-    ! if (infraredProps%active(is)) then
-    !     p_wrk3d = p_wrk3d + tmp1
-    ! end if
-    ! if (is > inb_scal) then
-    !     if (imixture == MIXT_TYPE_AIRWATER_LINEAR .or. imixture == MIXT_TYPE_AIRWATER) then
-    !         p_wrk3d = p_wrk3d + tmp2
-    !     end if
-    ! end if
-    ! if (sedimentationProps%active(is)) then
-    !     p_wrk3d = p_wrk3d + tmp3
-    ! end if
-    ! call AVG_IK_V(imax, jmax, kmax, p_wrk3d, rQ(1), wrk1d)
-    ! if (nse_eqns == DNS_EQNS_COMPRESSIBLE) p_wrk3d = p_wrk3d*rho
-    ! call AVG_IK_V(imax, jmax, kmax, p_wrk3d, fQ(1), wrk1d)
-    ! fQ(:) = fQ(:)/rR(:)
-
-    ! do k = 1, kmax
-    !     tmp1(:, :, k) = (s_local(:, :, k) - fS(k))*p_wrk3d(:, :, k)
-    !     dsdx(:, :, k) = (u(:, :, k) - fU(k))*p_wrk3d(:, :, k)
-    !     dsdy(:, :, k) = (v(:, :, k) - fV(k))*p_wrk3d(:, :, k)
-    !     dsdz(:, :, k) = (w(:, :, k) - fW(k))*p_wrk3d(:, :, k)
-    ! end do
-    ! call AVG_IK_V(imax, jmax, kmax, tmp1, Qss(1), wrk1d)
-    ! call AVG_IK_V(imax, jmax, kmax, dsdx, Qsu(1), wrk1d)
-    ! call AVG_IK_V(imax, jmax, kmax, dsdy, Qsv(1), wrk1d)
-    ! call AVG_IK_V(imax, jmax, kmax, dsdz, Qsw(1), wrk1d)
-    ! Qss(:) = Qss(:)*2.0_wp/rR(:)
-    ! Qsu(:) = Qsu(:)/rR(:)
-    ! Qsv(:) = Qsv(:)/rR(:)
-    ! Qsw(:) = Qsw(:)/rR(:)
+    do k = 1, kmax
+        tmp1(:, :, k) = (s_local(:, :, k) - fS(k))*tmp1(:, :, k)
+        dsdx(:, :, k) = (u(:, :, k) - fU(k))*tmp1(:, :, k)
+        dsdy(:, :, k) = (v(:, :, k) - fV(k))*tmp1(:, :, k)
+        dsdz(:, :, k) = (w(:, :, k) - fW(k))*tmp1(:, :, k)
+    end do
+    call AVG_IK_V(imax, jmax, kmax, tmp1, Qss(1), wrk1d)
+    call AVG_IK_V(imax, jmax, kmax, dsdx, Qsu(1), wrk1d)
+    call AVG_IK_V(imax, jmax, kmax, dsdy, Qsv(1), wrk1d)
+    call AVG_IK_V(imax, jmax, kmax, dsdz, Qsw(1), wrk1d)
+    Qss(:) = Qss(:)*2.0_wp/rR(:)
+    Qsu(:) = Qsu(:)/rR(:)
+    Qsv(:) = Qsv(:)/rR(:)
+    Qsw(:) = Qsw(:)/rR(:)
 
     ! #######################################################################
     ! Derivatives

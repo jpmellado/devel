@@ -4,16 +4,15 @@
 module TLab_Sources
     use TLab_Constants, only: wp, wi, small_wp
     use TLab_Memory, only: imax, jmax, kmax, isize_field, inb_scal, inb_scal_array
-    use TLab_OpenMP
     use FDM, only: g
-    ! use FDM, only: fdm_Int0
+    use FDM, only: fdm_Int0
     use NavierStokes, only: nse_eqns, DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC
     use Thermo_Anelastic, only: ribackground, Thermo_Anelastic_Buoyancy, Thermo_Anelastic_WEIGHT_ADD
     use Gravity, only: gravityProps, Gravity_Source
     ! use Rotation, only: coriolis, Rotation_Coriolis
-    ! use Radiation
-    use Microphysics
     use SpecialForcing
+    use Microphysics
+    use Radiation
     ! use LargeScaleForcing
     implicit none
     private
@@ -93,32 +92,23 @@ contains
         integer is
 
         ! #######################################################################
-        do is = 1, inb_scal ! Start loop over the N scalars
+        do is = 1, inb_scal
 
-!             ! -----------------------------------------------------------------------
-!             ! Radiation
-!             ! -----------------------------------------------------------------------
-!             if (infraredProps%active(is)) then
-!                 call Radiation_Infrared_Z(infraredProps, imax, jmax, kmax, fdm_Int0, s, tmp1, tmp2, tmp3, tmp4)
+            ! -----------------------------------------------------------------------
+            ! Radiation
+            if (infraredProps%active(is)) then
+                call Radiation_Infrared_Z(infraredProps, imax, jmax, kmax, fdm_Int0, s, tmp1, tmp2, tmp3, tmp4)
 
-!                 if (nse_eqns == DNS_EQNS_ANELASTIC) then
-!                     call Thermo_Anelastic_WEIGHT_ADD(imax, jmax, kmax, ribackground, tmp1, hs(:, is))
-!                 else
-! !$omp parallel default( shared ) &
-! !$omp private( ij, srt,end,siz )
-!                     call TLab_OMP_PARTITION(isize_field, srt, end, siz)
+                if (nse_eqns == DNS_EQNS_ANELASTIC) then
+                    call Thermo_Anelastic_WEIGHT_ADD(imax, jmax, kmax, ribackground, tmp1, hs(:, is))
+                else
+                    hs(:, is) = hs(:, is) + tmp1(:)
+                end if
 
-!                     do ij = srt, end
-!                         hs(ij, is) = hs(ij, is) + tmp1(ij)
-!                     end do
-! !$omp end parallel
-!                 end if
-
-!             end if
+            end if
 
             ! -----------------------------------------------------------------------
             ! Microphysics
-            ! -----------------------------------------------------------------------
             if (sedimentationProps%active(is)) then
                 call Microphysics_Sedimentation(sedimentationProps, imax, jmax, kmax, is, g(3), s, tmp1, tmp2)
 
@@ -129,23 +119,6 @@ contains
                 end if
 
             end if
-
-!             ! -----------------------------------------------------------------------
-!             ! Chemistry
-!             ! -----------------------------------------------------------------------
-!             if (chemistryProps%active(is)) then
-!                 call Chemistry_Source(chemistryProps, imax, jmax, kmax, is, s, tmp1)
-
-! !$omp parallel default( shared ) &
-! !$omp private( ij, srt,end,siz )
-!                 call TLab_OMP_PARTITION(isize_field, srt, end, siz)
-
-!                 do ij = srt, end
-!                     hs(ij, is) = hs(ij, is) + tmp1(ij)
-!                 end do
-! !$omp end parallel
-
-!             end if
 
 !             ! -----------------------------------------------------------------------
 !             ! Subsidence

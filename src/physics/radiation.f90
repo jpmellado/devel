@@ -3,15 +3,15 @@
 module Radiation
     use TLab_Constants, only: wp, wi, pi_wp, efile, MAX_PARS, MAX_VARS
     use TLab_Constants, only: BCS_MAX, BCS_MIN
-    use TLab_Grid, only: z
-    use FDM_Integral, only: FDM_Int1_Solve, fdm_integral_dt
-    use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
-    ! use TLab_Memory, only: inb_scal_array
     use TLab_Arrays, only: wrk2d, wrk3d
     use TLab_WorkFlow, only: TLab_Write_ASCII, TLab_Stop
     use TLab_Memory, only: TLab_Allocate_Real
+    use TLab_Grid, only: z
+    use FDM_Integral, only: FDM_Int1_Solve, fdm_integral_dt
+    use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC
     use Thermo_Base, only: imixture, MIXT_TYPE_AIRWATER
-    use Thermo_AirWater, only: inb_scal_ql, inb_scal_T
+    use Thermo_AirWater, only: inb_scal_e, inb_scal_ql, inb_scal_T
+    use Thermo_Anelastic, only: rbackground, Thermo_Anelastic_Weight_InPlace
     use OPR_ODES
     use Integration
     implicit none
@@ -20,7 +20,7 @@ module Radiation
     type, public :: radterm_dt
         sequence
         integer type
-        integer scalar(MAX_VARS)                ! fields defining this term
+        ! integer scalar(MAX_VARS)                ! fields defining this term
         logical active(MAX_VARS), lpadding(3)   ! fields affected by this term
         real(wp) parameters(MAX_PARS)
         real(wp) auxiliar(MAX_PARS)
@@ -56,7 +56,7 @@ module Radiation
 
     real(wp), parameter :: sigma = 5.67037442e-8_wp     ! Stefan-Boltzmann constant, W /m^2 /K^4
     real(wp) :: mu                                      ! mean direction parameter
-    ! to be moved into module
+    ! to be moved into derived type
     real(wp) :: epsilon                                 ! surface emissivity at ymin
     integer :: ncomps                                   ! number of radiatively active components
     integer :: nbands                                   ! number of spectral bands
@@ -69,7 +69,7 @@ module Radiation
     real(wp), allocatable, target :: tmp_rad(:, :)      ! 3D temporary arrays for radiation routine
 
     real(wp), pointer :: p_tau(:, :) => null()
-    real(wp), pointer :: p_source(:) => null(), p_flux_up(:) => null(), p_flux_down(:) => null()
+    real(wp), pointer :: p_source(:) => null()
 
 contains
     !########################################################################
@@ -112,9 +112,6 @@ contains
 
         infraredProps%active = .false.
         if (infraredProps%type /= TYPE_RAD_NONE) then
-            call ScanFile_Int(bakfile, inifile, block, 'Scalar', '1', idummy)         ! in which evolution equation radiation acts
-            infraredProps%active(idummy) = .true.
-
             infraredProps%auxiliar(:) = 0.0_wp
             call ScanFile_Char(bakfile, inifile, block, 'BoundaryConditions', '1.0, 1.0', sRes)
             idummy = MAX_PARS
@@ -162,14 +159,10 @@ contains
             end do
 
             ! -------------------------------------------------------------------
-            ! infraredProps%scalar = inb_scal_array                       ! By default, radiation is caused by last scalar
-
             select case (imixture)
             case (MIXT_TYPE_AIRWATER)
-                infraredProps%active(1) = .true.           ! energy
-                ! infraredProps%active(inb_scal_h) = .true.           ! energy
-                infraredProps%active(inb_scal_ql) = .true.           ! liquid
-                infraredProps%active(inb_scal_T) = .true.            ! liquid
+                infraredProps%active(inb_scal_e) = .true.               ! energy
+
                 ! first radiatively active scalar is liquid
                 ! second radiatively active scalar is vapor
                 ! third radiatively active scalar is a homogeneous field, e.g., CO2
@@ -195,11 +188,9 @@ contains
         allocate (bcs_ht(imax*jmax), bcs_hb(imax*jmax))!, t_ht(imax*jmax))
         select case (infraredProps%type)
         case (TYPE_IR_BAND)
-            inb_tmp_rad = 3                                         ! Additional memory space
+            inb_tmp_rad = 1                                         ! Additional memory space
             call TLab_Allocate_Real(__FILE__, tmp_rad, [isize_field, inb_tmp_rad], 'tmp-rad')
             p_source(1:isize_field) => tmp_rad(1:isize_field, 1)
-            p_flux_up(1:isize_field) => tmp_rad(1:isize_field, 2)
-            p_flux_down(1:isize_field) => tmp_rad(1:isize_field, 3)
         end select
 
         return
@@ -207,36 +198,35 @@ contains
 
     !########################################################################
     !########################################################################
-    subroutine Radiation_Infrared_Z(localProps, nx, ny, nz, fdmi, s, source, b, flux_down, flux_up, flux)
-        use Thermo_Anelastic
+    subroutine Radiation_Infrared_Z(localProps, nx, ny, nz, fdmi, s, source, b, tmp1, tmp2, flux_down, flux_up)
         type(radterm_dt), intent(in) :: localProps
         integer(wi), intent(in) :: nx, ny, nz
         type(fdm_integral_dt), intent(in) :: fdmi(2)
         real(wp), intent(in) :: s(nx*ny*nz, *)
         real(wp), intent(out) :: source(nx*ny*nz)           ! also used for absorption coefficient
         real(wp), intent(inout) :: b(nx*ny*nz)              ! emission function, returns flux up
-        real(wp), intent(inout) :: flux_down(nx*ny*nz), flux_up(nx*ny*nz)
-        real(wp), intent(out), optional :: flux(nx*ny*nz)   ! net flux upwards
-
-        ! target :: source, b, tmp1, flux
+        real(wp), intent(inout) :: tmp1(nx*ny*nz), tmp2(nx*ny*nz)
+        real(wp), intent(inout), optional :: flux_down(nx*ny*nz), flux_up(nx*ny*nz)
 
         ! -----------------------------------------------------------------------
         integer iband
 
         !########################################################################
-        p_tau(1:nx*ny, 1:nz) => wrk3d(1:nx*ny*ny)                 ! set pointer to optical depth and transmission functions used in routines below
+        p_tau(1:nx*ny, 1:nz) => wrk3d(1:nx*ny*nz)               ! pointer to optical depth and transmission functions used in routines below
 
         ! -----------------------------------------------------------------------
         select case (localProps%type)
         case (TYPE_IR_GRAY_LIQUID)
-            source(1:nx*ny*nz) = kappa(1, 1)*s(:, inb_scal_ql)  ! absorption coefficient in array source to save memory
+            ! absorption coefficient
+            source(1:nx*ny*nz) = kappa(1, 1)*s(:, inb_scal_ql)
             if (nse_eqns == DNS_EQNS_ANELASTIC) then
                 call Thermo_Anelastic_Weight_InPlace(nx, ny, nz, rbackground, source)
             end if
 
-            bcs_ht = localProps%auxiliar(1)                     ! downward flux at domain top
-            bcs_hb = localProps%auxiliar(2)                     ! upward flux at domain bottom
-            if (present(flux)) then                             ! solve radiative transfer equation along y
+            ! solve radiative transfer equation
+            bcs_ht = localProps%auxiliar(1)                         ! downward flux at domain top
+            bcs_hb = localProps%auxiliar(2)                         ! upward flux at domain bottom
+            if (present(flux_up)) then
                 call IR_RTE1_OnlyLiquid(localProps, nx*ny, nz, fdmi, source, flux_down, flux_up)
             else
                 call IR_RTE1_OnlyLiquid(localProps, nx*ny, nz, fdmi, source)
@@ -244,52 +234,61 @@ contains
 
             ! -----------------------------------------------------------------------
         case (TYPE_IR_GRAY)
-            b(1:nx*ny*nz) = sigma*s(1:nx*ny*nz, inb_scal_T)**4.0_wp             ! emission function, Stefan-Boltzmann law
+            ! emission function, Stefan-Boltzmann law
+            b(1:nx*ny*nz) = sigma*s(1:nx*ny*nz, inb_scal_T)**4.0_wp
 
-            source(1:nx*ny*nz) = kappa(1, 1)*s(:, inb_scal_ql) + &              ! absorption coefficient
+            ! absorption coefficient
+            source(1:nx*ny*nz) = kappa(1, 1)*s(:, inb_scal_ql) + &
                                  kappa(2, 1)*(s(:, 2) - s(:, inb_scal_ql)) + &
                                  kappa(3, 1)
             if (nse_eqns == DNS_EQNS_ANELASTIC) then
                 call Thermo_Anelastic_Weight_InPlace(nx, ny, nz, rbackground, source)
             end if
 
+            ! solve radiative transfer equation
             bcs_ht = localProps%auxiliar(1)                     ! downward flux at domain top
-
-            ! solve radiative transfer equation along z
-            call IR_RTE1_Global(localProps, nx*ny, nz, fdmi, source, b, flux_down, flux_up)
-            ! call IR_RTE1_Local(localProps, nx*ny, nz, fdmi, p_source, p_b, p_flux_down, tmp2, p_flux_up)
-            ! call IR_RTE1_Incremental(localProps, nx*ny, nz, fdmi, p_source, p_b, p_flux_down, p_flux_up)
+            if (present(flux_up)) then
+                call IR_RTE1_Global(localProps, nx*ny, nz, fdmi, source, b, flux_down, flux_up)
+            else
+                call IR_RTE1_Global(localProps, nx*ny, nz, fdmi, source, b, tmp1, tmp2)
+            end if
+            ! call IR_RTE1_Local(localProps, nx*ny, nz, fdmi, source, b, flux_down, tmp2, flux_up)
+            ! call IR_RTE1_Incremental(localProps, nx*ny, nz, fdmi, source, b, flux_down, flux_up)
 
             ! -----------------------------------------------------------------------
         case (TYPE_IR_BAND)
-            ! t_ht(1:nx*ny) = s(isize_field - nx*ny + 1:isize_field, kmax, inb_scal_T)           ! save T at the top boundary
+            ! initialize accumulation of conttributions from each band
+            source = 0.0_wp
+            if (present(flux_up)) then
+                flux_down = 0.0_wp
+                flux_up = 0.0_wp
+            end if
 
-            p_flux_down = 0.0_wp                                        ! initialize for accumulation of conttributions from each band
-            if (present(flux)) p_flux_up = 0.0_wp
-            p_source = 0.0_wp
             do iband = 1, nbands
-                b = sigma*s(:, inb_scal_T)**4.0_wp* &                   ! emission function, Stefan-Boltzmann law
+                ! emission function, Stefan-Boltzmann law
+                b = sigma*s(:, inb_scal_T)**4.0_wp* &
                     (beta(1, iband) + s(:, inb_scal_T)*(beta(2, iband) + s(:, inb_scal_T)*beta(3, iband)))
 
-                p_source(1:nx*ny*nz) = kappa(1, iband)*s(:, inb_scal_ql) + &               ! absorption coefficient
+                ! absorption coefficient
+                p_source(1:nx*ny*nz) = kappa(1, iband)*s(:, inb_scal_ql) + &
                                        kappa(2, iband)*(s(:, 2) - s(:, inb_scal_ql)) + &
-                                       kappa(3, iband) ! calculate absorption coefficient into tmp_rad3
+                                       kappa(3, iband)
                 if (nse_eqns == DNS_EQNS_ANELASTIC) then
-                    call Thermo_Anelastic_Weight_InPlace(nx, ny, nz, rbackground, p_source) ! multiply by density
+                    call Thermo_Anelastic_Weight_InPlace(nx, ny, nz, rbackground, p_source)
                 end if
 
-                bcs_ht(1:nx*ny) = localProps%auxiliar(iband)
+                ! solve radiative transfer equation
+                bcs_ht(1:nx*ny) = localProps%auxiliar(iband)! downward flux at domain top
+                call IR_RTE1_Global(localProps, nx*ny, nz, fdmi, p_source, b, tmp1, tmp2)
+                ! call IR_RTE1_Local()
+                ! call IR_RTE1_Incremental()
 
-                ! solve radiative transfer equation along z
-                call IR_RTE1_Global(localProps, nx*ny, nz, fdmi, p_source, b, p_flux_down, p_flux_up)
-                ! call IR_RTE1_Local(localProps, nx*ny, nz, fdmi, tmp_rad(:, 3), tmp_rad(:, 5), tmp_rad(:, 4), tmp2, p_b)
-                ! call IR_RTE1_Incremental(localProps, nx*ny, nz, fdmi, tmp_rad(:, 3), tmp_rad(:, 5), tmp_rad(:, 4), p_b)
-                if (present(flux)) then
-                    flux_down = flux_down + p_flux_down
-                    flux_up = flux_up + p_flux_up
-                end if
-
+                ! accumulate
                 source = source + p_source
+                if (present(flux_up)) then
+                    flux_down = flux_down + tmp1
+                    flux_up = flux_up + tmp2
+                end if
 
             end do
 

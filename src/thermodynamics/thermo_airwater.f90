@@ -17,7 +17,7 @@ module Thermo_AirWater
     public :: Thermo_AirWater_Initialize
     real(wp), public :: Rv, Rd, Rdv, Cd, Cl, Cdv, Cvl, Cdl, Lv0, Ld, Lv, Ldv, Lvl, Ldl, rd_ov_rv
 
-    integer, public :: inb_scal_ql, inb_scal_T
+    integer, public :: inb_scal_e, inb_scal_ql, inb_scal_T
 
     ! Reference to calculate potential temperatures
     real(wp), public :: PREF_1000 = 1e5_wp          ! 1000 hPa

@@ -27,8 +27,8 @@ contains
         use TLab_Memory, only: inb_scal, inb_scal_array
         use TLab_Grid, only: z
         use FDM, only: fdm_Int0
-        ! use NavierStokes, only: froude, schmidt
-        use Thermodynamics
+        use NavierStokes, only: schmidt
+        use Thermodynamics, only: imode_thermo, THERMO_TYPE_ANELASTIC
         use Thermo_Anelastic
         use Profiles, only: Profiles_ReadBlock
         use Profiles, only: PROFILE_NONE, PROFILE_EKMAN_U, PROFILE_EKMAN_U_P, PROFILE_EKMAN_V
@@ -38,7 +38,7 @@ contains
 
         ! -----------------------------------------------------------------------
         character(len=32) bakfile, block
-        character(len=512) sRes
+        ! character(len=512) sRes
         character(len=64) lstr
 
         ! real(wp) ploc(2), rloc(2), Tloc(2), sloc(2, 1:MAX_VARS)
@@ -171,33 +171,12 @@ contains
 
         end if
 
-        ! ! -----------------------------------------------------------------------
-        ! ! Add diagnostic fields to reference profile data, if any
-        ! do is = inb_scal + 1, inb_scal_array ! Add diagnostic fields, if any
-        !     sbg(is) = sbg(1)
-        !     schmidt(is) = schmidt(1)
-        ! end do
-
-        ! ! Buoyancy as next scalar, current value of counter is=inb_scal_array+1
-        ! if (buoyancy%type /= EQNS_BOD_NONE) then
-        !     sbg(is) = sbg(1)
-        !     sbg(is)%mean = (bbackground(1) + bbackground(z%size))/froude
-        !     sbg(is)%delta = abs(bbackground(1) - bbackground(z%size))/froude
-        !     schmidt(is) = schmidt(1)
-        ! end if
-
-        ! ! theta_l as next scalar
-        ! if (imode_thermo == THERMO_TYPE_ANELASTIC) then
-        !     if (imixture == MIXT_TYPE_AIRWATER) then
-        !         is = is + 1
-        !         call Thermo_Anelastic_THETA_L(1, z%size, 1, sbackground, p_wrk1d(:, 1), p_wrk1d(:, 2))
-        !         ! call Thermo_Anelastic_THETA_E(1, z%size, 1, sbackground, p_wrk1d(:, 1), p_wrk1d(:, 2))
-        !         sbg(is) = sbg(1)
-        !         sbg(is)%mean = (p_wrk1d(1, 1) + p_wrk1d(z%size, 1))*0.5_wp
-        !         sbg(is)%delta = abs(p_wrk1d(1, 1) - p_wrk1d(z%size, 1))
-        !         schmidt(is) = schmidt(1)
-        !     end if
-        ! end if
+        ! -----------------------------------------------------------------------
+        ! Add diagnostic fields to reference profile data, if any
+        do is = inb_scal + 1, inb_scal_array ! Add diagnostic fields, if any
+            sbg(is) = sbg(1)
+            schmidt(is) = schmidt(1)
+        end do
 
         return
     end subroutine TLab_Initialize_Background

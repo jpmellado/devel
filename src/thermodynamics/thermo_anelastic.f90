@@ -14,7 +14,7 @@ module Thermo_Anelastic
     use Thermo_Base, only: gamma0
     use Thermo_Base, only: nondimensional
     use Thermo_AirWater, only: Rv, Rd, Rdv, Cd, Cdv, Lv0, Ld, Ldv, Cvl, Cdl, Cl, rd_ov_rv, PREF_1000
-    use Thermo_AirWater, only: inb_scal_ql, inb_scal_T
+    use Thermo_AirWater, only: inb_scal_e, inb_scal_ql, inb_scal_T
     implicit none
     private
 
@@ -93,8 +93,9 @@ contains
 
         inb_scal_array = inb_scal_array + 1         ! Space for T as diagnostic
         if (imixture == MIXT_TYPE_AIRWATER) then
-            inb_scal_ql = 3
-            inb_scal_T = 4
+            inb_scal_e = 1          ! scalar index for the energy (liquid water static energy)
+            inb_scal_ql = 3         ! scalar index for the liquid (liquid water specific humidity)
+            inb_scal_T = 4          ! scalar index for the temperature
         end if
 
         return
