@@ -87,6 +87,16 @@ end module TLab_Pointers_3D
 
 ! ###################################################################
 ! ###################################################################
+module TLab_Pointers_2D
+    use TLab_Constants, only: wp
+    implicit none
+
+    real(wp), pointer :: p2d_wrk3d(:, :) => null()
+
+end module TLab_Pointers_2D
+
+! ###################################################################
+! ###################################################################
 module TLab_Pointers_C
     use TLab_Constants, only: wp
     implicit none
@@ -200,6 +210,7 @@ contains
         call TLab_Set_Pointers()
 
         call TLab_Set_Pointers_3D()
+        call TLab_Set_Pointers_2D()
 
         call TLab_Set_Pointers_C()
 
@@ -265,6 +276,17 @@ contains
 
         return
     end subroutine TLab_Set_Pointers_3D
+
+    ! ######################################################################
+    ! ######################################################################
+    subroutine TLab_Set_Pointers_2D()
+        use TLab_Arrays
+        use TLab_Pointers_2D
+
+        if (allocated(wrk3d)) p2d_wrk3d(1:imax*jmax, 1:kmax) => wrk3d(1:isize_field)
+
+        return
+    end subroutine TLab_Set_Pointers_2D
 
     ! ######################################################################
     ! ######################################################################

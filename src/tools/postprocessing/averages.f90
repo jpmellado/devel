@@ -25,7 +25,7 @@ program AVERAGES
     ! use Rotation, only: Rotation_Initialize
     use Microphysics, only: Microphysics_Initialize
     use Radiation, only: Radiation_Initialize
-    ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
+    use LargeScaleForcing, only: LargeScaleForcing_Initialize
     use OPR_Partial
     use OPR_Fourier
     use OPR_Elliptic
@@ -97,7 +97,7 @@ program AVERAGES
     ! call Rotation_Initialize(ifile)
     call Microphysics_Initialize(ifile)
     call Radiation_Initialize(ifile)
-    ! call LargeScaleForcing_Initialize(ifile)
+    call LargeScaleForcing_Initialize(ifile)
 
     call TLab_Consistency_Check()
 
@@ -112,6 +112,7 @@ program AVERAGES
     call OPR_Check()
 
     call TLab_Initialize_Background(ifile)  ! Initialize thermodynamic quantities
+    call NSE_Burgers_Initialize(ifile)
 
     ! do ig = 1, 3
     !     call OPR_FILTER_INITIALIZE(g(ig), PressureFilter(ig))

@@ -23,7 +23,7 @@ program DNS
     ! use Rotation, only: Rotation_Initialize
     use Microphysics, only: Microphysics_Initialize
     use Radiation, only: Radiation_Initialize
-    ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
+    use LargeScaleForcing, only: LargeScaleForcing_Initialize
     use OPR_Partial, only: OPR_Partial_Initialize
     use Tlab_Background, only: TLab_Initialize_Background!, pbg, rbg
     use OPR_Fourier, only: OPR_Fourier_Initialize
@@ -69,7 +69,7 @@ program DNS
     ! call Rotation_Initialize(ifile)
     call Microphysics_Initialize(ifile)
     call Radiation_Initialize(ifile)
-    ! call LargeScaleForcing_Initialize(ifile)
+    call LargeScaleForcing_Initialize(ifile)
 
     call TLab_Consistency_Check()
 

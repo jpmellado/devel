@@ -13,9 +13,8 @@ module NSE_Burgers
     use TLab_Grid, only: x, y, z
     use FDM, only: fdm_dt, g
     use NavierStokes, only: visc, schmidt
-    ! use OPR_FILTERS
     use OPR_Partial
-    ! use LargeScaleForcing, only: subsidenceProps, TYPE_SUB_CONSTANT_LOCAL
+    use LargeScaleForcing, only: subsidenceProps, TYPE_SUB_CONSTANT, wbackground
     implicit none
     private
 
@@ -407,6 +406,7 @@ contains
     !########################################################################
     !########################################################################
     subroutine NSE_Burgers_Z(is, nx, ny, nz, s, result, u)
+        use TLab_Pointers_2D, only: p2d_wrk3d
         integer, intent(in) :: is                       ! scalar index; if 0, then velocity
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz)
@@ -414,6 +414,7 @@ contains
         real(wp), intent(in) :: u(nx*ny*nz)
 
         ! -------------------------------------------------------------------
+        integer(wi) k
 
         ! ###################################################################
         if (z%size == 1) then ! Set to zero in 2D case
@@ -423,11 +424,11 @@ contains
 
         call NSE_Burgers_1D(nx*ny, g(3), fdmDiffusion(3)%lu(:, :, is), rho_anelastic(3), Dealiasing(3), s, u, result, wrk3d)
 
-        ! if (subsidenceProps%type == TYPE_SUB_CONSTANT_LOCAL) then
-        !     do k = 1, nz
-        !         result(:, k) = result(:, k) + z%nodes(k)*subsidenceProps%parameters(1)*wrk3d(:, k)
-        !     end do
-        ! end if
+        if (subsidenceProps%type == TYPE_SUB_CONSTANT) then
+            do k = 1, nz
+                result(:, k) = result(:, k) + p2d_wrk3d(:, k)*wbackground(k)
+            end do
+        end if
 
         return
     end subroutine NSE_Burgers_Z

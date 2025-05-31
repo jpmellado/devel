@@ -17,20 +17,20 @@ program VISUALS
     use IO_Fields
     use TLab_Grid
     use FDM, only: g, FDM_Initialize
-    ! use FDM, only: fdm_Int0
+    use FDM, only: fdm_Int0
     use NavierStokes!, only: NavierStokes_Initialize_Parameters
     use Thermodynamics, only: Thermo_Initialize
     use TLab_Background, only: TLab_Initialize_Background
     use Gravity, only: Gravity_Initialize, gravityProps, Gravity_Source, bbackground
     ! use Rotation, only: Rotation_Initialize
     use Thermo_Anelastic
-    ! use Radiation
-    use Microphysics
-    ! use LargeScaleForcing, only: LargeScaleForcing_Initialize
+    use Radiation !, only: Radiation_Initialize, infraredProps
+    use Microphysics !, only: Microphysics_Initialize, sedimentationProps
+    use LargeScaleForcing, only: LargeScaleForcing_Initialize
     use OPR_Partial
     use OPR_Fourier
     use OPR_Elliptic
-    ! use NSE_Burgers, only: NSE_Burgers_Initialize
+    use NSE_Burgers, only: NSE_Burgers_Initialize
     use FI_VECTORCALCULUS
     use FI_STRAIN_EQN
     use FI_GRADIENT_EQN
@@ -96,9 +96,9 @@ program VISUALS
 
     call Gravity_Initialize(ifile)
     ! call Rotation_Initialize(ifile)
-    ! call Radiation_Initialize(ifile)
+    call Radiation_Initialize(ifile)
     call Microphysics_Initialize(ifile)
-    ! call LargeScaleForcing_Initialize(ifile)
+    call LargeScaleForcing_Initialize(ifile)
 
     call TLab_Consistency_Check()
 
@@ -115,8 +115,7 @@ program VISUALS
     call OPR_Check()
 
     call TLab_Initialize_Background(ifile)
-
-    ! call NSE_Burgers_Initialize(ifile)
+    call NSE_Burgers_Initialize(ifile)
 
     ! allocate (gate(isize_field))
 
@@ -533,7 +532,7 @@ program VISUALS
                 call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), txc(:, 1), txc(:, 2))
                 call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), q(:, 1), txc(:, 3))
                 call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), q(:, 2), txc(:, 4))
-                txc(1:isize_field, 2) = abs(txc(1:isize_field, 2))/(txc(1:isize_field, 3)**2.0 + txc(1:isize_field, 4)**2.0 +small_wp)
+                txc(1:isize_field, 2) = abs(txc(1:isize_field, 2))/(txc(1:isize_field, 3)**2.0 + txc(1:isize_field, 4)**2.0 + small_wp)
                 call Write_Visuals(plot_file, txc(:, 2:2))
 
                 ! ###################################################################
@@ -567,13 +566,46 @@ program VISUALS
                 ! ###################################################################
                 ! Radiation
                 ! ###################################################################
-            case ('Radiation')
+            case ('Infrared')
                 do is = 1, inb_scal
-                    ! if (infraredProps%active(is)) then
-                    !     write (str, *) is; plot_file = 'Radiation'//trim(adjustl(str))//time_str(1:MaskSize)
-                    !     call Radiation_Infrared_Z(infraredProps, imax, jmax, kmax, fdm_Int0, s, txc(:, 1), txc(:, 2), txc(:, 3), txc(:, 4))
-                    !     call Write_Visuals(plot_file, txc(:, 1:1))
-                    ! end if
+                    if (infraredProps%active(is)) then
+                        write (str, *) is; plot_file = 'Infrared'//trim(adjustl(str))//time_str(1:MaskSize)
+                        call Radiation_Infrared_Z(infraredProps, imax, jmax, kmax, fdm_Int0, s, &
+                                                  txc(:, 1), txc(:, 2), txc(:, 3), txc(:, 4), txc(:, 5), txc(:, 6))
+                        if (nse_eqns == DNS_EQNS_ANELASTIC) then
+                            call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, ribackground, txc(:, 1))
+                        end if
+                        call Write_Visuals(plot_file, txc(:, 1:1))
+
+                        write (str, *) is; plot_file = 'InfraredFlux'//trim(adjustl(str))//time_str(1:MaskSize)
+                        txc(1:isize_field, 5) = txc(1:isize_field, 6) - txc(1:isize_field, 5)
+                        call Write_Visuals(plot_file, txc(:, 1:5))
+
+                        write (str, *) is; plot_file = 'InfraredFluxUp'//trim(adjustl(str))//time_str(1:MaskSize)
+                        call Write_Visuals(plot_file, txc(:, 1:6))
+                    end if
+
+                end do
+
+                ! ###################################################################
+                ! Microphysics
+                ! ###################################################################
+            case ('Sedimentation')
+                do is = 1, inb_scal
+                    if (infraredProps%active(is)) then
+                        write (str, *) is; plot_file = 'Sedimentation'//trim(adjustl(str))//time_str(1:MaskSize)
+                        call Microphysics_Sedimentation(sedimentationProps, imax, jmax, kmax, is, g(3), s, &
+                                                        txc(:, 1), txc(:, 2), txc(:, 3))
+                        if (nse_eqns == DNS_EQNS_ANELASTIC) then
+                            call Thermo_Anelastic_Weight_InPlace(imax, jmax, kmax, ribackground, txc(:, 1))
+                        end if
+                        call Write_Visuals(plot_file, txc(:, 1:1))
+
+                        write (str, *) is; plot_file = 'SedimentationFlux'//trim(adjustl(str))//time_str(1:MaskSize)
+                        plot_file = 'FLux'//time_str(1:MaskSize)
+                        call Write_Visuals(plot_file, txc(:, 1:3))
+
+                    end if
 
                 end do
 
@@ -646,7 +678,8 @@ contains
         iv = iv + 1; opt_name(iv) = 'HorizontalDivergence'
         iv = iv + 1; opt_name(iv) = 'Turbulent quantities'
         iv = iv + 1; opt_name(iv) = 'Buoyancy'
-        iv = iv + 1; opt_name(iv) = 'Radiation'
+        iv = iv + 1; opt_name(iv) = 'Sedimentation'
+        iv = iv + 1; opt_name(iv) = 'Infrared'
         iv = iv + 1; opt_name(iv) = 'Anelastic'
         if (iv > iopt_size_max) then ! Check
             call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Increase number of options.')

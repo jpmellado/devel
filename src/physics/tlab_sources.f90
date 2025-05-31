@@ -39,34 +39,22 @@ contains
             ! -----------------------------------------------------------------------
             if (gravityProps%active(iq)) then
                 select case (nse_eqns)
-                case(DNS_EQNS_BOUSSINESQ)
+                case (DNS_EQNS_BOUSSINESQ)
                     call Gravity_Source(gravityProps, imax, jmax, kmax, s, tmp1)
 
-                case(DNS_EQNS_ANELASTIC)
+                case (DNS_EQNS_ANELASTIC)
                     call Thermo_Anelastic_Buoyancy(imax, jmax, kmax, s, tmp1)
 
                 end select
-                
+
                 hq(:, iq) = hq(:, iq) + gravityProps%vector(iq)*tmp1(:)
 
             end if
 
 !             ! -----------------------------------------------------------------------
-!             ! Subsidence
-!             ! -----------------------------------------------------------------------
 !             if (subsidenceProps%active(iq)) then
-!                 call LargeScaleForcing_Subsidence(subsidenceProps, imax, jmax, kmax, q(:, iq), tmp1)
-
-! !$omp parallel default( shared ) &
-! !$omp private( ij, srt,end,siz )
-!                 call TLab_OMP_PARTITION(isize_field, srt, end, siz)
-
-!                 do ij = srt, end
-!                     hq(ij, iq) = hq(ij, iq) + tmp1(ij)
-!                 end do
-! !$omp end parallel
-
 !             end if
+            ! Implemented directly in burgers
 
             ! -----------------------------------------------------------------------
             if (forcingProps%active(iq)) then

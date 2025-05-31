@@ -64,7 +64,7 @@ contains
         if (trim(adjustl(sRes)) == 'none') then; evaporationProps%type = TYPE_EVA_NONE
         elseif (trim(adjustl(sRes)) == 'equilibrium') then; evaporationProps%type = TYPE_EVA_EQUILIBRIUM
         else
-            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Error in entry Type')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Error in entry Type.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
