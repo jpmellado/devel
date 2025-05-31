@@ -30,6 +30,7 @@ program AVERAGES
     use OPR_Fourier
     use OPR_Elliptic
     use NSE_Burgers, only: NSE_Burgers_Initialize
+    use NSE_Pressure
     use FI_VECTORCALCULUS
     use FI_STRAIN_EQN
     use FI_GRADIENT_EQN
@@ -195,9 +196,9 @@ program AVERAGES
             ! Conventional statistics
             ! ###################################################################
         case (1)
-            ! if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
-            !     call FI_PRESSURE_BOUSSINESQ(q, s, txc(1, 9), txc(1, 1), txc(1, 2), txc(1, 4), DCMP_TOTAL)
-            ! end if
+            if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
+                call NSE_Pressure_Incompressible(q, s, txc(:, 9), txc(:, 2), txc(:, 5), txc(:, 6))
+            end if
 
             if (scal_on) then
                 do is = 1, inb_scal_array          ! All, prognostic and diagnostic fields in array s
@@ -307,8 +308,8 @@ program AVERAGES
             ifield = ifield + 1; vars(ifield)%field => w(:); vars(ifield)%tag = 'W'
 
             if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
-                ! call FI_PRESSURE_BOUSSINESQ(q, s, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), DCMP_TOTAL)
-                ! ifield = ifield + 1; vars(ifield)%field => txc(:, 1); vars(ifield)%tag = 'P'
+                call NSE_Pressure_Incompressible(q, s, txc(:, 1), txc(:, 2), txc(:, 5), txc(:, 6))
+                ifield = ifield + 1; vars(ifield)%field => txc(:, 1); vars(ifield)%tag = 'P'
             else
                 ifield = ifield + 1; vars(ifield)%field => q(:, 5); vars(ifield)%tag = 'R'
                 ifield = ifield + 1; vars(ifield)%field => q(:, 6); vars(ifield)%tag = 'P'
@@ -389,7 +390,7 @@ program AVERAGES
             ifield = 0
 
             if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
-                ! call FI_PRESSURE_BOUSSINESQ(q, s, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
+                call NSE_Pressure_Incompressible(q, s, txc(:, 1), txc(:, 2), txc(:, 5), txc(:, 6))
                 call FI_STRAIN_PRESSURE(imax, jmax, kmax, u, v, w, txc(1, 1), &
                                         txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6))
             else
@@ -600,20 +601,20 @@ program AVERAGES
             ! ###################################################################
             ! Hydrostatic and dynamic pressure
             ! ###################################################################
-            ! case (14)
-            !     write (fname, *) itime; fname = 'avgP'//trim(adjustl(fname))
-            !     call TLab_Write_ASCII(lfile, 'Computing '//trim(adjustl(fname))//'...')
-            !     ifield = 0
+        case (14)
+            write (fname, *) itime; fname = 'avgP'//trim(adjustl(fname))
+            call TLab_Write_ASCII(lfile, 'Computing '//trim(adjustl(fname))//'...')
+            ifield = 0
 
-            !     call FI_PRESSURE_BOUSSINESQ(q, s, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), DCMP_TOTAL)
-            !     ifield = ifield + 1; vars(ifield)%field => txc(:, 1); vars(ifield)%tag = 'P'
+            call NSE_Pressure_Incompressible(q, s, txc(:, 1), txc(:, 2), txc(:, 5), txc(:, 6))
+            ifield = ifield + 1; vars(ifield)%field => txc(:, 1); vars(ifield)%tag = 'P'
 
-            !     q = 0.0_wp
-            !     call FI_PRESSURE_BOUSSINESQ(q, s, txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), DCMP_TOTAL)
-            !     ifield = ifield + 1; vars(ifield)%field => txc(:, 2); vars(ifield)%tag = 'Psta'
+            q = 0.0_wp
+            call NSE_Pressure_Incompressible(q, s, txc(:, 2), txc(:, 3), txc(:, 6), txc(:, 7))
+            ifield = ifield + 1; vars(ifield)%field => txc(:, 2); vars(ifield)%tag = 'Psta'
 
-            !     txc(:, 3) = txc(:, 1) - txc(:, 2)
-            !     ifield = ifield + 1; vars(ifield)%field => txc(:, 3); vars(ifield)%tag = 'Pdyn'
+            txc(:, 3) = txc(:, 1) - txc(:, 2)
+            ifield = ifield + 1; vars(ifield)%field => txc(:, 3); vars(ifield)%tag = 'Pdyn'
 
             ! ###################################################################
             ! Dissipation

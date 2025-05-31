@@ -31,6 +31,7 @@ program VISUALS
     use OPR_Fourier
     use OPR_Elliptic
     use NSE_Burgers, only: NSE_Burgers_Initialize
+    use NSE_Pressure
     use FI_VECTORCALCULUS
     use FI_STRAIN_EQN
     use FI_GRADIENT_EQN
@@ -245,7 +246,7 @@ program VISUALS
                     txc(1:isize_field, 2) = q(1:isize_field, 6)
 
                 case (DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC)      ! Although Pressure is not thermodynamic variable here...
-                    ! call FI_PRESSURE_BOUSSINESQ(q, s, txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4))
+                    call NSE_Pressure_Incompressible(q, s, txc(:, 1), txc(:, 2), txc(:, 5), txc(:, 6))
                     txc(1:isize_field, 2) = txc(1:isize_field, 1)   ! Save txc1 for later caculations
 
                 end select
@@ -285,7 +286,7 @@ program VISUALS
 
                 plot_file = 'PressureHydrostatic'//time_str(1:MaskSize)
                 q = 0.0_wp
-                ! call FI_PRESSURE_BOUSSINESQ(q, s, txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5))
+                call NSE_Pressure_Incompressible(q, s, txc(:, 2), txc(:, 3), txc(:, 6), txc(:, 7))
                 call Write_Visuals(plot_file, txc(:, 2:2))
 
                 plot_file = 'PressureHydrodynamic'//time_str(1:MaskSize)
@@ -426,14 +427,14 @@ program VISUALS
 
                 plot_file = 'StrainPressure'//time_str(1:MaskSize)
                 if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
-                    ! call FI_PRESSURE_BOUSSINESQ()
+                    call NSE_Pressure_Incompressible(q, s, txc(:, 1), txc(:, 2), txc(:, 5), txc(:, 6))
                 else
-                    txc(:, 6) = q(:, 6)     ! pressure
+                    txc(:, 1) = q(:, 6)     ! pressure
                 end if
-                call FI_STRAIN_PRESSURE(imax, jmax, kmax, q(1, 1), q(1, 2), q(1, 3), txc(1, 6), &
-                                        txc(1, 1), txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5))
-                txc(1:isize_field, 1) = 2.0_wp*txc(1:isize_field, 1)
-                call Write_Visuals(plot_file, txc(:, 1:1))
+                call FI_STRAIN_PRESSURE(imax, jmax, kmax, q(1, 1), q(1, 2), q(1, 3), txc(1, 1), &
+                                        txc(1, 2), txc(1, 3), txc(1, 4), txc(1, 5), txc(1, 6))
+                txc(1:isize_field, 2) = 2.0_wp*txc(1:isize_field, 2)
+                call Write_Visuals(plot_file, txc(:, 2:2))
 
                 plot_file = 'StrainProduction'//time_str(1:MaskSize)
                 call FI_STRAIN_PRODUCTION(imax, jmax, kmax, q(1, 1), q(1, 2), q(1, 3), &

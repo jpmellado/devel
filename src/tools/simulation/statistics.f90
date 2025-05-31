@@ -66,10 +66,11 @@ contains
         use TLab_Memory, only: inb_scal_array, isize_field
         use NavierStokes, only: nse_eqns, DNS_EQNS_ANELASTIC, DNS_EQNS_BOUSSINESQ
         use TLab_WorkFlow, only: scal_on
+        use TLab_Arrays
         ! use NavierStokes, only: froude, schmidt
         ! use TLab_Time, only: itime !, rtime
-        use TLab_Arrays
         ! use Thermo_Anelastic
+        use NSE_Pressure
         use DNS_ARRAYS
         ! use PARTICLE_VARS
         ! use PARTICLE_ARRAYS
@@ -88,7 +89,8 @@ contains
         ! ###################################################################
         ! Calculate pressure
         if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
-            ! call FI_PRESSURE_BOUSSINESQ(q, s, txc(1, 3), txc(1, 1), txc(1, 2), txc(1, 4))
+            ! call NSE_Pressure_Incompressible(q, s, txc(1, 3), txc(1, 1), txc(1, 2), txc(1, 4))
+            call NSE_Pressure_Incompressible(q, s, txc(:, 3), txc(:, 4), txc(:, 1), txc(:, 2))
         end if
 
         ! ###################################################################
