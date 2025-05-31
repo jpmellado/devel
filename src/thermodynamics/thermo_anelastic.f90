@@ -35,6 +35,7 @@ module Thermo_Anelastic
     public :: Thermo_Anelastic_ThetaV
     public :: Thermo_Anelastic_ThetaE
     public :: Thermo_Anelastic_ThetaL
+    public :: Thermo_Anelastic_MSE
     public :: Thermo_Anelastic_LAPSE_EQU
     public :: Thermo_Anelastic_LAPSE_FR
     public :: Thermo_Anelastic_Pvapor

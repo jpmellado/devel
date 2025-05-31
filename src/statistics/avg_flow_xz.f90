@@ -28,14 +28,10 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     use TLab_Grid, only: z
     use FDM, only: g
     use OPR_Partial
-    ! use Thermodynamics, only: imode_thermo, THERMO_TYPE_ANELASTIC, THERMO_TYPE_COMPRESSIBLE
-    ! use Thermodynamics, only: itransport, EQNS_TRANS_POWERLAW
-    ! use Thermodynamics, only: imixture, MIXT_TYPE_AIRWATER
-    ! use Thermodynamics, only: PREF_1000, CRATIO_INV
-    ! use Thermodynamics, only: Thermo_Psat_Polynomial
-    ! use Thermo_Anelastic
-    ! use THERMO_AIRWATER
-    ! use THERMO_CALORIC
+    use Thermodynamics, only: imode_thermo, THERMO_TYPE_NONE, THERMO_TYPE_ANELASTIC, THERMO_TYPE_COMPRESSIBLE
+    use Thermo_Base, only: Thermo_Psat_Polynomial
+    use Thermo_AirWater, only: inb_scal_T
+    use Thermo_Anelastic
     use NavierStokes
     use Gravity, only: gravityProps, Gravity_Source
     ! use Rotation, only: coriolis
@@ -87,60 +83,35 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     ! Variable definition and memory management
     ! -----------------------------------------------------------------------
     ng = 1; ig(ng) = 1
-#define rR(k)     mean2d(k,ig(1)  )
-#define rU(k)     mean2d(k,ig(1)+1)
-#define rV(k)     mean2d(k,ig(1)+2)
-#define rW(k)     mean2d(k,ig(1)+3)
-#define rP(k)     mean2d(k,ig(1)+4)
-#define rT(k)     mean2d(k,ig(1)+5)
-#define re(k)     mean2d(k,ig(1)+6)
-#define rh(k)     mean2d(k,ig(1)+7)
-#define rs(k)     mean2d(k,ig(1)+8)
-#define rB(k)     mean2d(k,ig(1)+9)
-#define fU(k)     mean2d(k,ig(1)+10)
-#define fV(k)     mean2d(k,ig(1)+11)
-#define fW(k)     mean2d(k,ig(1)+12)
-#define fT(k)     mean2d(k,ig(1)+13)
-#define fe(k)     mean2d(k,ig(1)+14)
-#define fh(k)     mean2d(k,ig(1)+15)
-#define fs(k)     mean2d(k,ig(1)+16)
-    sg(ng) = 17
+#define rU(k)     mean2d(k,ig(1))
+#define rV(k)     mean2d(k,ig(1)+1)
+#define rW(k)     mean2d(k,ig(1)+2)
+#define fU(k)     mean2d(k,ig(1)+3)
+#define fV(k)     mean2d(k,ig(1)+4)
+#define fW(k)     mean2d(k,ig(1)+5)
+#define rP(k)     mean2d(k,ig(1)+6)
 
-    groupname(ng) = 'Mean'
-    varname(ng) = 'rR rU rV rW rP rT re rh rs rB fU fV fW fT fe fh fs'
+#define Rxx(k)    mean2d(k,ig(1)+7)
+#define Ryy(k)    mean2d(k,ig(1)+8)
+#define Rzz(k)    mean2d(k,ig(1)+9)
+#define Rxy(k)    mean2d(k,ig(1)+10)
+#define Rxz(k)    mean2d(k,ig(1)+11)
+#define Ryz(k)    mean2d(k,ig(1)+12)
+#define Tke(k)    mean2d(k,ig(1)+13)
+#define rP2(k)    mean2d(k,ig(1)+14)
+    sg(ng) = 15
 
-    ! -----------------------------------------------------------------------
-    ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define Tke(k)    mean2d(k,ig(2)  )
-#define Rxx(k)    mean2d(k,ig(2)+1)
-#define Ryy(k)    mean2d(k,ig(2)+2)
-#define Rzz(k)    mean2d(k,ig(2)+3)
-#define Rxy(k)    mean2d(k,ig(2)+4)
-#define Rxz(k)    mean2d(k,ig(2)+5)
-#define Ryz(k)    mean2d(k,ig(2)+6)
-#define rP2(k)    mean2d(k,ig(2)+7)
-#define rR2(k)    mean2d(k,ig(2)+8)
-#define rT2(k)    mean2d(k,ig(2)+9)
-#define fT2(k)    mean2d(k,ig(2)+10)
-#define re2(k)    mean2d(k,ig(2)+11)
-#define fe2(k)    mean2d(k,ig(2)+12)
-#define rh2(k)    mean2d(k,ig(2)+13)
-#define fh2(k)    mean2d(k,ig(2)+14)
-#define rs2(k)    mean2d(k,ig(2)+15)
-#define fs2(k)    mean2d(k,ig(2)+16)
-    sg(ng) = 17
-
-    groupname(ng) = 'Fluctuations'
-    varname(ng) = 'Tke Rxx Ryy Rzz Rxy Rxz Ryz rP2 rR2 rT2 fT2 re2 fe2 rh2 fh2 rs2 fs2'
+    groupname(ng) = 'Dynamics'
+    varname(ng) = 'rU rV rW fU fV fW rP Rxx Ryy Rzz Rxy Rxz Ryz Tke rP2'
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define vortx(k)  mean2d(k,ig(3)  )
-#define vorty(k)  mean2d(k,ig(3)+1)
-#define vortz(k)  mean2d(k,ig(3)+2)
-#define vortx2(k) mean2d(k,ig(3)+3)
-#define vorty2(k) mean2d(k,ig(3)+4)
-#define vortz2(k) mean2d(k,ig(3)+5)
+#define vortx(k)  mean2d(k,ig(2)  )
+#define vorty(k)  mean2d(k,ig(2)+1)
+#define vortz(k)  mean2d(k,ig(2)+2)
+#define vortx2(k) mean2d(k,ig(2)+3)
+#define vorty2(k) mean2d(k,ig(2)+4)
+#define vortz2(k) mean2d(k,ig(2)+5)
     sg(ng) = 6
 
     groupname(ng) = 'Vorticity'
@@ -148,17 +119,17 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define Rxx_t(k)  mean2d(k,ig(4)  )
-#define Bxx(k)    mean2d(k,ig(4)+1)
-#define Cxx(k)    mean2d(k,ig(4)+2)
-#define Pxx(k)    mean2d(k,ig(4)+3)
-#define Exx(k)    mean2d(k,ig(4)+4)
-#define PIxx(k)   mean2d(k,ig(4)+5)
-#define Fxx(k)    mean2d(k,ig(4)+6)
-#define Txxz_z(k) mean2d(k,ig(4)+7)
-#define Txxz(k)   mean2d(k,ig(4)+8)
-#define Gxx(k)    mean2d(k,ig(4)+9)
-#define Dxx(k)    mean2d(k,ig(4)+10)
+#define Rxx_t(k)  mean2d(k,ig(3)  )
+#define Bxx(k)    mean2d(k,ig(3)+1)
+#define Cxx(k)    mean2d(k,ig(3)+2)
+#define Pxx(k)    mean2d(k,ig(3)+3)
+#define Exx(k)    mean2d(k,ig(3)+4)
+#define PIxx(k)   mean2d(k,ig(3)+5)
+#define Fxx(k)    mean2d(k,ig(3)+6)
+#define Txxz_z(k) mean2d(k,ig(3)+7)
+#define Txxz(k)   mean2d(k,ig(3)+8)
+#define Gxx(k)    mean2d(k,ig(3)+9)
+#define Dxx(k)    mean2d(k,ig(3)+10)
     sg(ng) = 11
 
     groupname(ng) = 'RxxBudget'
@@ -166,17 +137,17 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define Ryy_t(k)  mean2d(k,ig(5)  )
-#define Byy(k)    mean2d(k,ig(5)+1)
-#define Cyy(k)    mean2d(k,ig(5)+2)
-#define Pyy(k)    mean2d(k,ig(5)+3)
-#define Eyy(k)    mean2d(k,ig(5)+4)
-#define PIyy(k)   mean2d(k,ig(5)+5)
-#define Fyy(k)    mean2d(k,ig(5)+6)
-#define Tyyz_z(k) mean2d(k,ig(5)+7)
-#define Tyyz(k)   mean2d(k,ig(5)+8)
-#define Gyy(k)    mean2d(k,ig(5)+9)
-#define Dyy(k)    mean2d(k,ig(5)+10)
+#define Ryy_t(k)  mean2d(k,ig(4)  )
+#define Byy(k)    mean2d(k,ig(4)+1)
+#define Cyy(k)    mean2d(k,ig(4)+2)
+#define Pyy(k)    mean2d(k,ig(4)+3)
+#define Eyy(k)    mean2d(k,ig(4)+4)
+#define PIyy(k)   mean2d(k,ig(4)+5)
+#define Fyy(k)    mean2d(k,ig(4)+6)
+#define Tyyz_z(k) mean2d(k,ig(4)+7)
+#define Tyyz(k)   mean2d(k,ig(4)+8)
+#define Gyy(k)    mean2d(k,ig(4)+9)
+#define Dyy(k)    mean2d(k,ig(4)+10)
     sg(ng) = 11
 
     groupname(ng) = 'RyyBudget'
@@ -184,17 +155,17 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define Rzz_t(k)  mean2d(k,ig(6)  )
-#define Bzz(k)    mean2d(k,ig(6)+1)
-#define Czz(k)    mean2d(k,ig(6)+2)
-#define Pzz(k)    mean2d(k,ig(6)+3)
-#define Ezz(k)    mean2d(k,ig(6)+4)
-#define PIzz(k)   mean2d(k,ig(6)+5)
-#define Fzz(k)    mean2d(k,ig(6)+6)
-#define Tzzz_z(k) mean2d(k,ig(6)+7)
-#define Tzzz(k)   mean2d(k,ig(6)+8)
-#define Gzz(k)    mean2d(k,ig(6)+9)
-#define Dzz(k)    mean2d(k,ig(6)+10)
+#define Rzz_t(k)  mean2d(k,ig(5)  )
+#define Bzz(k)    mean2d(k,ig(5)+1)
+#define Czz(k)    mean2d(k,ig(5)+2)
+#define Pzz(k)    mean2d(k,ig(5)+3)
+#define Ezz(k)    mean2d(k,ig(5)+4)
+#define PIzz(k)   mean2d(k,ig(5)+5)
+#define Fzz(k)    mean2d(k,ig(5)+6)
+#define Tzzz_z(k) mean2d(k,ig(5)+7)
+#define Tzzz(k)   mean2d(k,ig(5)+8)
+#define Gzz(k)    mean2d(k,ig(5)+9)
+#define Dzz(k)    mean2d(k,ig(5)+10)
     sg(ng) = 11
 
     groupname(ng) = 'RzzBudget'
@@ -202,17 +173,17 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define Rxy_t(k)  mean2d(k,ig(7)  )
-#define Bxy(k)    mean2d(k,ig(7)+1)
-#define Cxy(k)    mean2d(k,ig(7)+2)
-#define Pxy(k)    mean2d(k,ig(7)+3)
-#define Exy(k)    mean2d(k,ig(7)+4)
-#define PIxy(k)   mean2d(k,ig(7)+5)
-#define Fxy(k)    mean2d(k,ig(7)+6)
-#define Txyz_z(k) mean2d(k,ig(7)+7)
-#define Txyz(k)   mean2d(k,ig(7)+8)
-#define Gxy(k)    mean2d(k,ig(7)+9)
-#define Dxy(k)    mean2d(k,ig(7)+10)
+#define Rxy_t(k)  mean2d(k,ig(6)  )
+#define Bxy(k)    mean2d(k,ig(6)+1)
+#define Cxy(k)    mean2d(k,ig(6)+2)
+#define Pxy(k)    mean2d(k,ig(6)+3)
+#define Exy(k)    mean2d(k,ig(6)+4)
+#define PIxy(k)   mean2d(k,ig(6)+5)
+#define Fxy(k)    mean2d(k,ig(6)+6)
+#define Txyz_z(k) mean2d(k,ig(6)+7)
+#define Txyz(k)   mean2d(k,ig(6)+8)
+#define Gxy(k)    mean2d(k,ig(6)+9)
+#define Dxy(k)    mean2d(k,ig(6)+10)
     sg(ng) = 11
 
     groupname(ng) = 'RxyBudget'
@@ -220,17 +191,17 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define Rxz_t(k)  mean2d(k,ig(8)  )
-#define Bxz(k)    mean2d(k,ig(8)+1)
-#define Cxz(k)    mean2d(k,ig(8)+2)
-#define Pxz(k)    mean2d(k,ig(8)+3)
-#define Exz(k)    mean2d(k,ig(8)+4)
-#define PIxz(k)   mean2d(k,ig(8)+5)
-#define Fxz(k)    mean2d(k,ig(8)+6)
-#define Txzz_z(k) mean2d(k,ig(8)+7)
-#define Txzz(k)   mean2d(k,ig(8)+8)
-#define Gxz(k)    mean2d(k,ig(8)+9)
-#define Dxz(k)    mean2d(k,ig(8)+10)
+#define Rxz_t(k)  mean2d(k,ig(7)  )
+#define Bxz(k)    mean2d(k,ig(7)+1)
+#define Cxz(k)    mean2d(k,ig(7)+2)
+#define Pxz(k)    mean2d(k,ig(7)+3)
+#define Exz(k)    mean2d(k,ig(7)+4)
+#define PIxz(k)   mean2d(k,ig(7)+5)
+#define Fxz(k)    mean2d(k,ig(7)+6)
+#define Txzz_z(k) mean2d(k,ig(7)+7)
+#define Txzz(k)   mean2d(k,ig(7)+8)
+#define Gxz(k)    mean2d(k,ig(7)+9)
+#define Dxz(k)    mean2d(k,ig(7)+10)
     sg(ng) = 11
 
     groupname(ng) = 'RxzBudget'
@@ -238,17 +209,17 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define Ryz_t(k)  mean2d(k,ig(9)  )
-#define Byz(k)    mean2d(k,ig(9)+1)
-#define Cyz(k)    mean2d(k,ig(9)+2)
-#define Pyz(k)    mean2d(k,ig(9)+3)
-#define Eyz(k)    mean2d(k,ig(9)+4)
-#define PIyz(k)   mean2d(k,ig(9)+5)
-#define Fyz(k)    mean2d(k,ig(9)+6)
-#define Tyzz_z(k) mean2d(k,ig(9)+7)
-#define Tyzz(k)   mean2d(k,ig(9)+8)
-#define Gyz(k)    mean2d(k,ig(9)+9)
-#define Dyz(k)    mean2d(k,ig(9)+10)
+#define Ryz_t(k)  mean2d(k,ig(8)  )
+#define Byz(k)    mean2d(k,ig(8)+1)
+#define Cyz(k)    mean2d(k,ig(8)+2)
+#define Pyz(k)    mean2d(k,ig(8)+3)
+#define Eyz(k)    mean2d(k,ig(8)+4)
+#define PIyz(k)   mean2d(k,ig(8)+5)
+#define Fyz(k)    mean2d(k,ig(8)+6)
+#define Tyzz_z(k) mean2d(k,ig(8)+7)
+#define Tyzz(k)   mean2d(k,ig(8)+8)
+#define Gyz(k)    mean2d(k,ig(8)+9)
+#define Dyz(k)    mean2d(k,ig(8)+10)
     sg(ng) = 11
 
     groupname(ng) = 'RyzBudget'
@@ -256,23 +227,23 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define Tke_t(k)  mean2d(k,ig(10)  )
-#define Buo(k)    mean2d(k,ig(10)+1)
-#define Con(k)    mean2d(k,ig(10)+2)
-#define Prd(k)    mean2d(k,ig(10)+3)
-#define Eps(k)    mean2d(k,ig(10)+4)
-#define Pi(k)     mean2d(k,ig(10)+5)
-#define Tz_z(k)   mean2d(k,ig(10)+6)
-#define Tz1(k)    mean2d(k,ig(10)+7)
-#define Tz2(k)    mean2d(k,ig(10)+8)
-#define Tz3(k)    mean2d(k,ig(10)+9)
-#define Tz1_z(k)  mean2d(k,ig(10)+10)
-#define Tz2_z(k)  mean2d(k,ig(10)+11)
-#define Tz3_z(k)  mean2d(k,ig(10)+12)
-#define Gkin(k)   mean2d(k,ig(10)+13)
-#define Dkin(k)   mean2d(k,ig(10)+14)
-#define Phi(k)    mean2d(k,ig(10)+15)
-#define ugradp(k) mean2d(k,ig(10)+16)
+#define Tke_t(k)  mean2d(k,ig(9)  )
+#define Buo(k)    mean2d(k,ig(9)+1)
+#define Con(k)    mean2d(k,ig(9)+2)
+#define Prd(k)    mean2d(k,ig(9)+3)
+#define Eps(k)    mean2d(k,ig(9)+4)
+#define Pi(k)     mean2d(k,ig(9)+5)
+#define Tz_z(k)   mean2d(k,ig(9)+6)
+#define Tz1(k)    mean2d(k,ig(9)+7)
+#define Tz2(k)    mean2d(k,ig(9)+8)
+#define Tz3(k)    mean2d(k,ig(9)+9)
+#define Tz1_z(k)  mean2d(k,ig(9)+10)
+#define Tz2_z(k)  mean2d(k,ig(9)+11)
+#define Tz3_z(k)  mean2d(k,ig(9)+12)
+#define Gkin(k)   mean2d(k,ig(9)+13)
+#define Dkin(k)   mean2d(k,ig(9)+14)
+#define Phi(k)    mean2d(k,ig(9)+15)
+#define ugradp(k) mean2d(k,ig(9)+16)
     sg(ng) = 17
 
     groupname(ng) = 'TkeBudget'
@@ -280,12 +251,12 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define rU3(k)   mean2d(k,ig(11)  )
-#define rU4(k)   mean2d(k,ig(11)+1)
-#define rV3(k)   mean2d(k,ig(11)+2)
-#define rV4(k)   mean2d(k,ig(11)+3)
-#define rW3(k)   mean2d(k,ig(11)+4)
-#define rW4(k)   mean2d(k,ig(11)+5)
+#define rU3(k)   mean2d(k,ig(10)  )
+#define rU4(k)   mean2d(k,ig(10)+1)
+#define rV3(k)   mean2d(k,ig(10)+2)
+#define rV4(k)   mean2d(k,ig(10)+3)
+#define rW3(k)   mean2d(k,ig(10)+4)
+#define rW4(k)   mean2d(k,ig(10)+5)
     sg(ng) = 6
 
     groupname(ng) = 'HigherOrder'
@@ -293,37 +264,37 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define U_z1(k)  mean2d(k,ig(12)  )
-#define V_z1(k)  mean2d(k,ig(12)+1)
-#define W_z1(k)  mean2d(k,ig(12)+2)
-#define U_ii2(k) mean2d(k,ig(12)+3)
-#define U_x2(k)  mean2d(k,ig(12)+4)
-#define U_y2(k)  mean2d(k,ig(12)+5)
-#define U_z2(k)  mean2d(k,ig(12)+6)
-#define V_x2(k)  mean2d(k,ig(12)+7)
-#define V_y2(k)  mean2d(k,ig(12)+8)
-#define V_z2(k)  mean2d(k,ig(12)+9)
-#define W_x2(k)  mean2d(k,ig(12)+10)
-#define W_y2(k)  mean2d(k,ig(12)+11)
-#define W_z2(k)  mean2d(k,ig(12)+12)
-#define U_x3(k)  mean2d(k,ig(12)+13)
-#define U_y3(k)  mean2d(k,ig(12)+14)
-#define U_z3(k)  mean2d(k,ig(12)+15)
-#define V_x3(k)  mean2d(k,ig(12)+16)
-#define V_y3(k)  mean2d(k,ig(12)+17)
-#define V_z3(k)  mean2d(k,ig(12)+18)
-#define W_x3(k)  mean2d(k,ig(12)+19)
-#define W_y3(k)  mean2d(k,ig(12)+20)
-#define W_z3(k)  mean2d(k,ig(12)+21)
-#define U_x4(k)  mean2d(k,ig(12)+22)
-#define U_y4(k)  mean2d(k,ig(12)+23)
-#define U_z4(k)  mean2d(k,ig(12)+24)
-#define V_x4(k)  mean2d(k,ig(12)+25)
-#define V_y4(k)  mean2d(k,ig(12)+26)
-#define V_z4(k)  mean2d(k,ig(12)+27)
-#define W_x4(k)  mean2d(k,ig(12)+28)
-#define W_y4(k)  mean2d(k,ig(12)+29)
-#define W_z4(k)  mean2d(k,ig(12)+30)
+#define U_z1(k)  mean2d(k,ig(11)  )
+#define V_z1(k)  mean2d(k,ig(11)+1)
+#define W_z1(k)  mean2d(k,ig(11)+2)
+#define U_ii2(k) mean2d(k,ig(11)+3)
+#define U_x2(k)  mean2d(k,ig(11)+4)
+#define U_y2(k)  mean2d(k,ig(11)+5)
+#define U_z2(k)  mean2d(k,ig(11)+6)
+#define V_x2(k)  mean2d(k,ig(11)+7)
+#define V_y2(k)  mean2d(k,ig(11)+8)
+#define V_z2(k)  mean2d(k,ig(11)+9)
+#define W_x2(k)  mean2d(k,ig(11)+10)
+#define W_y2(k)  mean2d(k,ig(11)+11)
+#define W_z2(k)  mean2d(k,ig(11)+12)
+#define U_x3(k)  mean2d(k,ig(11)+13)
+#define U_y3(k)  mean2d(k,ig(11)+14)
+#define U_z3(k)  mean2d(k,ig(11)+15)
+#define V_x3(k)  mean2d(k,ig(11)+16)
+#define V_y3(k)  mean2d(k,ig(11)+17)
+#define V_z3(k)  mean2d(k,ig(11)+18)
+#define W_x3(k)  mean2d(k,ig(11)+19)
+#define W_y3(k)  mean2d(k,ig(11)+20)
+#define W_z3(k)  mean2d(k,ig(11)+21)
+#define U_x4(k)  mean2d(k,ig(11)+22)
+#define U_y4(k)  mean2d(k,ig(11)+23)
+#define U_z4(k)  mean2d(k,ig(11)+24)
+#define V_x4(k)  mean2d(k,ig(11)+25)
+#define V_y4(k)  mean2d(k,ig(11)+26)
+#define V_z4(k)  mean2d(k,ig(11)+27)
+#define W_x4(k)  mean2d(k,ig(11)+28)
+#define W_y4(k)  mean2d(k,ig(11)+29)
+#define W_z4(k)  mean2d(k,ig(11)+30)
     sg(ng) = 31
 
     groupname(ng) = 'DerivativeFluctuations'
@@ -334,98 +305,85 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define rGamma(k)  mean2d(k,ig(13)  )
-#define c2(k)      mean2d(k,ig(13)+1)
-#define rho_ac(k)  mean2d(k,ig(13)+2)
-#define rho_en(k)  mean2d(k,ig(13)+3)
-#define T_ac(k)    mean2d(k,ig(13)+4)
-#define T_en(k)    mean2d(k,ig(13)+5)
-#define M_t(k)     mean2d(k,ig(13)+6)
-#define rRP(k)     mean2d(k,ig(13)+7)
-#define rRT(k)     mean2d(k,ig(13)+8)
-    sg(ng) = 9
+#define rB(k)        mean2d(k,ig(12)  )
+#define Pot(k)       mean2d(k,ig(12)+1)
+#define bfreq_fr(k)  mean2d(k,ig(12)+2)
+#define bfreq_eq(k)  mean2d(k,ig(12)+3)
+    sg(ng) = 4
 
-    groupname(ng) = 'Acoustics'
-    varname(ng) = 'gamma C2 Rho_ac Rho_en T_ac T_en M_t rRP rRT'
+    groupname(ng) = 'Buoyancy'
+    varname(ng) = 'rB Pot BuoyFreq_fr BuoyFreq_eq'
 
     ! -----------------------------------------------------------------------
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define rR2_flux_x(k) mean2d(k,ig(14)  )
-#define rR2_flux_y(k) mean2d(k,ig(14)+1)
-#define rR2_flux_z(k) mean2d(k,ig(14)+2)
-#define rR2_dil1(k)   mean2d(k,ig(14)+3)
-#define rR2_dil2(k)   mean2d(k,ig(14)+4)
-#define rR2_trp(k)    mean2d(k,ig(14)+5)
-#define rR2_prod(k)   mean2d(k,ig(14)+6)
-#define rR2_conv(k)   mean2d(k,ig(14)+7)
-    sg(ng) = 8
+#define pref(k)      mean2d(k,ig(13))
+#define rref(k)      mean2d(k,ig(13)+1)
+#define tref(k)      mean2d(k,ig(13)+2)
+#define rR(k)        mean2d(k,ig(13)+3)
+#define rT(k)        mean2d(k,ig(13)+4)
+#define rR2(k)       mean2d(k,ig(13)+5)
+#define rT2(k)       mean2d(k,ig(13)+6)
+#define theta(k)     mean2d(k,ig(13)+7)
+#define thetav(k)    mean2d(k,ig(13)+8)
+#define thetae(k)    mean2d(k,ig(13)+9)
+#define thetal(k)    mean2d(k,ig(13)+10)
+#define mse(k)       mean2d(k,ig(13)+11)
+#define psat(k)      mean2d(k,ig(13)+12)
+#define rh(k)        mean2d(k,ig(13)+13)
+#define dewpoint(k)  mean2d(k,ig(13)+14)
+#define lapse_fr(k)  mean2d(k,ig(13)+15)
+#define lapse_eq(k)  mean2d(k,ig(13)+16)
+#define lapse_dew(k) mean2d(k,ig(13)+17)
+    sg(ng) = 18
 
-    groupname(ng) = 'RhoBudget'
-    varname(ng) = 'RhoFluxX RhoFluxY RhoFluxZ RhoDil1 RhoDil2 RhoTrp RhoProd RhoConv'
+    groupname(ng) = 'Thermodynamics'
+    varname(ng) = 'pRef rRef TRef rR rT rR2 rT2 ' &
+                  //'Theta ThetaV ThetaE ThetaL MoistStaticEnergy ' &
+                  //'Psat RelativeHumidity DewPoint ' &
+                  //'LapseRate_fr LapseRate_eq LapseRate_dew'
 
-    ! -----------------------------------------------------------------------
-    ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define Pot(k)       mean2d(k,ig(15)  )
-#define rref(k)      mean2d(k,ig(15)+1)
-#define tref(k)      mean2d(k,ig(15)+2)
-#define bfreq_fr(k)  mean2d(k,ig(15)+3)
-#define bfreq_eq(k)  mean2d(k,ig(15)+4)
-#define lapse_fr(k)  mean2d(k,ig(15)+5)
-#define lapse_eq(k)  mean2d(k,ig(15)+6)
-#define potem_fr(k)  mean2d(k,ig(15)+7)
-#define potem_eq(k)  mean2d(k,ig(15)+8)
-#define psat(k)      mean2d(k,ig(15)+9)
-#define pref(k)      mean2d(k,ig(15)+10)
-#define relhum(k)    mean2d(k,ig(15)+11)
-#define dewpoint(k)  mean2d(k,ig(15)+12)
-#define lapse_dew(k) mean2d(k,ig(15)+13)
-    sg(ng) = 14
+    ! select case (imode_thermo)
+    ! case (THERMO_TYPE_NONE)
+    !     ng = ng - 1
 
-    groupname(ng) = 'Stratification'
-    if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
-        varname(ng) = 'Pot rRref rTref BuoyFreq_fr BuoyFreq_eq LapseRate_fr LapseRate_eq ' &
-                      //'PotTemp PotTemp_v SaturationPressure rPref RelativeHumidity Dewpoint LapseRate_dew'
-    else
-        varname(ng) = 'Pot rRref rTref BuoyFreq_fr BuoyFreq_eq LapseRate_fr LapseRate_eq ' &
-                      //'PotTemp_fr PotTemp_eq SaturationPressure rPref RelativeHumidity Dewpoint LapseRate_dew'
-    end if
+    ! case (THERMO_TYPE_ANELASTIC)
+
+    ! case (THERMO_TYPE_COMPRESSIBLE)
+
+    ! end select
 
     ! -----------------------------------------------------------------------
     ! Auxiliary variables depending on z and t; this last group is not written
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
-#define rUf(k)    mean2d(k,ig(16))
-#define rVf(k)    mean2d(k,ig(16)+1)
-#define rWf(k)    mean2d(k,ig(16)+2)
+#define rUf(k)    mean2d(k,ig(14))
+#define rVf(k)    mean2d(k,ig(14)+1)
+#define rWf(k)    mean2d(k,ig(14)+2)
 
-#define rU_z(k)   mean2d(k,ig(16)+3)
-#define rV_z(k)   mean2d(k,ig(16)+4)
-#define rW_z(k)   mean2d(k,ig(16)+5)
-#define fU_z(k)   mean2d(k,ig(16)+6)
-#define fV_z(k)   mean2d(k,ig(16)+7)
-#define fW_z(k)   mean2d(k,ig(16)+8)
-#define rP_z(k)   mean2d(k,ig(16)+9)
-#define rR_z(k)   mean2d(k,ig(16)+10)
-#define rT_z(k)   mean2d(k,ig(16)+11)
-#define rB_z(k)   mean2d(k,ig(16)+12)
+#define rU_z(k)   mean2d(k,ig(14)+3)
+#define rV_z(k)   mean2d(k,ig(14)+4)
+#define rW_z(k)   mean2d(k,ig(14)+5)
+#define fU_z(k)   mean2d(k,ig(14)+6)
+#define fV_z(k)   mean2d(k,ig(14)+7)
+#define fW_z(k)   mean2d(k,ig(14)+8)
+#define rP_z(k)   mean2d(k,ig(14)+9)
 
-#define Rxx_z(k)  mean2d(k,ig(16)+13)
-#define Ryy_z(k)  mean2d(k,ig(16)+14)
-#define Rzz_z(k)  mean2d(k,ig(16)+15)
-#define Rxy_z(k)  mean2d(k,ig(16)+16)
-#define Rxz_z(k)  mean2d(k,ig(16)+17)
-#define Ryz_z(k)  mean2d(k,ig(16)+18)
-#define rR2_z(k)  mean2d(k,ig(16)+19)
+#define Rxx_z(k)  mean2d(k,ig(14)+10)
+#define Ryy_z(k)  mean2d(k,ig(14)+11)
+#define Rzz_z(k)  mean2d(k,ig(14)+12)
+#define Rxy_z(k)  mean2d(k,ig(14)+13)
+#define Rxz_z(k)  mean2d(k,ig(14)+14)
+#define Ryz_z(k)  mean2d(k,ig(14)+15)
 
-#define Tau_xz(k)   mean2d(k,ig(16)+20)
-#define Tau_yz(k)   mean2d(k,ig(16)+21)
-#define Tau_zz(k)   mean2d(k,ig(16)+22)
-#define Tau_xz_z(k) mean2d(k,ig(16)+23)
-#define Tau_yz_z(k) mean2d(k,ig(16)+24)
-#define Tau_zz_z(k) mean2d(k,ig(16)+25)
+#define Tau_xz(k)   mean2d(k,ig(14)+16)
+#define Tau_yz(k)   mean2d(k,ig(14)+17)
+#define Tau_zz(k)   mean2d(k,ig(14)+18)
+#define Tau_xz_z(k) mean2d(k,ig(14)+19)
+#define Tau_yz_z(k) mean2d(k,ig(14)+20)
+#define Tau_zz_z(k) mean2d(k,ig(14)+21)
 
-#define aux(k)      mean2d(k,ig(9)+26)
+#define aux(k)      mean2d(k,ig(14)+22)
 
-    sg(ng) = 27
+    sg(ng) = 23
 
     ! -----------------------------------------------------------------------
     nv = ig(ng) + sg(ng) - 1
@@ -464,14 +422,9 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! Density and Favre avrages
     if (nse_eqns == DNS_EQNS_BOUSSINESQ) then
-        rR(:) = 1.0_wp ! I divide below by density; rbackground(:)
-
         fU(:) = rU(:); fV(:) = rV(:); fW(:) = rW(:)
 
     else if (nse_eqns == DNS_EQNS_ANELASTIC) then
-        ! call Thermo_Anelastic_DENSITY(imax, jmax, kmax, s, dwdx, p_wrk3d)
-        call AVG_IK_V(imax, jmax, kmax, p_wrk3d, rR(1), wrk1d)
-
         fU(:) = rU(:); fV(:) = rV(:); fW(:) = rW(:)
 
     else
@@ -493,7 +446,6 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     rVf(:) = rV(:) - fV(:)
     rWf(:) = rW(:) - fW(:)
 
-    call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), rR(1), rR_z(1))
     call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), fU(1), fU_z(1))
     call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), fV(1), fV_z(1))
     call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), fW(1), fW_z(1))
@@ -511,14 +463,13 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
         dwdz(:, :, k) = w(:, :, k) - fW(k)
     end do
 
-    if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
-        dvdx = dwdx*dwdx
-        dvdy = dwdy*dwdy
-        dvdz = dwdz*dwdz
-    else
-        dvdx = dwdx*dwdx*rho
-        dvdy = dwdy*dwdy*rho
-        dvdz = dwdz*dwdz*rho
+    dvdx = dwdx*dwdx
+    dvdy = dwdy*dwdy
+    dvdz = dwdz*dwdz
+    if (nse_eqns == DNS_EQNS_COMPRESSIBLE) then
+        dvdx = dvdx*rho
+        dvdy = dvdy*rho
+        dvdz = dvdz*rho
     end if
     call AVG_IK_V(imax, jmax, kmax, dvdx, Rxx(1), wrk1d)
     call AVG_IK_V(imax, jmax, kmax, dvdy, Ryy(1), wrk1d)
@@ -529,14 +480,13 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
         Rzz(:) = Rzz(:)/rR(:)
     end if
 
-    if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
-        dvdx = dwdx*dwdy
-        dvdy = dwdx*dwdz
-        dvdz = dwdy*dwdz
-    else
-        dvdx = dwdx*dwdy*rho
-        dvdy = dwdx*dwdz*rho
-        dvdz = dwdy*dwdz*rho
+    dvdx = dwdx*dwdy
+    dvdy = dwdx*dwdz
+    dvdz = dwdy*dwdz
+    if (nse_eqns == DNS_EQNS_COMPRESSIBLE) then
+        dvdx = dvdx*rho
+        dvdy = dvdy*rho
+        dvdz = dvdz*rho
     end if
     call AVG_IK_V(imax, jmax, kmax, dvdx, Rxy(1), wrk1d)
     call AVG_IK_V(imax, jmax, kmax, dvdy, Rxz(1), wrk1d)
@@ -553,40 +503,6 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), Rxy(1), Rxy_z(1))
     call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), Rxz(1), Rxz_z(1))
     call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), Ryz(1), Ryz_z(1))
-
-    ! Density
-    if (.not. (nse_eqns == DNS_EQNS_BOUSSINESQ)) then
-        if (nse_eqns == DNS_EQNS_ANELASTIC) then
-            ! call Thermo_Anelastic_DENSITY(imax, jmax, kmax, s, dudx, p_wrk3d)
-            do k = 1, kmax
-                dudx(:, :, k) = dudx(:, :, k) - rR(k)
-            end do
-        else
-            do k = 1, kmax
-                dudx(:, :, k) = rho(:, :, k) - rR(k)
-            end do
-        end if
-        dvdx = dudx*dudx
-        call AVG_IK_V(imax, jmax, kmax, dvdx, rR2(1), wrk1d)
-
-        call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), rR2(1), rR2_z(1))
-
-        ! Density Fluctuations Budget
-        do k = 1, kmax
-            dvdx(:, :, k) = u(:, :, k) - rU(k)
-            dvdy(:, :, k) = v(:, :, k) - rV(k)
-            dvdz(:, :, k) = w(:, :, k) - rW(k)
-        end do
-        dvdx = dvdx*dudx
-        dvdy = dvdy*dudx
-        dvdz = dvdz*dudx
-        call AVG_IK_V(imax, jmax, kmax, dvdx, rR2_flux_x(1), wrk1d)
-        call AVG_IK_V(imax, jmax, kmax, dvdy, rR2_flux_y(1), wrk1d)
-        call AVG_IK_V(imax, jmax, kmax, dvdz, rR2_flux_z(1), wrk1d)
-        dvdz = dvdz*dudx
-        call AVG_IK_V(imax, jmax, kmax, dvdz, rR2_trp(1), wrk1d)
-
-    end if
 
     ! higher-order moments
     p_wrk3d = dwdx*dwdx*dwdx
@@ -698,223 +614,89 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
     ! ###################################################################
     ! Thermodynamic variables
-    !
-    ! dudx = gamma
-    ! dudy = dsdy
-    ! dudz = dTdy
-    ! dvdx = cp
-    ! dvdy = drdy
-    ! dvdz = psat
-    ! dwdx = T
-    ! dwdy = dpdy
-    ! dwdz =
     ! ###################################################################
-#define T_LOC(i,j,k)     dwdx(i,j,k)
+    select case (imode_thermo)
+    case (THERMO_TYPE_NONE)
+    case (THERMO_TYPE_ANELASTIC)
+        pref(:) = pbackground(:)
+        rref(:) = rbackground(:)
+        tref(:) = tbackground(:)
 
-!     if (nse_eqns == DNS_EQNS_BOUSSINESQ) then
-!         ! rT(:) = tbackground(:)
+        call Thermo_Anelastic_Rho(imax, jmax, kmax, s, dwdx, p_wrk3d)
+        call AVG_IK_V(imax, jmax, kmax, dwdx, rR(1), wrk1d)
+        do k = 1, kmax
+            dvdx(:, :, k) = (dwdx(:, :, k) - rR(k))**2
+        end do
+        call AVG_IK_V(imax, jmax, kmax, dvdx, rR2(1), wrk1d)
 
-!     else if (nse_eqns == DNS_EQNS_ANELASTIC) then
-!         ! call Thermo_Anelastic_TEMPERATURE(imax, jmax, kmax, s, T_LOC(1, 1, 1))
-!         call AVG_IK_V(imax, jmax, kmax, T_LOC(1, 1, 1), rT(1), wrk1d)
+        call AVG_IK_V(imax, jmax, kmax, s(:, :, :, inb_scal_T), rT(1), wrk1d)
+        do k = 1, kmax
+            dvdx(:, :, k) = (s(:, :, k, inb_scal_T) - rT(k))**2
+        end do
+        call AVG_IK_V(imax, jmax, kmax, dvdx, rT2(1), wrk1d)
 
-!         do k = 1, kmax
-!             dvdx(:, :, k) = (T_LOC(:, :, k) - rT(k))**2
-!         end do
-!         call AVG_IK_V(imax, jmax, kmax, dvdx, rT2(1), wrk1d)
+        call Thermo_Anelastic_Theta(imax, jmax, kmax, s, dvdz, p_wrk3d)
+        call AVG_IK_V(imax, jmax, kmax, dvdz, theta(1), wrk1d)
 
-!         call Thermo_Psat_Polynomial(imax*jmax*kmax, T_LOC(1, 1, 1), dvdz)
-!         call AVG_IK_V(imax, jmax, kmax, dvdz, psat(1), wrk1d)
+        call Thermo_Anelastic_ThetaV(imax, jmax, kmax, s, dvdz, p_wrk3d)
+        call AVG_IK_V(imax, jmax, kmax, dvdz, thetav(1), wrk1d)
 
-!         call Thermo_Anelastic_RH(imax, jmax, kmax, s, dvdz, p_wrk3d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdz, relhum(1), wrk1d)
+        call Thermo_Anelastic_ThetaL(imax, jmax, kmax, s, dvdz, p_wrk3d)
+        call AVG_IK_V(imax, jmax, kmax, dvdz, thetal(1), wrk1d)
 
-!         call Thermo_Anelastic_THETA(imax, jmax, kmax, s, dvdz, p_wrk3d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdz, potem_fr(1), wrk1d)
-!         call Thermo_Anelastic_THETA_V(imax, jmax, kmax, s, dvdz, p_wrk3d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdz, potem_eq(1), wrk1d)
+        call Thermo_Anelastic_ThetaE(imax, jmax, kmax, s, dvdz, p_wrk3d)
+        call AVG_IK_V(imax, jmax, kmax, dvdz, thetae(1), wrk1d)
 
-!         call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), T_LOC(1, 1, 1), dudz)
+        call Thermo_Anelastic_MSE(imax, jmax, kmax, s, dvdz)
+        call AVG_IK_V(imax, jmax, kmax, dvdz, mse(1), wrk1d)
 
-!         call Thermo_Anelastic_LAPSE_EQU(imax, jmax, kmax, s, dwdz, p_wrk3d)
-!         call AVG_IK_V(imax, jmax, kmax, dwdz, lapse_eq(1), wrk1d)
-!         !frequency(:) = (lapse(:) + dTdy(:))/locT(:)
-!         p_wrk3d = (dwdz + dudz)/dwdx
-!         call AVG_IK_V(imax, jmax, kmax, p_wrk3d, bfreq_eq(1), wrk1d)
-!         bfreq_eq(:) = bfreq_eq(:)*gravityProps%vector(2)
+        call Thermo_Psat_Polynomial(imax*jmax*kmax, s(:, :, :, inb_scal_T), dvdz)
+        call AVG_IK_V(imax, jmax, kmax, dvdz, psat(1), wrk1d)
 
-!         call Thermo_Anelastic_LAPSE_FR(imax, jmax, kmax, s, dwdz)
-!         call AVG_IK_V(imax, jmax, kmax, dwdz, lapse_fr(1), wrk1d)
-!         !frequency(:) = (lapse(:) + dTdy(:))/locT(:)
-!         p_wrk3d = (dwdz + dudz)/dwdx
-!         call AVG_IK_V(imax, jmax, kmax, p_wrk3d, bfreq_fr(1), wrk1d)
-!         bfreq_fr(:) = bfreq_fr(:)*gravityProps%vector(2)
+        call Thermo_Anelastic_RH(imax, jmax, kmax, s, dvdz, p_wrk3d)
+        call AVG_IK_V(imax, jmax, kmax, dvdz, rh(1), wrk1d)
 
-!         call Thermo_Anelastic_VAPOR_PRESSURE(imax, jmax, kmax, s, dudz)
-!         call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), dudz, dudy)
-!         ! dwdz should contains lapse_fr, since lapse_dew = lapse_fr when saturated
-!         call Thermo_Anelastic_DEWPOINT(imax, jmax, kmax, s, dudy, p_wrk3d, dwdz)
-!         call AVG_IK_V(imax, jmax, kmax, p_wrk3d, dewpoint(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dwdz, lapse_dew(1), wrk1d)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), s(:, :, :, inb_scal_T), dudz)
 
-! #undef T_LOC
+        call Thermo_Anelastic_LAPSE_EQU(imax, jmax, kmax, s, dwdz, p_wrk3d)
+        call AVG_IK_V(imax, jmax, kmax, dwdz, lapse_eq(1), wrk1d)
+        !frequency(:) = (lapse(:) + dTdy(:))/locT(:)
+        p_wrk3d = (dwdz + dudz)/dwdx
+        call AVG_IK_V(imax, jmax, kmax, p_wrk3d, bfreq_eq(1), wrk1d)
+        bfreq_eq(:) = bfreq_eq(:)*gravityProps%vector(3)
 
-!     else
-! #define GAMMA_LOC(i,j,k) dudx(i,j,k)
-! #define S_LOC(i,j,k)     dwdz(i,j,k)
+        call Thermo_Anelastic_LAPSE_FR(imax, jmax, kmax, s, dwdz)
+        call AVG_IK_V(imax, jmax, kmax, dwdz, lapse_fr(1), wrk1d)
+        !frequency(:) = (lapse(:) + dTdy(:))/locT(:)
+        p_wrk3d = (dwdz + dudz)/dwdx
+        call AVG_IK_V(imax, jmax, kmax, p_wrk3d, bfreq_fr(1), wrk1d)
+        bfreq_fr(:) = bfreq_fr(:)*gravityProps%vector(3)
 
-!         ! -------------------------------------------------------------------
-!         ! Main fields
-!         ! -------------------------------------------------------------------
-!         ! call THERMO_CALORIC_TEMPERATURE(imax*jmax*kmax, s, e, rho, T, p_wrk3d)
-!         call THERMO_GAMMA(imax*jmax*kmax, s, T, GAMMA_LOC(:, :, :))
-!         call THERMO_ENTROPY(imax*jmax*kmax, s, T, p_loc, S_LOC(1, 1, 1))
+        call Thermo_Anelastic_Pvapor(imax, jmax, kmax, s, dudz)
+        call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), dudz, dudy)
+        ! dwdz should contains lapse_fr, since lapse_dew = lapse_fr when saturated
+        call Thermo_Anelastic_DEWPOINT(imax, jmax, kmax, s, dudy, p_wrk3d, dwdz)
+        call AVG_IK_V(imax, jmax, kmax, p_wrk3d, dewpoint(1), wrk1d)
+        call AVG_IK_V(imax, jmax, kmax, dwdz, lapse_dew(1), wrk1d)
 
-!         call AVG_IK_V(imax, jmax, kmax, T, rT(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, e, re(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, S_LOC(1, 1, 1), rs(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, GAMMA_LOC(1, 1, 1), rGamma(1), wrk1d)
-
-!         ! Means
-!         dudy = rho*e
-!         dudz = e + CRATIO_INV*p_loc/rho             ! enthalpy
-!         dvdx = rho*dudz
-!         dvdy = rho*S_LOC(:, :, :)
-!         dvdz = rho*T
-!         p_wrk3d = GAMMA_LOC(:, :, :)*p_loc/rho      ! speed of sound
-!         call AVG_IK_V(imax, jmax, kmax, dudy, fe(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dudz, rh(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdx, fh(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdy, fs(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdz, fT(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, p_wrk3d, c2(1), wrk1d)
-!         fe(:) = fe(:)/rR(:)
-!         fh(:) = fh(:)/rR(:)
-!         fs(:) = fs(:)/rR(:)
-!         fT(:) = fT(:)/rR(:)
-
-!         call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), rT(1), rT_z(1))
-
-!         ! Turbulent Mach number
-!         M_t(:) = sqrt((Rxx(:) + Ryy(:) + Rzz(:))/c2(:))
-
-!         ! Covariances
-!         do k = 1, kmax
-!             dudy(:, :, k) = (S_LOC(:, :, k) - rs(k))**2
-!             dudz(:, :, k) = rho(:, :, k)*(S_LOC(:, :, k) - fs(k))**2
-!             dvdx(:, :, k) = (T(:, :, k) - rT(k))**2
-!             dvdy(:, :, k) = rho(:, :, k)*(T(:, :, k) - fT(k))**2
-!             dvdz(:, :, k) = (rho(:, :, k) - rR(k))*(T(:, :, k) - fT(k))
-!             p_wrk3d(:, :, k) = (rho(:, :, k) - rR(k))*(p_loc(:, :, k) - rP(k))
-!         end do
-!         call AVG_IK_V(imax, jmax, kmax, dudy, rs2(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dudz, fs2(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdx, rT2(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdy, fT2(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdz, rRT(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, p_wrk3d, rRP(1), wrk1d)
-!         fs2(:) = fs2(:)/rR(:)
-!         fT2(:) = fT2(:)/rR(:)
-
-!         do k = 1, kmax
-!             dudy(:, :, k) = (e(:, :, k) - re(k))**2
-!             dudz(:, :, k) = rho(:, :, k)*(e(:, :, k) - fe(k))**2
-!         end do
-!         call AVG_IK_V(imax, jmax, kmax, dudy, re2(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dudz, fe2(1), wrk1d)
-!         fe2(:) = fe2(:)/rR(:)
-
-!         p_wrk3d = e + CRATIO_INV*p_loc/rho
-!         do k = 1, kmax
-!             dudy(:, :, k) = (p_wrk3d(:, :, k) - rh(k))**2
-!             dudz(:, :, k) = rho(:, :, k)*(p_wrk3d(:, :, k) - fh(k))**2
-!         end do
-!         call AVG_IK_V(imax, jmax, kmax, dudy, rh2(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dudz, fh2(1), wrk1d)
-!         fh2(:) = fh2(:)/rR(:)
-
-!         ! Acoustic and entropic density and temperature fluctuations
-!         do k = 1, kmax
-!             dudy(:, :, k) = p_loc(:, :, k) - rP(k)                 ! pprime
-!             dudz(:, :, k) = dudy(:, :, k)/c2(k)               ! rho_ac
-!             dvdx(:, :, k) = rho(:, :, k) - rR(k) - dudz(:, :, k) ! rho_en = rprime - rho_ac
-!             dvdy(:, :, k) = (dudy(:, :, k)/rP(k) - dudz(:, :, k)/rR(k))*fT(k) ! T_ac
-!             dvdz(:, :, k) = T(:, :, k) - fT(k) - dvdy(:, :, k)               ! T_en = Tprime - T_ac
-!         end do
-!         dudz = dudz*dudz
-!         dvdx = dvdx*dvdx
-!         dvdy = dvdy*dvdy
-!         dvdz = dvdz*dvdz
-!         call AVG_IK_V(imax, jmax, kmax, dudz, rho_ac(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdx, rho_en(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdy, T_ac(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdz, T_en(1), wrk1d)
-
-!         ! -------------------------------------------------------------------
-!         ! Buoyancy frequency & saturation pressure
-!         ! -------------------------------------------------------------------
-!         call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), rho, dvdy)
-
-!         call Thermo_Psat_Polynomial(imax*jmax*kmax, T, dvdz)
-!         call THERMO_CP(imax*jmax*kmax, s, GAMMA_LOC(:, :, :), dvdx)
-
-!         do k = 1, kmax
-!             dudy(:, :, k) = dwdy(:, :, k)/p_loc(:, :, k)/GAMMA_LOC(:, :, k) - dvdy(:, :, k)/rho(:, :, k)
-!             dvdx(:, :, k) = 1.0_wp/dvdx(:, :, k)
-!             dvdy(:, :, k) = T(:, :, k)*((p_loc(:, :, k)/PREF_1000)**(1.0_wp/GAMMA_LOC(:, :, k) - 1.0_wp))
-!         end do
-!         call AVG_IK_V(imax, jmax, kmax, dudy, bfreq_fr(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdx, lapse_fr(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdy, potem_fr(1), wrk1d)
-!         call AVG_IK_V(imax, jmax, kmax, dvdz, psat(1), wrk1d)
-!         bfreq_fr(:) = -bfreq_fr(:)*gravityProps%vector(2)
-!         lapse_fr(:) = -lapse_fr(:)*gravityProps%vector(2)*CRATIO_INV
-
-!         if (imixture == MIXT_TYPE_AIRWATER) then
-!             call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), T, dudz)
-!             call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), s(1, 1, 1, 2), dudy)
-
-!             ! To be done
-!             ! call THERMO_AIRWATER_LAPSE_EQU(s, T, p_loc, dudz, dudy, dvdx, dvdy)!, dwdy, dwdz, p_wrk3d)
-!             ! call AVG_IK_V(imax, jmax, kmax, dvdy, bfreq_eq(1), wrk1d)
-!             ! call AVG_IK_V(imax, jmax, kmax, dvdx, lapse_eq(1), wrk1d)
-!             ! bfreq_eq(:) = -bfreq_eq(:)*gravityProps%vector(2)
-!             ! lapse_eq(:) = -lapse_eq(:)*gravityProps%vector(2)*CRATIO_INV
-
-!             call THERMO_AIRWATER_THETA_EQ(s, T, p_loc, dvdx, dvdy, dwdy)
-!             call AVG_IK_V(imax, jmax, kmax, dvdx, potem_eq(1), wrk1d)
-
-!         end if
-
-! #undef S_LOC
-! #undef GAMMA_LOC
-!     end if
-
-!     select case (imode_thermo)
-!     case (THERMO_TYPE_ANELASTIC)
-!         pref(:) = pbackground(:)
-!         tref(:) = tbackground(:)
-!         rref(:) = rbackground(:)
-!     case (THERMO_TYPE_COMPRESSIBLE)
-!         pref(:) = rP(:)
-!         tref(:) = rT(:)
-!         rref(:) = rR(:)
-!     end select
+    end select
 
     ! ###################################################################
-    ! Potential energy
-    !
-    ! dudx = buoyancy
-    !
+    ! Buoyancy
     ! ###################################################################
     if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
 
         select case (nse_eqns)
-        case (DNS_EQNS_ANELASTIC)
-            ! call Thermo_Anelastic_BUOYANCY(imax, jmax, kmax, s, dudx)
-
         case (DNS_EQNS_BOUSSINESQ)
             call Gravity_Source(gravityProps, imax, jmax, kmax, s, dudx)
+
+            call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), dudx, dudy)
+            call AVG_IK_V(imax, jmax, kmax, dudy, bfreq_fr(1), wrk1d)
+            bfreq_fr(:) = bfreq_fr(:)*gravityProps%vector(3)
+            bfreq_eq(:) = bfreq_fr(:)
+
+        case (DNS_EQNS_ANELASTIC)
+            call Thermo_Anelastic_Buoyancy(imax, jmax, kmax, s, dudx)
 
         end select
 
@@ -930,9 +712,12 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
         dummy = 1.0_wp/froude
         rB(:) = rB(:)*dummy
-        call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), rB(1), rB_z(1))
+        ! call OPR_Partial_Z(OPR_P1, 1, 1, kmax, g(3), rB(1), rB_z(1))
 
         ! pmod(:) = -rP_z(:) + sign(rB(:), gravityProps%vector(2))
+
+        ! potential energy
+        Pot(:) = -rB(:)*z%nodes(:)
 
     else
         Bxx(:) = -rR(:)*rUf(:)
@@ -940,6 +725,9 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
         Bzz(:) = -rR(:)*rWf(:)
 
         ! pmod(:) = -rP_z(:) + gravityProps%vector(2)*rR(:)
+
+        ! potential energy
+        Pot(:) = -rR(:)*z%nodes(:)*gravityProps%vector(3)
 
     end if
 
@@ -951,15 +739,6 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     Bxx(:) = 2.0_wp*Bxx(:)*gravityProps%vector(1)
     Byy(:) = 2.0_wp*Byy(:)*gravityProps%vector(2)
     Bzz(:) = 2.0_wp*Bzz(:)*gravityProps%vector(3)
-
-    ! Potential energy equation
-    if (any([DNS_EQNS_BOUSSINESQ, DNS_EQNS_ANELASTIC] == nse_eqns)) then
-        Pot(:) = -rB(:)*z%nodes(:)
-
-    else
-        ! Pot(:) = -rR(:)*z%nodes(:)*gravityProps%vector(3)
-
-    end if
 
     ! ###################################################################
     ! # Array storage of velocity gradient tensor
@@ -1110,23 +889,6 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     end do
     call AVG_IK_V(imax, jmax, kmax, p_wrk3d, U_ii2(1), wrk1d)
 
-    ! ###################################################################
-    ! Density Fluctuations Budget
-    ! ###################################################################
-    if (nse_eqns == DNS_EQNS_COMPRESSIBLE) then
-        p_wrk3d = dudx + dvdy + dwdz
-        do k = 1, kmax
-            p_wrk3d(:, :, k) = (p_wrk3d(:, :, k) - rV_z(k))*(rho(:, :, k) - rR(k))
-        end do
-        call AVG_IK_V(imax, jmax, kmax, p_wrk3d, rR2_dil1(1), wrk1d)
-
-        do k = 1, kmax
-            p_wrk3d(:, :, k) = p_wrk3d(:, :, k)*(rho(:, :, k) - rR(k))
-        end do
-        call AVG_IK_V(imax, jmax, kmax, p_wrk3d, rR2_dil2(1), wrk1d)
-
-    end if
-
     ! ##################################################################
     ! Mean viscous dissipation rate
     ! ##################################################################
@@ -1267,13 +1029,6 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     ! ###################################################################
     ! Complete budget equations
     ! ###################################################################
-    ! Density fluctuations budget equation
-    if (nse_eqns == DNS_EQNS_COMPRESSIBLE) then
-        rR2_prod(:) = -2.0_wp*(rR2_flux_z(:)*rR_z(:) + rR2(:)*rV_z(:))
-        rR2_conv(:) = -rV(:)*rR2_z(:)
-        rR2_dil1(:) = 2.0_wp*rR(:)*rR2_dil1(:)
-    end if
-
     ! Rij Convective Terms
     Cxx(:) = -fV(:)*Rxx_z(:)
     Cyy(:) = -fV(:)*Ryy_z(:)
@@ -1318,12 +1073,25 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     ! end if
 
     ! Rij Transient terms
-    Rxx_t(:) = -Fxx(:) + Bxx(:) + Cxx(:) + Pxx(:) - Exx(:) + (PIxx(:) - Txxz_z(:) - Gxx(:) + Dxx(:))/rR(:)
-    Ryy_t(:) = -Fyy(:) + Byy(:) + Cyy(:) + Pyy(:) - Eyy(:) + (PIyy(:) - Tyyz_z(:) - Gyy(:) + Dyy(:))/rR(:)
-    Rzz_t(:) = -Fzz(:) + Bzz(:) + Czz(:) + Pzz(:) - Ezz(:) + (PIzz(:) - Tzzz_z(:) - Gzz(:) + Dzz(:))/rR(:)
-    Rxy_t(:) = -Fxy(:) + Bxy(:) + Cxy(:) + Pxy(:) - Exy(:) + (PIxy(:) - Txyz_z(:) - Gxy(:) + Dxy(:))/rR(:)
-    Rxz_t(:) = -Fxz(:) + Bxz(:) + Cxz(:) + Pxz(:) - Exz(:) + (PIxz(:) - Txzz_z(:) - Gxz(:) + Dxz(:))/rR(:)
-    Ryz_t(:) = -Fyz(:) + Byz(:) + Cyz(:) + Pyz(:) - Eyz(:) + (PIyz(:) - Tyzz_z(:) - Gyz(:) + Dyz(:))/rR(:)
+    select case (nse_eqns)
+
+    case (DNS_EQNS_BOUSSINESQ)
+        aux(:) = 1.0_wp
+
+    case (DNS_EQNS_ANELASTIC)
+        aux(:) = 1.0_wp/rbackground(:)
+
+    case (DNS_EQNS_COMPRESSIBLE)
+        aux(:) = 1.0_wp/rR(:)
+
+    end select
+
+    Rxx_t(:) = -Fxx(:) + Bxx(:) + Cxx(:) + Pxx(:) - Exx(:) + (PIxx(:) - Txxz_z(:) - Gxx(:) + Dxx(:))*aux(:)
+    Ryy_t(:) = -Fyy(:) + Byy(:) + Cyy(:) + Pyy(:) - Eyy(:) + (PIyy(:) - Tyyz_z(:) - Gyy(:) + Dyy(:))*aux(:)
+    Rzz_t(:) = -Fzz(:) + Bzz(:) + Czz(:) + Pzz(:) - Ezz(:) + (PIzz(:) - Tzzz_z(:) - Gzz(:) + Dzz(:))*aux(:)
+    Rxy_t(:) = -Fxy(:) + Bxy(:) + Cxy(:) + Pxy(:) - Exy(:) + (PIxy(:) - Txyz_z(:) - Gxy(:) + Dxy(:))*aux(:)
+    Rxz_t(:) = -Fxz(:) + Bxz(:) + Cxz(:) + Pxz(:) - Exz(:) + (PIxz(:) - Txzz_z(:) - Gxz(:) + Dxz(:))*aux(:)
+    Ryz_t(:) = -Fyz(:) + Byz(:) + Cyz(:) + Pyz(:) - Eyz(:) + (PIyz(:) - Tyzz_z(:) - Gyz(:) + Dyz(:))*aux(:)
 
     ! Kinetic energy equation
     Tke(:) = 0.5_wp*(Rxx(:) + Ryy(:) + Rzz(:))
@@ -1337,7 +1105,7 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     Gkin(:) = 0.5_wp*(Gxx(:) + Gyy(:) + Gzz(:))
     Dkin(:) = 0.5_wp*(Dxx(:) + Dyy(:) + Dzz(:))
 
-    Tke_t(:) = Buo(:) + Con(:) + Prd(:) - Eps(:) + (-Tz_z(:) + Pi(:) - Gkin(:) + Dkin(:))/rR(:)
+    Tke_t(:) = Buo(:) + Con(:) + Prd(:) - Eps(:) + (-Tz_z(:) + Pi(:) - Gkin(:) + Dkin(:))*aux(:)
 
     ! ###################################################################
     ! Output
