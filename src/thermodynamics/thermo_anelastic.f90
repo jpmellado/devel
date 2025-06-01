@@ -93,11 +93,16 @@ contains
         end if
 
         inb_scal_array = inb_scal_array + 1         ! Space for T as diagnostic
-        if (imixture == MIXT_TYPE_AIRWATER) then
-            inb_scal_e = 1          ! scalar index for the energy (liquid water static energy)
+        inb_scal_e = 1              ! scalar index for the energy (liquid water static energy)
+        select case (imixture)
+        case (MIXT_TYPE_AIR)
+            inb_scal_T = 2          ! scalar index for the temperature
+        case (MIXT_TYPE_AIRVAPOR)
+            inb_scal_T = 3          ! scalar index for the temperature
+        case (MIXT_TYPE_AIRWATER)
             inb_scal_ql = 3         ! scalar index for the liquid (liquid water specific humidity)
             inb_scal_T = 4          ! scalar index for the temperature
-        end if
+        end select
 
         return
     end subroutine Thermo_Anelastic_Initialize
