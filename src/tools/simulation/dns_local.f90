@@ -49,8 +49,6 @@ contains
         use BOUNDARY_BCS
         ! use PARTICLE_VARS
         ! use PLANES
-        ! use IBM_VARS, only: imode_ibm, ibm_geo
-        ! use AVG_PHASE
         ! use OPR_Filters, only: FilterDomain, PressureFilter, DNS_FILTER_NONE
         ! use Discrete, only: Discrete_ReadBlock
 
@@ -59,7 +57,7 @@ contains
         ! -------------------------------------------------------------------
         character(len=32) bakfile, block
         character(len=128) eStr
-        character(len=512) sRes
+        ! character(len=512) sRes
         integer is
 
         ! ###################################################################

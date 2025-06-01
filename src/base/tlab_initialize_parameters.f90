@@ -44,13 +44,13 @@ subroutine TLab_Initialize_Parameters(inifile)
     end if
 
     ! ###################################################################
-    block = 'Main'
+    block = 'WorkFlow'
     eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
     call TLab_Write_ASCII(bakfile, '#')
     call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
     call TLab_Write_ASCII(bakfile, '#FileFormat=<mpiio/NetCDF/None>')
-    call TLab_Write_ASCII(bakfile, '#FileType=<Double/Single>')
+    call TLab_Write_ASCII(bakfile, '#FileDatatype=<Double/Single>')
     call TLab_Write_ASCII(bakfile, '#VerbosityLevel=<0/1/2>')
     call TLab_Write_ASCII(bakfile, '#CalculateFlow=<yes/no>')
     call TLab_Write_ASCII(bakfile, '#CalculateScalar=<yes/no>')
@@ -64,11 +64,11 @@ subroutine TLab_Initialize_Parameters(inifile)
         call TLab_Stop(DNS_ERROR_UNDEVELOP)
     end if
 
-    call ScanFile_Char(bakfile, inifile, block, 'FileType', 'Double', sRes)
+    call ScanFile_Char(bakfile, inifile, block, 'FileDatatype', 'Double', sRes)
     if (trim(adjustl(sRes)) == 'double') then; io_datatype = IO_TYPE_DOUBLE
     elseif (trim(adjustl(sRes)) == 'single') then; io_datatype = IO_TYPE_SINGLE
     else
-        call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong FileType.')
+        call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong FileDatatype.')
         call TLab_Stop(DNS_ERROR_UNDEVELOP)
     end if
 
