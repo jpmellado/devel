@@ -50,23 +50,23 @@ module Thermo_Compressible
         return
     end subroutine Thermo_Compressible_Initialize
 
-    !########################################################################
-    !########################################################################
-    subroutine Thermo_Compressible_Memory()
-        use TLab_Memory, only: isize_field, imax, jmax, kmax
-        use TLab_Arrays, only: q
+    ! !########################################################################
+    ! !########################################################################
+    ! subroutine Thermo_Compressible_Memory()
+    !     use TLab_Memory, only: isize_field, imax, jmax, kmax
+    !     use TLab_Arrays, only: q
 
-        integer(wi) idummy(2)
+    !     integer(wi) idummy(2)
 
-        idummy = shape(q)
-        ! Pointers
-        if (idummy(2) >= 4) e(1:imax, 1:jmax, 1:kmax) => q(1:isize_field, 4)
-        if (idummy(2) >= 5) rho(1:imax, 1:jmax, 1:kmax) => q(1:isize_field, 5)
-        if (idummy(2) >= 6) p(1:imax, 1:jmax, 1:kmax) => q(1:isize_field, 6)
-        if (idummy(2) >= 7) T(1:imax, 1:jmax, 1:kmax) => q(1:isize_field, 7)
-        if (idummy(2) >= 8) vis(1:imax, 1:jmax, 1:kmax) => q(1:isize_field, 8)
+    !     idummy = shape(q)
+    !     ! Pointers
+    !     if (idummy(2) >= 4) e(1:imax, 1:jmax, 1:kmax) => q(1:isize_field, 4)
+    !     if (idummy(2) >= 5) rho(1:imax, 1:jmax, 1:kmax) => q(1:isize_field, 5)
+    !     if (idummy(2) >= 6) p(1:imax, 1:jmax, 1:kmax) => q(1:isize_field, 6)
+    !     if (idummy(2) >= 7) T(1:imax, 1:jmax, 1:kmax) => q(1:isize_field, 7)
+    !     if (idummy(2) >= 8) vis(1:imax, 1:jmax, 1:kmax) => q(1:isize_field, 8)
 
-        return
-    end subroutine Thermo_Compressible_Memory
+    !     return
+    ! end subroutine Thermo_Compressible_Memory
 
 end module Thermo_Compressible

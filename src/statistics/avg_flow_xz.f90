@@ -659,14 +659,14 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
 
         call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), s(:, :, :, inb_scal_T), dudz)
 
-        call Thermo_Anelastic_LAPSE_EQU(imax, jmax, kmax, s, dwdz, p_wrk3d)
+        call Thermo_Anelastic_LapseEquilibrium(imax, jmax, kmax, s, dwdz, p_wrk3d)
         call AVG_IK_V(imax, jmax, kmax, dwdz, lapse_eq(1), wrk1d)
         !frequency(:) = (lapse(:) + dTdy(:))/locT(:)
         p_wrk3d = (dwdz + dudz)/dwdx
         call AVG_IK_V(imax, jmax, kmax, p_wrk3d, bfreq_eq(1), wrk1d)
         bfreq_eq(:) = bfreq_eq(:)*gravityProps%vector(3)
 
-        call Thermo_Anelastic_LAPSE_FR(imax, jmax, kmax, s, dwdz)
+        call Thermo_Anelastic_LapseFrozen(imax, jmax, kmax, s, dwdz)
         call AVG_IK_V(imax, jmax, kmax, dwdz, lapse_fr(1), wrk1d)
         !frequency(:) = (lapse(:) + dTdy(:))/locT(:)
         p_wrk3d = (dwdz + dudz)/dwdx
@@ -676,7 +676,7 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
         call Thermo_Anelastic_Pvapor(imax, jmax, kmax, s, dudz)
         call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), dudz, dudy)
         ! dwdz should contains lapse_fr, since lapse_dew = lapse_fr when saturated
-        call Thermo_Anelastic_DEWPOINT(imax, jmax, kmax, s, dudy, p_wrk3d, dwdz)
+        call Thermo_Anelastic_Weight_DewPoint(imax, jmax, kmax, s, dudy, p_wrk3d, dwdz)
         call AVG_IK_V(imax, jmax, kmax, p_wrk3d, dewpoint(1), wrk1d)
         call AVG_IK_V(imax, jmax, kmax, dwdz, lapse_dew(1), wrk1d)
 

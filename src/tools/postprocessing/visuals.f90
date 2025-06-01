@@ -545,7 +545,7 @@ program VISUALS
                 call Write_Visuals(plot_file, txc(:, 1:1))
 
                 ! plot_file = 'Dewpoint'//time_str(1:MaskSize)
-                ! call Thermo_Anelastic_Dewpoint(imax, jmax, kmax, s, txc(1, 1), wrk3d)
+                ! call Thermo_Anelastic_Weight_DewPoint(imax, jmax, kmax, s, txc(1, 1), wrk3d)
                 ! call Write_Visuals(plot_file, txc(:, 1:1))
 
                 plot_file = 'Theta'//time_str(1:MaskSize)

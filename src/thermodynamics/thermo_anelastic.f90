@@ -19,7 +19,7 @@ module Thermo_Anelastic
     private
 
     public :: Thermo_Anelastic_Initialize
-    public :: Thermo_Anelastic_Memory
+    ! public :: Thermo_Anelastic_Memory
 
     public :: Thermo_Anelastic_EquilibriumPH
     public :: Thermo_Anelastic_T
@@ -27,8 +27,8 @@ module Thermo_Anelastic
     public :: Thermo_Anelastic_Buoyancy
     public :: Thermo_Anelastic_Weight_InPlace
     public :: Thermo_Anelastic_Weight_OutPlace
-    public :: Thermo_Anelastic_WEIGHT_ADD
-    public :: Thermo_Anelastic_WEIGHT_SUBTRACT
+    public :: Thermo_Anelastic_Weight_Add
+    public :: Thermo_Anelastic_Weight_Subtract
 
     public :: Thermo_Anelastic_Rho
     public :: Thermo_Anelastic_Theta
@@ -36,10 +36,10 @@ module Thermo_Anelastic
     public :: Thermo_Anelastic_ThetaE
     public :: Thermo_Anelastic_ThetaL
     public :: Thermo_Anelastic_MSE
-    public :: Thermo_Anelastic_LAPSE_EQU
-    public :: Thermo_Anelastic_LAPSE_FR
+    public :: Thermo_Anelastic_LapseEquilibrium
+    public :: Thermo_Anelastic_LapseFrozen
     public :: Thermo_Anelastic_Pvapor
-    public :: Thermo_Anelastic_DEWPOINT
+    public :: Thermo_Anelastic_Weight_DewPoint
     public :: Thermo_Anelastic_RH
     public :: Thermo_Anelastic_STATIC_CONSTANTCP
     ! public :: Thermo_Anelastic_EquilibriumPH_RE
@@ -107,25 +107,25 @@ contains
         return
     end subroutine Thermo_Anelastic_Initialize
 
-    !########################################################################
-    !########################################################################
-    subroutine Thermo_Anelastic_Memory()
-        use TLab_Memory, only: isize_field
-        use TLab_Arrays, only: s
+    ! !########################################################################
+    ! !########################################################################
+    ! subroutine Thermo_Anelastic_Memory()
+    !     use TLab_Memory, only: isize_field
+    !     use TLab_Arrays, only: s
 
-        integer(wi) idummy(2)
+    !     integer(wi) idummy(2)
 
-        idummy = shape(s)
-        ! Pointers
-        if (idummy(2) >= 1) p_hl(1:isize_field) => s(1:isize_field, 1)
-        if (idummy(2) >= 2) p_qt(1:isize_field) => s(1:isize_field, 2)
-        if (idummy(2) >= 3) p_ql(1:isize_field) => s(1:isize_field, 3)
-        if (idummy(2) >= 4) p_T(1:isize_field) => s(1:isize_field, 4)
+    !     idummy = shape(s)
+    !     ! Pointers
+    !     if (idummy(2) >= 1) p_hl(1:isize_field) => s(1:isize_field, 1)
+    !     if (idummy(2) >= 2) p_qt(1:isize_field) => s(1:isize_field, 2)
+    !     if (idummy(2) >= 3) p_ql(1:isize_field) => s(1:isize_field, 3)
+    !     if (idummy(2) >= 4) p_T(1:isize_field) => s(1:isize_field, 4)
 
-        ! Shall we add here the creation of the background profiles?
+    !     ! Shall we add here the creation of the background profiles?
 
-        return
-    end subroutine Thermo_Anelastic_Memory
+    !     return
+    ! end subroutine Thermo_Anelastic_Memory
 
     !########################################################################
     !########################################################################
@@ -427,7 +427,7 @@ contains
 
 !########################################################################
 !########################################################################
-    subroutine Thermo_Anelastic_WEIGHT_ADD(nx, ny, nz, weight, a, b)
+    subroutine Thermo_Anelastic_Weight_Add(nx, ny, nz, weight, a, b)
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: weight(nz)
         real(wp), intent(in) :: a(nx*ny, nz)
@@ -441,11 +441,11 @@ contains
         end do
 
         return
-    end subroutine Thermo_Anelastic_WEIGHT_ADD
+    end subroutine Thermo_Anelastic_Weight_Add
 
 !########################################################################
 !########################################################################
-    subroutine Thermo_Anelastic_WEIGHT_SUBTRACT(nx, ny, nz, weight, a, b)
+    subroutine Thermo_Anelastic_Weight_Subtract(nx, ny, nz, weight, a, b)
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: weight(nz)
         real(wp), intent(in) :: a(nx*ny, nz)
@@ -459,7 +459,7 @@ contains
         end do
 
         return
-    end subroutine Thermo_Anelastic_WEIGHT_SUBTRACT
+    end subroutine Thermo_Anelastic_Weight_Subtract
 
     !########################################################################
     !########################################################################
@@ -699,7 +699,7 @@ contains
     !########################################################################
     !########################################################################
     ! Frozen lapse rate; in unsaturated conditions, this is the unsaturated lapse rate
-    subroutine Thermo_Anelastic_LAPSE_FR(nx, ny, nz, s, lapse)
+    subroutine Thermo_Anelastic_LapseFrozen(nx, ny, nz, s, lapse)
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz, *)
         real(wp), intent(out) :: lapse(nx*ny*nz)
@@ -718,12 +718,12 @@ contains
         end select
 
         return
-    end subroutine Thermo_Anelastic_LAPSE_FR
+    end subroutine Thermo_Anelastic_LapseFrozen
 
     !########################################################################
     !########################################################################
     ! Equilibrium lapse rate
-    subroutine Thermo_Anelastic_LAPSE_EQU(nx, ny, nz, s, lapse, T)
+    subroutine Thermo_Anelastic_LapseEquilibrium(nx, ny, nz, s, lapse, T)
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz, *)
         real(wp), intent(out) :: lapse(nx*ny*nz)
@@ -736,10 +736,10 @@ contains
 
         select case (imixture)
         case (MIXT_TYPE_AIR)
-            call Thermo_Anelastic_LAPSE_FR(nx, ny, nz, s, lapse)
+            call Thermo_Anelastic_LapseFrozen(nx, ny, nz, s, lapse)
 
         case (MIXT_TYPE_AIRVAPOR)
-            call Thermo_Anelastic_LAPSE_FR(nx, ny, nz, s, lapse)
+            call Thermo_Anelastic_LapseFrozen(nx, ny, nz, s, lapse)
 
         case (MIXT_TYPE_AIRWATER)
 
@@ -771,7 +771,7 @@ contains
         end select
 
         return
-    end subroutine Thermo_Anelastic_LAPSE_EQU
+    end subroutine Thermo_Anelastic_LapseEquilibrium
 
     !########################################################################
     !########################################################################
@@ -827,7 +827,7 @@ contains
 
     !########################################################################
     !########################################################################
-    subroutine Thermo_Anelastic_DEWPOINT(nx, ny, nz, s, dpvdy, Td, Lapse)
+    subroutine Thermo_Anelastic_Weight_DewPoint(nx, ny, nz, s, dpvdy, Td, Lapse)
         integer(wi), intent(in) :: nx, ny, nz
         real(wp), intent(in) :: s(nx*ny*nz, *), dpvdy(nx*ny*nz)
         real(wp), intent(out) :: lapse(nx*ny*nz), Td(nx*ny*nz)
@@ -868,7 +868,7 @@ contains
 #undef pv
 
         return
-    end subroutine Thermo_Anelastic_DEWPOINT
+    end subroutine Thermo_Anelastic_Weight_DewPoint
 
     !########################################################################
     !########################################################################

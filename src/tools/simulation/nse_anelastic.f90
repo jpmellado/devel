@@ -14,12 +14,12 @@ subroutine NSE_Anelastic()
     use TLab_Constants, only: wp, wi, BCS_NN
     use TLab_Memory, only: imax, jmax, kmax, inb_flow, inb_scal
     use TLab_Arrays, only: s
-    use TLab_Pointers, only: u, v, w, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9
+    use TLab_Pointers, only: u, v, w, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8
     use FDM, only: g
     use DNS_Arrays
     use TimeMarching, only: dte, remove_divergence
     use Thermo_Anelastic, only: rbackground, ribackground, Thermo_Anelastic_Weight_InPlace
-    use Thermo_Anelastic, only: Thermo_Anelastic_Weight_OutPlace, Thermo_Anelastic_WEIGHT_SUBTRACT
+    use Thermo_Anelastic, only: Thermo_Anelastic_Weight_OutPlace, Thermo_Anelastic_Weight_Subtract
     use BOUNDARY_BCS
     use OPR_Partial
     use NSE_Burgers
@@ -57,24 +57,24 @@ subroutine NSE_Anelastic()
     call NSE_Burgers_Z(0, imax, jmax, kmax, w, tmp3, w)
 
     ! Ox momentum equation
-    call NSE_Burgers_Y(0, imax, jmax, kmax, u, tmp7, tmp9, tmp5) ! tmp5 contains v transposed
-    call NSE_Burgers_Z(0, imax, jmax, kmax, u, tmp8, w)
-    hq(:, 1) = hq(:, 1) + tmp1(:) + tmp7(:) + tmp8(:)
+    call NSE_Burgers_Y(0, imax, jmax, kmax, u, tmp6, tmp8, tmp5) ! tmp5 contains v transposed
+    call NSE_Burgers_Z(0, imax, jmax, kmax, u, tmp7, w)
+    hq(:, 1) = hq(:, 1) + tmp1(:) + tmp6(:) + tmp7(:)
 
     ! Oy momentum equation
-    call NSE_Burgers_X(0, imax, jmax, kmax, v, tmp7, tmp9, tmp4) ! tmp4 contains u transposed
-    call NSE_Burgers_Z(0, imax, jmax, kmax, v, tmp8, w)
-    hq(:, 2) = hq(:, 2) + tmp2(:) + tmp7(:) + tmp8(:)
+    call NSE_Burgers_X(0, imax, jmax, kmax, v, tmp6, tmp8, tmp4) ! tmp4 contains u transposed
+    call NSE_Burgers_Z(0, imax, jmax, kmax, v, tmp7, w)
+    hq(:, 2) = hq(:, 2) + tmp2(:) + tmp6(:) + tmp7(:)
 
     ! Oz momentum equation
-    call NSE_Burgers_X(0, imax, jmax, kmax, w, tmp7, tmp9, tmp4) ! tmp4 contains u transposed
-    call NSE_Burgers_Y(0, imax, jmax, kmax, w, tmp8, tmp9, tmp5) ! tmp5 contains v transposed
-    hq(:, 3) = hq(:, 3) + tmp3(:) + tmp7(:) + tmp8(:)
+    call NSE_Burgers_X(0, imax, jmax, kmax, w, tmp6, tmp8, tmp4) ! tmp4 contains u transposed
+    call NSE_Burgers_Y(0, imax, jmax, kmax, w, tmp7, tmp8, tmp5) ! tmp5 contains v transposed
+    hq(:, 3) = hq(:, 3) + tmp3(:) + tmp6(:) + tmp7(:)
 
     ! Scalar equations
     do is = 1, inb_scal
-        call NSE_Burgers_X(is, imax, jmax, kmax, s(:, is), tmp1, tmp9, tmp4) ! tmp4 contains u transposed
-        call NSE_Burgers_Y(is, imax, jmax, kmax, s(:, is), tmp2, tmp9, tmp5) ! tmp5 contains v transposed
+        call NSE_Burgers_X(is, imax, jmax, kmax, s(:, is), tmp1, tmp8, tmp4) ! tmp4 contains u transposed
+        call NSE_Burgers_Y(is, imax, jmax, kmax, s(:, is), tmp2, tmp8, tmp5) ! tmp5 contains v transposed
         call NSE_Burgers_Z(is, imax, jmax, kmax, s(:, is), tmp3, w)
         hs(:, is) = hs(:, is) + tmp1(:) + tmp2(:) + tmp3(:)
 
@@ -117,9 +117,9 @@ subroutine NSE_Anelastic()
     call OPR_Partial_X(OPR_P1, imax, jmax, kmax, g(1), tmp1, tmp2)
     call OPR_Partial_Y(OPR_P1, imax, jmax, kmax, g(2), tmp1, tmp3)
     call OPR_Partial_Z(OPR_P1, imax, jmax, kmax, g(3), tmp1, tmp4)
-    call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp2, hq(:, 1))
-    call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp3, hq(:, 2))
-    call Thermo_Anelastic_WEIGHT_SUBTRACT(imax, jmax, kmax, ribackground, tmp4, hq(:, 3))
+    call Thermo_Anelastic_Weight_Subtract(imax, jmax, kmax, ribackground, tmp2, hq(:, 1))
+    call Thermo_Anelastic_Weight_Subtract(imax, jmax, kmax, ribackground, tmp3, hq(:, 2))
+    call Thermo_Anelastic_Weight_Subtract(imax, jmax, kmax, ribackground, tmp4, hq(:, 3))
 
     ! #######################################################################
     ! Boundary conditions
