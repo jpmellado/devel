@@ -91,8 +91,8 @@ contains
         integer, parameter :: TYPE_DIRECT = 2
 
         integer(wi) :: ndl, ndr, nd
-        character*512 sRes
-        character*32 bakfile
+        character(len=32) bakfile, block
+        character(len=512) sRes
 
         integer(wi) iglobal, jglobal
         integer(wi) fft_offset_i, fft_offset_j
@@ -100,12 +100,13 @@ contains
         ! ###################################################################
         ! Reading
         bakfile = trim(adjustl(inifile))//'.bak'
+        block = 'Space'
 
         imode_elliptic = TYPE_FACTORIZE                 ! default is the finite-difference method used for the derivatives
         fdm_loc%der1%mode_fdm = g(3)%der1%mode_fdm      ! to impose zero divergence down to round-off error in the interior points
         fdm_loc%der2%mode_fdm = g(3)%der2%mode_fdm
 
-        call ScanFile_Char(bakfile, inifile, 'Main', 'EllipticOrder', 'void', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'SchemeElliptic', 'void', sRes)
         if (trim(adjustl(sRes)) == 'compactdirect4') then
             imode_elliptic = TYPE_DIRECT
             fdm_loc%der1%mode_fdm = FDM_COM4_DIRECT

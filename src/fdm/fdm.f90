@@ -42,49 +42,55 @@ contains
 
         ! -------------------------------------------------------------------
         character(len=32) bakfile, block
+        character(len=128) eStr
         character(len=512) sRes
         integer ig
 
         !########################################################################
         ! Reading
         bakfile = trim(adjustl(inifile))//'.bak'
-        block = 'Main'
+
+        ! -------------------------------------------------------------------
+        block = 'Space'
+        eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
         call TLab_Write_ASCII(bakfile, '#')
         call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
-        call TLab_Write_ASCII(bakfile, '#SpaceOrder1=<CompactJacobian4/CompactJacobian6/CompactJacobian6Penta/CompactDirect4/CompactDirect6>')
-        call TLab_Write_ASCII(bakfile, '#SpaceOrder2=<CompactJacobian4/CompactJacobian6/CompactJacobian6Hyper/CompactDirect4/CompactDirect6>')
+        call TLab_Write_ASCII(bakfile, '#SchemeDerivative1=<CompactJacobian4/CompactJacobian6/CompactJacobian6Penta/CompactDirect4/CompactDirect6>')
+        call TLab_Write_ASCII(bakfile, '#SchemeDerivative2=<CompactJacobian4/CompactJacobian6/CompactJacobian6Hyper/CompactDirect4/CompactDirect6>')
 
-        call ScanFile_Char(bakfile, inifile, block, 'SpaceOrder1', 'void', sRes)
-        if (trim(adjustl(sRes)) == 'void') &
-            call ScanFile_Char(bakfile, inifile, block, 'SpaceOrder', 'compactjacobian6', sRes) ! backwards compatibility
+        call ScanFile_Char(bakfile, inifile, block, 'SchemeDerivative1', 'compactjacobian6', sRes)
         if (trim(adjustl(sRes)) == 'compactjacobian4') then; g(1:3)%der1%mode_fdm = FDM_COM4_JACOBIAN; 
         elseif (trim(adjustl(sRes)) == 'compactjacobian6') then; g(1:3)%der1%mode_fdm = FDM_COM6_JACOBIAN; 
         elseif (trim(adjustl(sRes)) == 'compactjacobian6penta') then; g(1:3)%der1%mode_fdm = FDM_COM6_JACOBIAN_PENTA; 
         elseif (trim(adjustl(sRes)) == 'compactdirect4') then; g(1:3)%der1%mode_fdm = FDM_COM4_DIRECT; 
         elseif (trim(adjustl(sRes)) == 'compactdirect6') then; g(1:3)%der1%mode_fdm = FDM_COM6_DIRECT; 
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. Wrong SpaceOrder1 option.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong SchemeDerivative1 option.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
-        call ScanFile_Char(bakfile, inifile, block, 'SpaceOrder2', 'CompactJacobian6Hyper', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'SchemeDerivative2', 'CompactJacobian6Hyper', sRes)
         if (trim(adjustl(sRes)) == 'compactjacobian4') then; g(1:3)%der2%mode_fdm = FDM_COM4_JACOBIAN; 
         elseif (trim(adjustl(sRes)) == 'compactjacobian6') then; g(1:3)%der2%mode_fdm = FDM_COM6_JACOBIAN; 
         elseif (trim(adjustl(sRes)) == 'compactjacobian6hyper') then; g(1:3)%der2%mode_fdm = FDM_COM6_JACOBIAN_HYPER; 
         elseif (trim(adjustl(sRes)) == 'compactdirect4') then; g(1:3)%der2%mode_fdm = FDM_COM4_DIRECT; 
         elseif (trim(adjustl(sRes)) == 'compactdirect6') then; g(1:3)%der2%mode_fdm = FDM_COM6_DIRECT; 
         else
-            call TLab_Write_ASCII(efile, __FILE__//'. Wrong SpaceOrder2 option.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong SchemeDerivative2 option.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 
         if (g(1)%der1%mode_fdm == FDM_COM6_JACOBIAN_PENTA) then     ! CFL_max depends on max[g(ig)%der1%mwn(:)]
-            call TLab_Write_ASCII(wfile, __FILE__//'. CompactJacobian6Penta requires adjusted CFL-number depending on alpha and beta values.')
+            call TLab_Write_ASCII(wfile, trim(adjustl(eStr))//'CompactJacobian6Penta requires adjusted CFL-number depending on alpha and beta values.')
         end if
 
+        ! -------------------------------------------------------------------
+        block = 'Grid'
+        eStr = __FILE__//'. '//trim(adjustl(block))//'. '
+
         call TLab_Write_ASCII(bakfile, '#')
-        call TLab_Write_ASCII(bakfile, '#[Grid]')
+        call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
         call TLab_Write_ASCII(bakfile, '#XUniform=<yes/no>')
         call TLab_Write_ASCII(bakfile, '#YUniform=<yes/no>')
         call TLab_Write_ASCII(bakfile, '#ZUniform=<yes/no>')
@@ -97,7 +103,7 @@ contains
         g(3)%name = 'z'
 
         do ig = 1, 3
-            call ScanFile_Char(bakfile, inifile, 'Grid', g(ig)%name(1:1)//'Uniform', 'void', sRes)
+            call ScanFile_Char(bakfile, inifile, block, g(ig)%name(1:1)//'Uniform', 'void', sRes)
             if (trim(adjustl(sRes)) == 'yes') then; g(ig)%uniform = .true.
             else if (trim(adjustl(sRes)) == 'no') then; g(ig)%uniform = .false.
             else
@@ -105,7 +111,7 @@ contains
                 call TLab_Stop(DNS_ERROR_UNIFORMX)
             end if
 
-            call ScanFile_Char(bakfile, inifile, 'Grid', g(ig)%name(1:1)//'Periodic', 'void', sRes)
+            call ScanFile_Char(bakfile, inifile, block, g(ig)%name(1:1)//'Periodic', 'void', sRes)
             if (trim(adjustl(sRes)) == 'yes') then; g(ig)%periodic = .true.
             else if (trim(adjustl(sRes)) == 'no') then; g(ig)%periodic = .false.
             else
