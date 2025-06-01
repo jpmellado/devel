@@ -57,15 +57,15 @@ contains
         ! ###################################################################
         bakfile = trim(adjustl(inifile))//'.bak'
 
-        block = 'Iteration'
+        block = 'Time'
         eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
         call TLab_Write_ASCII(bakfile, '#ObsLog=<None/Ekman>')
-        call ScanFile_Char(bakfile, inifile, 'Iteration', 'ObsLog', 'none', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'ObsLog', 'none', sRes)
         if (trim(adjustl(sRes)) == 'none') then; dns_obs_log = OBS_TYPE_NONE
         else if (trim(adjustl(sRes)) == 'ekman') then; dns_obs_log = OBS_TYPE_EKMAN
         else
-            call TLab_Write_ASCII(efile, 'DNS_Initialize_Parameters. ObsLog.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'. Incorrect type ObsLog.')
             call TLab_Stop(DNS_ERROR_OPTION)
         end if
 

@@ -39,6 +39,7 @@ module TimeMarching
 
     real(wp), public :: dtime                   ! time step
     real(wp), public :: dte                     ! time step of each substep
+    logical, public :: remove_divergence        ! Remove residual divergence every time step
 
     ! -------------------------------------------------------------------
     ! integer :: imode_rhs                        ! Type of implementation of the RHS of evolution equations
@@ -100,34 +101,34 @@ contains
         ! ###################################################################
         bakfile = trim(adjustl(inifile))//'.bak'
 
-        block = 'Main'
+        block = 'Time'
         eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
         call TLab_Write_ASCII(bakfile, '#')
         call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
-        call TLab_Write_ASCII(bakfile, '#TimeOrder=<RungeKuttaExplicit3/RungeKuttaExplicit4/RungeKuttaDiffusion3>')
+        call TLab_Write_ASCII(bakfile, '#Scheme=<RungeKuttaExplicit3/RungeKuttaExplicit4/RungeKuttaDiffusion3>')
         call TLab_Write_ASCII(bakfile, '#TimeStep=<value (used if CFL is negative)>')
-        call TLab_Write_ASCII(bakfile, '#TimeCFL=<value>')
+        call TLab_Write_ASCII(bakfile, '#MaxCFL=<value>')
         call TLab_Write_ASCII(bakfile, '#TimeDiffusiveCFL=<value>')
         call TLab_Write_ASCII(bakfile, '#TimeReactiveCFL=<value>')
 
-        call ScanFile_Char(bakfile, inifile, 'Main', 'TimeOrder', 'dummy', sRes)
+        call ScanFile_Char(bakfile, inifile, block, 'Scheme', 'dummy', sRes)
         if (trim(adjustl(sRes)) == 'rungekuttaexplicit3') then; rkm_mode = RKM_EXP3; lstr = '0.6'; 
         elseif (trim(adjustl(sRes)) == 'rungekuttaexplicit4') then; rkm_mode = RKM_EXP4; lstr = '1.2'; 
         elseif (trim(adjustl(sRes)) == 'rungekuttadiffusion3') then; rkm_mode = RKM_IMP3_DIFFUSION; lstr = '0.6'; 
             !  ELSEIF ( TRIM(ADJUSTL(sRes)) .EQ. 'rungekuttasource3'    ) THEN; rkm_mode = RKM_IMP3_SOURCE;
         else
-            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TimeOrder option.')
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong Scheme option.')
             call TLab_Stop(DNS_ERROR_RKORDER)
         end if
 
-        ! Default cfla value set in lstr while reading TimeOrder
-        call ScanFile_Real(bakfile, inifile, 'Main', 'TimeCFL', trim(adjustl(lstr)), cfla)
+        ! Default cfla value set in lstr while reading Scheme
+        call ScanFile_Real(bakfile, inifile, block, 'MaxCFL', trim(adjustl(lstr)), cfla)
         write (lstr, *) 0.25_wp*cfla ! Default value for diffusive CFL
-        call ScanFile_Real(bakfile, inifile, 'Main', 'TimeDiffusiveCFL', trim(adjustl(lstr)), cfld)
+        call ScanFile_Real(bakfile, inifile, block, 'TimeDiffusiveCFL', trim(adjustl(lstr)), cfld)
         write (lstr, *) 0.5_wp*cfla ! Default value for reactive CFL
-        call ScanFile_Real(bakfile, inifile, 'Main', 'TimeReactiveCFL', trim(adjustl(lstr)), cflr)
-        call ScanFile_Real(bakfile, inifile, 'Main', 'TimeStep', '0.05', dtime)
+        call ScanFile_Real(bakfile, inifile, block, 'TimeReactiveCFL', trim(adjustl(lstr)), cflr)
+        call ScanFile_Real(bakfile, inifile, block, 'TimeStep', '0.05', dtime)
 
         ! ! -------------------------------------------------------------------
         ! ! Implicit RKM part
@@ -144,6 +145,17 @@ contains
         !     end do
 
         ! end if
+
+        ! -------------------------------------------------------------------
+        call TLab_Write_ASCII(bakfile, '#RemoveDivergence=<none/remove>')
+
+        call ScanFile_Char(bakfile, inifile, block, 'TermDivergence', 'yes', sRes)
+        if (trim(adjustl(sRes)) == 'no') then; remove_divergence = .false.
+        else if (trim(adjustl(sRes)) == 'yes') then; remove_divergence = .true.
+        else
+            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong RemoveDivergence option.')
+            call TLab_Stop(DNS_ERROR_OPTION)
+        end if
 
         ! ###################################################################
         ! RK coefficients
@@ -303,8 +315,8 @@ contains
             case (DNS_EQNS_ANELASTIC)
                 if (rkm_mode == RKM_EXP3 .or. rkm_mode == RKM_EXP4) then
                     call TMarch_Substep_Anelastic_Explicit()
-                ! else if (rkm_mode == RKM_IMP3_DIFFUSION) then
-                !     call TMarch_Substep_Boussinesq_Implicit()
+                    ! else if (rkm_mode == RKM_IMP3_DIFFUSION) then
+                    !     call TMarch_Substep_Boussinesq_Implicit()
                 end if
 
             case (DNS_EQNS_COMPRESSIBLE)
@@ -568,7 +580,7 @@ contains
         end do
 
         call TLab_Diagnostic(imax, jmax, kmax, s)
-        
+
         return
     end subroutine TMarch_Substep_Anelastic_Explicit
 

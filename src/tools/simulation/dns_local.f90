@@ -32,8 +32,6 @@ module DNS_LOCAL
     real(wp) :: wall_time        ! Actual elapsed time during the simulation in seconds
     integer :: start_clock      ! Starting time of the simulation on the system
 
-    logical :: remove_divergence    ! Remove residual divergence every time step
-
     ! Variable viscosity
     logical :: flag_viscosity
     real(wp) :: visc_stop, visc_time, visc_rate
@@ -66,25 +64,7 @@ contains
 
         ! ###################################################################
         bakfile = trim(adjustl(inifile))//'.bak'
-
-        ! ###################################################################
-        block = 'Main'
-        eStr = __FILE__//'. '//trim(adjustl(block))//'. '
-
-        call TLab_Write_ASCII(bakfile, '#')
-        call TLab_Write_ASCII(bakfile, '#['//trim(adjustl(block))//']')
-        call TLab_Write_ASCII(bakfile, '#TermDivergence=<none/remove>')
-
-        call ScanFile_Char(bakfile, inifile, 'Main', 'TermDivergence', 'remove', sRes)
-        if (trim(adjustl(sRes)) == 'none') then; remove_divergence = .false.
-        else if (trim(adjustl(sRes)) == 'remove') then; remove_divergence = .true.
-        else
-            call TLab_Write_ASCII(efile, trim(adjustl(eStr))//'Wrong TermDivergence option.')
-            call TLab_Stop(DNS_ERROR_OPTION)
-        end if
-
-        ! ###################################################################
-        block = 'Iteration'
+        block = 'Time'
         eStr = __FILE__//'. '//trim(adjustl(block))//'. '
 
         call TLab_Write_ASCII(bakfile, '#')
@@ -96,15 +76,15 @@ contains
         call TLab_Write_ASCII(bakfile, '#Saveplanes=<value>')
         call TLab_Write_ASCII(bakfile, '#RunAvera=<yes/no>')
         call TLab_Write_ASCII(bakfile, '#Runtime=<seconds>')
-        call TLab_Write_ASCII(bakfile, '#IteraLog=<value>')
+        call TLab_Write_ASCII(bakfile, '#Logs=<value>')
 
-        call ScanFile_Int(bakfile, inifile, 'Iteration', 'Start', '0', nitera_first)
-        call ScanFile_Int(bakfile, inifile, 'Iteration', 'End', '0', nitera_last)
-        call ScanFile_Int(bakfile, inifile, 'Iteration', 'Restart', '50', nitera_save)
-        call ScanFile_Int(bakfile, inifile, 'Iteration', 'Statistics', '50', nitera_stats)
-        call ScanFile_Int(bakfile, inifile, 'Iteration', 'Saveplanes', '-1', nitera_pln)
-        call ScanFile_Real(bakfile, inifile, 'Iteration', 'Runtime', '10000000', nruntime_sec)
-        call ScanFile_Int(bakfile, inifile, 'Iteration', 'IteraLog', '10', nitera_log)
+        call ScanFile_Int(bakfile, inifile, block, 'Start', '0', nitera_first)
+        call ScanFile_Int(bakfile, inifile, block, 'End', '0', nitera_last)
+        call ScanFile_Int(bakfile, inifile, block, 'Restart', '50', nitera_save)
+        call ScanFile_Int(bakfile, inifile, block, 'Statistics', '50', nitera_stats)
+        call ScanFile_Int(bakfile, inifile, block, 'Saveplanes', '-1', nitera_pln)
+        call ScanFile_Int(bakfile, inifile, block, 'Logs', '10', nitera_log)
+        call ScanFile_Real(bakfile, inifile, block, 'Runtime', '10000000', nruntime_sec)
 
         ! ! Domain Filter (Should we move it to Iteration?)
         ! call ScanFile_Int(bakfile, inifile, 'Filter', 'Step', '0', nitera_filter)

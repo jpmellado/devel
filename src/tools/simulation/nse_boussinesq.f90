@@ -17,8 +17,7 @@ subroutine NSE_Boussinesq()
     use TLab_Pointers, only: u, v, w, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9
     use FDM, only: g
     use DNS_Arrays
-    use DNS_LOCAL, only: remove_divergence
-    use TimeMarching, only: dte
+    use TimeMarching, only: dte, remove_divergence
     use BOUNDARY_BCS
     use OPR_Partial
     use NSE_Burgers

@@ -17,8 +17,7 @@ subroutine NSE_Anelastic()
     use TLab_Pointers, only: u, v, w, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, tmp8, tmp9
     use FDM, only: g
     use DNS_Arrays
-    use DNS_LOCAL, only: remove_divergence
-    use TimeMarching, only: dte
+    use TimeMarching, only: dte, remove_divergence
     use Thermo_Anelastic, only: rbackground, ribackground, Thermo_Anelastic_Weight_InPlace
     use Thermo_Anelastic, only: Thermo_Anelastic_Weight_OutPlace, Thermo_Anelastic_WEIGHT_SUBTRACT
     use BOUNDARY_BCS
