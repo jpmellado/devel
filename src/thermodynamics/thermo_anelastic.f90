@@ -139,10 +139,8 @@ contains
     !#
     !########################################################################
     subroutine Thermo_Anelastic_EquilibriumPH(nx, ny, nz, s, h)
-        ! use Thermo_Base, only: dsmooth, NEWTONRAPHSON_ERROR
-
         integer(wi), intent(in) :: nx, ny, nz
-        real(wp), intent(inout) :: s(nx*ny*nz, *)
+        real(wp), intent(inout) :: s(nx*ny*nz, 3)   ! qt, ql, T
         real(wp), intent(in) :: h(nx*ny*nz)
 
         ! -------------------------------------------------------------------
@@ -895,56 +893,5 @@ contains
 
         return
     end subroutine Thermo_Anelastic_STATIC_CONSTANTCP
-
-! ! ###################################################################
-! ! ###################################################################
-!     subroutine Thermo_Anelastic_EquilibriumPH_RE(nx, ny, nz, s, e, p, wrk3d)
-!         use THERMO_AIRWATER
-
-!         integer(wi) nx, ny, nz
-!         real(wp), intent(in) :: p(nx*ny*nz), e(nx*ny*nz)
-!         real(wp), intent(inout) :: s(nx*ny*nz, *)
-!         real(wp), intent(OUT) :: wrk3d(nx*ny*nz)
-
-! ! -------------------------------------------------------------------
-!         integer(wi) i, jk, iter, niter
-!         real(wp) r_loc(1), en_loc(1), s_loc(2), dummy(1)
-!         real(wp) p_loc(1), e_loc(1), t_loc(1)
-
-! ! ###################################################################
-!         niter = 5
-
-!         s(:, 3) = 0.0_wp ! initialize, q_l=0
-
-!         do iter = 1, niter ! iteration
-! ! calculate density in wrk3d
-!             call Thermo_Anelastic_Rho(nx, ny, nz, s, e, p, wrk3d)
-
-! ! calculate energy
-!             ij = 0
-!             do jk = 0, ny*nz - 1
-!                 is = mod(jk, ny) + 1
-!                 P_LOC = pbackground(is)
-!                 E_LOC = epbackground(is)
-
-!                 do i = 1, nx
-!                     ij = ij + 1
-
-!                     r_loc = wrk3d(ij)
-!                     s_loc(1) = s(ij, 2)
-!                     s_loc(2) = s(ij, 3)
-!                     en_loc = s(ij, 1) - E_LOC - CRATIO_INV*P_LOC/r_loc
-
-! ! solve equilibrium (rho,e,q_i)
-!                     call THERMO_AIRWATER_RE(1, s_loc, en_loc, r_loc, t_loc(:), dummy(:))
-
-!                     s(ij, 3) = s_loc(2)
-
-!                 end do
-!             end do
-!         end do
-
-!         return
-!     end subroutine Thermo_Anelastic_EquilibriumPH_RE
 
 end module Thermo_Anelastic

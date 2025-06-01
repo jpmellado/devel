@@ -182,8 +182,6 @@ contains
         use Thermo_Base, only: imixture, MIXT_TYPE_AIRWATER
         use Thermo_Anelastic
         use Microphysics
-        ! use THERMO_AIRWATER
-        ! use THERMO_THERMAL
         use OPR_ODES
 
         type(fdm_integral_dt), intent(in) :: fdmi(2)
@@ -259,30 +257,12 @@ contains
                 if (imixture == MIXT_TYPE_AIRWATER .and. evaporationProps%type == TYPE_EVA_EQUILIBRIUM) then
                     pbackground(:) = p(:)
                     call Thermo_Anelastic_EquilibriumPH(1, 1, nz, s(:, 2), s(:, 1))
-                    call Thermo_Anelastic_T(1, 1, nz, s, T)
                 end if
+                call Thermo_Anelastic_T(1, 1, nz, s, T)
 
             case (THERMO_TYPE_COMPRESSIBLE)
 
             end select
-
-            ! if (inb_flow_array > inb_flow .or. inb_scal_array > inb_scal) then      ! calculate diagnostic s.a. liquid content q_l
-            !     select case (imode_thermo)
-            !     case (THERMO_TYPE_ANELASTIC)
-            !         pbackground(:) = p(:)
-            !         if (imixture == MIXT_TYPE_AIRWATER) then
-            !             call Thermo_Anelastic_EquilibriumPH(1, 1, nz, s(:, 2), s(:, 1))
-            !             call Thermo_Anelastic_T(1, 1, nz, s, T)
-            !         end if
-
-            !     case (THERMO_TYPE_COMPRESSIBLE)
-            !         ! if (imixture == MIXT_TYPE_AIRWATER) then
-            !         !     call THERMO_AIRWATER_PH_RE(nx, s(:, 2), p, s(:, 1), T)
-            !         ! end if
-
-            !     end select
-
-            ! end if
 
         end do
 

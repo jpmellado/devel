@@ -159,7 +159,7 @@ program AVERAGES
             rtime = params(1)
         end if
 
-        call TLab_Diagnostic(imax, jmax, kmax, q, s)  ! Initialize diagnostic thermodynamic quantities
+        call TLab_Diagnostic(imax, jmax, kmax, s)  ! Initialize diagnostic thermodynamic quantities
 
         ! ! -------------------------------------------------------------------
         ! ! Calculate intermittency

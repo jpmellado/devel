@@ -143,7 +143,7 @@ program VISUALS
             rtime = params(1)
         end if
 
-        call TLab_Diagnostic(imax, jmax, kmax, q, s)
+        call TLab_Diagnostic(imax, jmax, kmax, s)
 
         write (str, fmt_r) rtime; str = 'Physical time '//trim(adjustl(str))
         call TLab_Write_ASCII(lfile, str)

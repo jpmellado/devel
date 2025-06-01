@@ -2,7 +2,7 @@
 
 !########################################################################
 !#
-!# Assumes statistical homogeneity in xOz, so that the corresponding
+!# Assumes statistical homogeneity in xOy, so that the corresponding
 !# partial derivative terms are assumed to be zero.
 !#
 !# In the incompressible case, the array p has been
@@ -342,16 +342,6 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
                   //'Psat RelativeHumidity DewPoint ' &
                   //'LapseRate_fr LapseRate_eq LapseRate_dew'
 
-    ! select case (imode_thermo)
-    ! case (THERMO_TYPE_NONE)
-    !     ng = ng - 1
-
-    ! case (THERMO_TYPE_ANELASTIC)
-
-    ! case (THERMO_TYPE_COMPRESSIBLE)
-
-    ! end select
-
     ! -----------------------------------------------------------------------
     ! Auxiliary variables depending on z and t; this last group is not written
     ng = ng + 1; ig(ng) = ig(ng - 1) + sg(ng - 1)
@@ -394,7 +384,18 @@ subroutine AVG_FLOW_XZ(q, s, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwd
     mean2d(:, 1:nv) = 0.0_wp
 
     ng = ng - 1
-    nv = ig(ng) + sg(ng) - 1 ! the last group is not written out
+    nv = ig(ng) + sg(ng) - 1        ! the last group with auxiliary variables is not written out
+
+    select case (imode_thermo)
+    case (THERMO_TYPE_NONE)
+        ng = ng - 1
+        nv = ig(ng) + sg(ng) - 1    ! the thermodynamics group is not written out
+
+    case (THERMO_TYPE_ANELASTIC)
+
+    case (THERMO_TYPE_COMPRESSIBLE)
+
+    end select
 
     ! #######################################################################
     write (line1, *) itime; line1 = 'Calculating flow statistics at It'//trim(adjustl(line1))//'...'

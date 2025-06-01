@@ -567,8 +567,8 @@ contains
             s(:, is) = s(:, is) + dte*hs(:, is)
         end do
 
-        call TLab_Diagnostic(imax, jmax, kmax, q, s) ! Should not need this here, only in anelastic and compressible
-
+        call TLab_Diagnostic(imax, jmax, kmax, s)
+        
         return
     end subroutine TMarch_Substep_Anelastic_Explicit
 
