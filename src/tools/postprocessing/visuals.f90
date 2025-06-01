@@ -603,7 +603,6 @@ program VISUALS
                         call Write_Visuals(plot_file, txc(:, 1:1))
 
                         write (str, *) is; plot_file = 'SedimentationFlux'//trim(adjustl(str))//time_str(1:MaskSize)
-                        plot_file = 'FLux'//time_str(1:MaskSize)
                         call Write_Visuals(plot_file, txc(:, 1:3))
 
                     end if
@@ -772,36 +771,58 @@ contains
         inb_txc = 0
 
         do iv = 1, iopt_size
-            if (opt_vec(iv) == 1) then; iread_flow = .true.; inb_txc = max(inb_txc, 1); end if
-            if (opt_vec(iv) == 2) then; iread_flow = .true.; inb_txc = max(inb_txc, 1); end if
-            if (opt_vec(iv) == 3) then; iread_flow = .true.; inb_txc = max(inb_txc, 1); end if
-            if (opt_vec(iv) == 4) then; iread_flow = .true.; inb_txc = max(inb_txc, 3); end if
-            if (opt_vec(iv) == 5) then; iread_flow = .true.; inb_txc = max(inb_txc, 1); end if
-            if (opt_vec(iv) == 6) then; iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 2); end if
-            if (opt_vec(iv) == 7) then; iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 3); end if
-            if (opt_vec(iv) == 8) then; iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 7); end if
-            if (opt_vec(iv) == 8) then; iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 10); end if
-            if (opt_vec(iv) == 9) then; iread_scal = .true.; inb_txc = max(inb_txc, 1); end if
-            if (opt_vec(iv) > 9 .and. opt_vec(iv) <= iscal_offset) then
-                iread_scal = .true.; inb_txc = max(inb_txc, 4); end if
-            if (opt_vec(iv) == iscal_offset + 1) then; iread_scal = .true.; inb_txc = max(inb_txc, 3); end if
-            if (opt_vec(iv) == iscal_offset + 2) then; iread_scal = .true.; inb_txc = max(inb_txc, 3); end if
-            if (opt_vec(iv) == iscal_offset + 3) then; iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 6); end if
-            if (opt_vec(iv) == iscal_offset + 4) then; iread_flow = .true.; inb_txc = max(inb_txc, 4); end if
-            if (opt_vec(iv) == iscal_offset + 5) then; iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 7); end if
-            if (opt_vec(iv) == iscal_offset + 6) then; iread_flow = .true.; inb_txc = max(inb_txc, 6); end if
-            if (opt_vec(iv) == iscal_offset + 7) then; iread_flow = .true.; inb_txc = max(inb_txc, 6); end if
-            if (opt_vec(iv) == iscal_offset + 8) then; iread_flow = .true.; inb_txc = max(inb_txc, 3); end if
-            if (opt_vec(iv) == iscal_offset + 9) then; iread_flow = .true.; inb_txc = max(inb_txc, 6); end if
-            if (opt_vec(iv) == iscal_offset + 10) then; iread_flow = .true.; inb_txc = max(inb_txc, 6); end if
-            if (opt_vec(iv) == iscal_offset + 12) then; iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 4); end if
-            if (opt_vec(iv) == iscal_offset + 14) then; iread_flow = .true.; inb_txc = max(inb_txc, 2); end if
-            if (opt_vec(iv) == iscal_offset + 15) then; iread_flow = .true.; inb_txc = max(inb_txc, 6); end if
-            if (opt_vec(iv) == iscal_offset + 16) then; iread_scal = .true.; inb_txc = max(inb_txc, 4); end if
-            if (opt_vec(iv) == iscal_offset + 17) then; iread_scal = .true.; inb_txc = max(inb_txc, 2); end if
-            ! if (opt_vec(iv) == iscal_offset + 18) then; iread_part = .true.; inb_txc = max(inb_txc, 2); end if
-            if (opt_vec(iv) == iscal_offset + 19) then; iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 7); end if
-            if (opt_vec(iv) == iscal_offset + 20) then; iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 10); end if
+            select case (trim(adjustl(opt_name(opt_vec(iv)))))
+            case ('VelocityX')
+                iread_flow = .true.; inb_txc = max(inb_txc, 1)
+            case ('VelocityY')
+                iread_flow = .true.; inb_txc = max(inb_txc, 1)
+            case ('VelocityZ')
+                iread_flow = .true.; inb_txc = max(inb_txc, 1)
+            case ('VelocityVector')
+                iread_flow = .true.; inb_txc = max(inb_txc, 3)
+            case ('VelocityMagnitude')
+                iread_flow = .true.; inb_txc = max(inb_txc, 1)
+            case ('Density')
+                iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 1)
+            case ('Temperature')
+                iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 1)
+            case ('Pressure')
+                iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 7)
+            case ('Scalars')
+                iread_scal = .true.; inb_txc = max(inb_txc, 1)
+            case ('ScalarGradientVector')
+                iread_scal = .true.; inb_txc = max(inb_txc, 3)
+            case ('ScalarGradient G_iG_i (Log)')
+                iread_scal = .true.; inb_txc = max(inb_txc, 2)
+            case ('ScalarGradientEquation')
+                iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 6)
+            case ('VorticityVector')
+                iread_flow = .true.; inb_txc = max(inb_txc, 4)
+            case ('Enstrophy W_iW_i (Log)')
+                iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 7)
+            case ('EnstrophyEquation')
+                iread_flow = .true.; inb_txc = max(inb_txc, 6)
+            case ('StrainTensor')
+                iread_flow = .true.; inb_txc = max(inb_txc, 6)
+            case ('Strain 2S_ijS_ij (Log)')
+                iread_flow = .true.; inb_txc = max(inb_txc, 3)
+            case ('StrainEquation')
+                iread_flow = .true.; inb_txc = max(inb_txc, 6)
+            case ('VelocityGradientInvariants')
+                iread_flow = .true.; inb_txc = max(inb_txc, 6)
+            case ('HorizontalDivergence')
+                iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 2)
+            case ('Turbulent quantities')
+                iread_flow = .true.; inb_txc = max(inb_txc, 6)
+            case ('Buoyancy')
+                iread_flow = .true.; iread_scal = .true.; inb_txc = max(inb_txc, 4)
+            case ('Anelastic')
+                iread_scal = .true.; inb_txc = max(inb_txc, 1)
+            case ('Infrared')
+                iread_scal = .true.; inb_txc = max(inb_txc, 6)
+            case ('Sedimentation')
+                iread_scal = .true.; inb_txc = max(inb_txc, 3)
+            end select
         end do
 
         ! #######################################################################
